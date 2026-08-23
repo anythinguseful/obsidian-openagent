@@ -387,3 +387,52 @@ premisnya tidak ada.
 guard v0.1.18 melakukan `fs.readdirSync` untuk membuktikan tak ada panggilan
 `fileManager.trashFile` langsung di luar shim. Alasannya didokumentasikan di
 header modul.
+
+## Progress — 2026-08-24, split selesai (Phase 9–11)
+
+`test/smoke.test.cjs` **7.012 → 1.296 baris (−82%)**, 289 `✓` utuh di setiap
+fase tanpa kecuali. Monolit sekarang tinggal orkestrator: bootstrap harness,
+tujuh `require`, tujuh pemanggilan guard, plus tiga guard yang sengaja tetap
+tinggal (lihat di bawah).
+
+| modul | baris | guard |
+| --- | --- | --- |
+| `settings.cjs` | 1.994 | 70 |
+| `preview.cjs` | 1.509 | 55 |
+| `chat.cjs` | 928 | 35 |
+| `styles.cjs` | 509 | 19 |
+| `quickask.cjs` | 400 | 12 |
+| `agent.cjs` | 172 | 7 |
+| `misc.cjs` | 180 | 6 |
+| `harness.cjs` | 163 | — |
+
+**Phase 10 (preview, 55 blok / 1.529 baris).** Klaster dengan pencampuran
+anchor terparah: 24 blok memakai anchor root dan `test/` sekaligus. Aturan
+Phase 9 sudah menangani `read()` dan `readFileSync` satu baris, tapi ada
+`readFileSync` yang membentang beberapa baris sehingga lolos ke aturan
+`path.join` generik yang belum anchor-aware — hasilnya
+`ROOT/real-preview/obsidian-shim.ts`, kurang segmen `test`. Lihat Lesson 186.
+
+**Phase 11 (misc, 6 blok / 152 baris).** Sisa yang tidak dimiliki satu surface
+pun: relokasi workspace, tooltip hygiene, control-character hygiene,
+sertifikasi radius, dan dua guard minify. Dua hal baru di sini:
+
+- Guard relokasi memakai `await plugin.activateView()`, jadi `miscGuards`
+  adalah satu-satunya modul `async` dan dipanggil dengan `await`. Lupa
+  `await`-nya tidak membuat test merah — prosesnya hanya keluar sebelum
+  promise selesai dan enam `✓` hilang diam-diam. Diff baseline yang
+  menangkapnya, bukan exit code.
+- Tiga guard membangun path secara dinamis (`path.join(__dirname, p)` dengan
+  `p` variabel loop) sehingga tidak bisa di-anchor per path. Alih-alih menebak,
+  modul mendeklarasikan `TESTDIR = path.join(ROOT, "test")` yang nilainya
+  persis `__dirname` monolit. Path literal tetap wajib lewat `read()` supaya
+  terlihat oleh check-docs guard 1.
+
+**Tetap di monolit, dengan alasan.** Ketiganya guard *ketiadaan* file: blok
+`reasoning.tsx` (`!fs.existsSync` atas `chain-of-thought`/`steps`/
+`prompt-suggestion`), guard radius v0.1.94, dan guard multi-file yang membaca
+`scripts/release.mjs` + `manifest.json`. Blok pertama sempat ikut Phase 11 lalu
+ditarik kembali: check-docs guard 1 mewajibkan setiap literal
+`path.join(ROOT, …)` resolve di disk, dan ini dibuktikan langsung dengan modul
+probe sekali pakai — bukan diasumsikan. Guard semacam ini hanya boleh pindah
+kalau path-nya lewat `read()`, seperti `pdf-worker.d.ts` di `preview.cjs`.

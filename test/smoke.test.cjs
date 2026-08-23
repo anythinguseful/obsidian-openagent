@@ -14,6 +14,7 @@ const chatGuards = require("./smoke/chat.cjs");
 const agentGuards = require("./smoke/agent.cjs");
 const quickaskGuards = require("./smoke/quickask.cjs");
 const previewGuards = require("./smoke/preview.cjs");
+const miscGuards = require("./smoke/misc.cjs");
 
 (async () => {
 	await plugin.onload();
@@ -333,69 +334,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// v0.1.162 behavioural (owner: "tidak berubah sama sekali"): opening the
 	// chat must MOVE an existing leaf to the configured location, not just
 	// reveal it in place. Same-region → reveal only.
-	{
-		const events = [];
-		const leftSplit = {};
-		const rightSplit = {};
-		let detached = false;
-		let openedOn = null;
-		const existingLeaf = {
-			getRoot: () => rightSplit,
-			getViewState: () => ({ type: "openagent-chat", state: {}, active: true }),
-			detach: () => {
-				detached = true;
-			},
-			/* v0.1.163: relocation captures the live session id first */
-			view: { getCurrentSessionId: () => "sess-42" },
-		};
-		const ws = plugin.app.workspace;
-		const savedLeaves = ws.getLeavesOfType;
-		const savedReveal = ws.revealLeaf;
-		ws.leftSplit = leftSplit;
-		ws.rightSplit = rightSplit;
-		ws.getLeavesOfType = () => [existingLeaf];
-		ws.getLeftLeaf = () => ({
-			setViewState: async () => {
-				openedOn = "left";
-			},
-		});
-		ws.getLeaf = () => ({
-			setViewState: async () => {
-				openedOn = "main";
-			},
-		});
-		ws.getRightLeaf = () => ({
-			setViewState: async () => {
-				openedOn = "right";
-			},
-		});
-		ws.revealLeaf = (leaf) => events.push(leaf === existingLeaf ? "existing" : "target");
-
-		plugin.settings.chatLeafLocation = "left";
-		await plugin.activateView();
-		const moved = detached && openedOn === "left" && events.length === 1 && events[0] === "target";
-		/* the conversation survives the move: captured id is handed back */
-		const captured = plugin.consumePendingChatSessionId();
-
-		detached = false;
-		openedOn = null;
-		events.length = 0;
-		plugin.settings.chatLeafLocation = "right";
-		await plugin.activateView();
-		const stays = !detached && openedOn === null && events.length === 1 && events[0] === "existing";
-
-		ws.getLeavesOfType = savedLeaves;
-		ws.revealLeaf = savedReveal;
-		delete ws.leftSplit;
-		delete ws.rightSplit;
-
-		if (moved && stays && captured === "sess-42") {
-			console.log("✓ v0.1.162 behavioural: existing chat MOVES to the configured location; same-region reveals in place; session id captured for restore");
-		} else {
-			console.error(`✗ v0.1.162 behavioural relocation failed (moved=${moved}, stays=${stays}, captured=${captured}, events=${events.join(",")}, openedOn=${openedOn})`);
-			failed++;
-		}
-	}
 
 	// tool registry
 	const tools = plugin.runner.getTools();
@@ -525,26 +463,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// hazard is co-occurrence — a bare `title=` (no aria-label) is legal
 	// (v0.1.32 model-menu rows tooltip `id · fastId` this way, Hermes
 	// Desktop parity). Guard flags elements carrying BOTH attributes.
-	{
-		const fs = require("fs");
-		const files = ["../src/ui/ChatApp.tsx"].concat(
-			fs
-				.readdirSync(path.join(__dirname, "../src/ui/components"))
-				.filter((f) => f.endsWith(".tsx"))
-				.map((f) => `../src/ui/components/${f}`)
-		);
-		const offenders = files.filter((p) =>
-			(fs.readFileSync(path.join(__dirname, p), "utf8").match(/<[^>]*>/g) ?? []).some(
-				(tag) => tag.includes("title=") && tag.includes("aria-label=")
-			)
-		);
-		if (offenders.length === 0) {
-			console.log("✓ tooltip hygiene: no element carries title= together with aria-label= (no double tips)");
-		} else {
-			console.error(`✗ title= + aria-label= on one element (double tooltip): ${offenders.join(", ")}`);
-			failed++;
-		}
-	}
 
 	// copilot parity batch (study: logancyang/obsidian-copilot@master, source-
 	// verified via jsDelivr): markdown safety/math/image preprocess wired into
@@ -810,19 +728,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// minus \t \n \r) inside ANY src .ts/.tsx — one invisible \x01 in a string
 	// literal once bypassed every string-anchors check and produced a wrong
 	// signature separator at runtime.
-	{
-		const walk = (dir) =>
-			fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-				e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith(".ts") || e.name.endsWith(".tsx") ? [path.join(dir, e.name)] : []
-			);
-		const offenders = walk(path.join(__dirname, "..", "src")).filter((f) => /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(fs.readFileSync(f, "utf8")));
-		if (offenders.length === 0) {
-			console.log("✓ lesson-31: no raw control characters in src/ (escape-text only)");
-		} else {
-			console.error(`✗ lesson-31 raw control characters in: ${offenders.join(", ")}`);
-			failed++;
-		}
-	}
 
 
 	// ---- v0.1.32 — composer model menu full parity with Hermes Desktop
@@ -955,26 +860,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// Message actions certified quiet rounded-square, radius-s family
 	// (Hermes thread actions = rounded-md @main; the host var owns the
 	// exact value, per the style contract).
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const css = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const ok = { s: "4", m: "8", l: "12" };
-		const found = [...css.matchAll(/var\(--radius-([sml]), (\d+)px\)/g)];
-		const bad = found.filter((m) => ok[m[1]] !== m[2]);
-		if (
-			bad.length === 0 &&
-			found.length >= 20 &&
-			/\.oa-app \.oa-msg-action \{[\s\S]{0,400}?border-radius: var\(--radius-s/.test(css) &&
-			css.includes(".oa-app .oa-attach-toggle { border-radius: 999px; }") &&
-			/\.oa-app \.oa-prompt-action \{[\s\S]{0,700}?border-radius: 999px;/.test(css)
-		) {
-			console.log("✓ radius certification: all fallbacks official (s4/m8/l12) · msg-action family kept · composer circles intact");
-		} else {
-			console.error("✗ radius certification drifted", bad.map((m) => m[0]).join(","));
-			failed++;
-		}
-	}
 	// 2026-08-02 v0.1.53 settings pixel lane: the General tab audit probe
 	// (F18) must exist in build-settings.mjs with element-order assertions,
 	// the aggregate red-probe gate must fail loudly, and release.mjs must
@@ -1362,22 +1247,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// chord kirim — bawaan Shift+Enter=kirim/Enter=baris baru · toggle ON
 	// membalik · Ctrl/Cmd+Enter SELALU kirim di dua mode
 	// v0.1.128 (audit 2026-08-09, peluru-perak terukur): production build di-MINIFY
-	{
-		const cfg = read("esbuild.config.mjs");
-		const size = read("main.js").length;
-		const ok =
-			cfg.includes("minify: prod ? true : false") &&
-			!cfg.includes("es.drop") && !cfg.includes("\tdrop:") && // jalur debugMode menjaga console.* nya — opsi pelempar-log tak boleh masuk
-			size > 100000 &&
-			size < 1200000 && // v0.1.145 Workspace enforcement adds policy/provenance guards; keep the minified bundle below 1.2 MB
-			read("manifest.json").includes('"version": "0.1.151"');
-		if (ok) {
-			console.log("✓ v0.1.128: production minify aktif · main.js terjepit < 2,3 MB (dry-run 1,93 MB dari 5,40 MB) · console debugMode tidak di-drop");
-		} else {
-			console.error(`✗ v0.1.128 minify regressed (main.js ${size} B)`);
-			failed++;
-		}
-	}
 	// v0.1.129 (audit docs/audits/audit-2026-08-09.md p3): dead exports dibersihkan —
 	// 9 ikon tak direferensikan (BrainIcon sengaja park), konstanta goals yatim
 	// v0.1.130 (audit batch 3): pdf.worker EKSTERNAL — vendor file + blob Worker
@@ -1388,26 +1257,6 @@ const previewGuards = require("./smoke/preview.cjs");
 	// kandidat mati semua TERBUKTI false-positive/comment-only (3 terakhir
 	// — oa-selbar-rooted/oa-app-only/oa-app-scoped — hanya frasa di
 	// komentar, nol aturan, nol referensi kode).
-	{
-		const rel = read("scripts/release.mjs");
-		const css = read("styles.css");
-		const ok =
-			rel.includes("CSS_SENTINELS") &&
-			rel.includes('loader: "css"') &&
-			rel.includes("minify: true") &&
-			rel.includes("minifyCssForZip(join(root, f)") &&
-			rel.includes("(zip-minified, sentinel-verified)") &&
-			css.includes("QUICK ASK FIELD RESET") && // komentar sumber bertahan = repo styles.css TIDAK ikut terminify
-			css.includes(".oa-selbar .oa-selbar-btn {") && // aturan selbar asli tetap di selector nyata (v0.1.102)
-			css.includes("\n") && // layout multi-baris utuh
-			read("manifest.json").includes('"version": "0.1.151"');
-		if (ok) {
-			console.log("✓ v0.1.131: styles.css zip-only minify + sentinel verify · repo tetap readable · audit CSS 43/43 tuntas false-positive");
-		} else {
-			console.error("✗ v0.1.131 zip-only css minify regressed");
-			failed++;
-		}
-	}
 
 	// v0.1.132 (menuntaskan 🟡 §gap-doc): skills ⅔ → 3/3 — Hermes skill_view +
 	// skill_manage parity (studi raw: features/skills.md + tools-reference).
@@ -1433,6 +1282,7 @@ const previewGuards = require("./smoke/preview.cjs");
 	failed += agentGuards();
 	failed += quickaskGuards();
 	failed += previewGuards();
+	failed += await miscGuards();
 
 	plugin.onunload();	if (failed > 0) {
 		console.error(`\n${failed} smoke check(s) failed`);
