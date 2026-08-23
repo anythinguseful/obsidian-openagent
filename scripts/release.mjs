@@ -23,7 +23,7 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { prepareReleaseAssets, verifyGithubCiProof } from "./release-assets.mjs";
+import { assertTrackedTreeClean, prepareReleaseAssets, verifyGithubCiProof } from "./release-assets.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
@@ -65,7 +65,18 @@ if (skipPreview) {
 	console.log("\n== preview skipped (--skip-preview) — preview/ left as-is");
 } else {
 	step("preview", "node", ["test/build-preview.mjs"]);
-	step("settings preview", "node", ["test/real-preview/build-settings.mjs"]);
+	/* OA_RELEASE_WITNESS=readonly: the settings harness must record its run in
+	   the ignored sidecar only — it may never rewrite the TRACKED witness
+	   mid-release, or the fail-closed clean-tree check below (and in the
+	   publisher preflight) would reject the very run that dirtied the tree
+	   (run 32653162333). */
+	step("settings preview", "node", ["test/real-preview/build-settings.mjs"], {
+		env: { ...process.env, OA_RELEASE_WITNESS: "readonly" },
+	});
+	/* Fail at the exact step that would drift the tree — not as a bare exit
+	   code at the end of the pipeline. */
+	assertTrackedTreeClean(root);
+	console.log("== tracked tree still clean after preview steps");
 }
 
 /* 5: stage + zip (paths inside the archive must be "openagent/<file>") */

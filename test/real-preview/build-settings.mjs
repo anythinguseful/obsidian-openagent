@@ -5,7 +5,12 @@
  * section and runs DOM/keyboard audit probes:
  *
  *   test/real-preview/shots/settings-<section>.png   → pixel evidence
- *   test/real-preview/settings-audit-probes.json     → probe results
+ *   test/real-preview/settings-audit-probes.json     → probe results (TRACKED witness;
+ *                                                       rewrite policy lives in
+ *                                                       planSettingsWitnessUpdate — a release
+ *                                                       run, OA_RELEASE_WITNESS=readonly,
+ *                                                       never touches it)
+ *   test/real-preview/out/settings-audit-probes.json → ignored timestamped sidecar of every run
  *
  * Graduated 2026-08-02 (v0.1.53): now a release step (after the chat
  * preview), and ANY red probe fails the release — the audit-phase "record
@@ -14,10 +19,11 @@
 
 import { chromium } from "playwright";
 import esbuild from "esbuild";
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { planSettingsWitnessUpdate } from "../../scripts/release-assets.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
@@ -2545,11 +2551,31 @@ async function main() {
 	} finally {
 		await browser.close();
 	}
-	writeFileSync(resolve(here, "settings-audit-probes.json"), JSON.stringify({ at: new Date().toISOString(), probes }, null, 2));
+	/* Witness write policy (run 32653162333 fix): this JSON is a TRACKED file,
+	   and the release pipeline asserts a clean tracked tree. Every run still
+	   records its full timestamped result in the ignored sidecar under out/;
+	   the tracked witness itself is only rewritten by the pure planner — and a
+	   release run (OA_RELEASE_WITNESS=readonly, set by scripts/release.mjs)
+	   never touches it, so `npm run release` can never dirty the tree it is
+	   about to certify. */
+	const now = new Date().toISOString();
+	const witnessPath = resolve(here, "settings-audit-probes.json");
+	mkdirSync(resolve(here, "out"), { recursive: true });
+	writeFileSync(resolve(here, "out", "settings-audit-probes.json"), JSON.stringify({ at: now, probes }, null, 2));
+	const readonlyWitness = process.env.OA_RELEASE_WITNESS === "readonly";
+	const plan = planSettingsWitnessUpdate({
+		trackedJson: existsSync(witnessPath) ? readFileSync(witnessPath, "utf8") : null,
+		freshProbes: probes,
+		readonly: readonlyWitness,
+		now,
+	});
+	if (plan.writeTracked) writeFileSync(witnessPath, plan.trackedText);
+	if (plan.notice) console.warn(`settings-witness: ${plan.notice}`);
 	console.log("\n[probes]");
 	for (const [k, v] of Object.entries(probes)) console.log(`  ${k}: ${JSON.stringify(v)}`);
-	/* v0.1.53 gate (graduated to the release pipeline): the JSON write above
-	   stays unconditional, then any red probe fails the step loudly. */
+	/* v0.1.53 gate (graduated to the release pipeline): the run is recorded
+	   first (sidecar always; tracked witness per policy), then any red probe
+	   fails the step loudly. */
 	const redProbes = Object.entries(probes).filter(([, v]) => v && v.fixed === false);
 	if (redProbes.length > 0) {
 		console.error(`✗ settings audit probes FAILED: ${redProbes.map(([k]) => k).join(", ")}`);

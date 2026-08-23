@@ -7,10 +7,12 @@ const { pathToFileURL } = require("node:url");
 
 (async () => {
 	const {
+		assertTrackedTreeClean,
 		buildFinalReport,
 		buildSourceManifest,
 		checksumLine,
 		parsePublishArgs,
+		planSettingsWitnessUpdate,
 		prepareReleaseAssets,
 		releaseAssetPaths,
 		runWithRetries,
@@ -105,8 +107,66 @@ const { pathToFileURL } = require("node:url");
 		check(prepared.assets.length === 6, "asset preparation produces the complete GitHub inventory");
 		check(readFileSync(prepared.paths.sourceManifest, "utf8").includes("  README.md"), "prepared source manifest covers tracked source");
 		check(readFileSync(prepared.paths.finalReport, "utf8").includes(prepared.commit), "prepared final report binds the source commit");
+
+		/* Regression guard (run 32653162333): the release must fail closed the
+		   moment ANY tracked file drifts — the settings witness rewrite used to
+		   dirty the tree mid-pipeline and the failure surfaced only as a bare
+		   exit code 1 at the very end. */
+		writeFileSync(join(repo, "README.md"), "tracked source — drifted\n");
+		assert.throws(() => assertTrackedTreeClean(repo), /Tracked source is dirty/);
+		passed++;
+		console.log("✓ clean-tree assertion names the drifted tracked file");
+		assert.throws(
+			() =>
+				prepareReleaseAssets({
+					root: repo,
+					releaseDir,
+					version: "0.1.151",
+					buildStamp: "2026-08-23 16:00Z",
+					reconstructed: true,
+					preview: "skipped",
+					pdfProof: "fixture CI",
+				}),
+			/Tracked source is dirty/,
+		);
+		passed++;
+		console.log("✓ asset preparation fails closed on a dirty tracked tree");
+		writeFileSync(join(repo, "README.md"), "tracked source\n");
+		assertTrackedTreeClean(repo);
+		passed++;
+		console.log("✓ restored tracked tree passes the clean assertion again");
 	} finally {
 		rmSync(repo, { recursive: true, force: true });
+	}
+
+	/* Regression guard (run 32653162333): the settings harness witness is a
+	   TRACKED file rewritten with a fresh timestamp on every run — that churn
+	   alone guaranteed a dirty tree before the clean-tree check existed a
+	   stable answer for. The planner decides when the tracked witness may be
+	   touched; a release run (readonly) may never touch it. */
+	{
+		const probesA = { F1: { fixed: true }, F2: { fixed: true, count: 2 } };
+		const tracked = JSON.stringify({ at: "2026-08-23T00:00:00.000Z", probes: probesA }, null, 2);
+
+		const same = planSettingsWitnessUpdate({ trackedJson: tracked, freshProbes: probesA, readonly: false, now: "2026-08-24T09:00:00.000Z" });
+		check(same.writeTracked === false, "identical probe results never rewrite the tracked witness (no timestamp churn)");
+
+		const probesB = { F1: { fixed: true }, F2: { fixed: true, count: 3 } };
+		const dev = planSettingsWitnessUpdate({ trackedJson: tracked, freshProbes: probesB, readonly: false, now: "2026-08-24T09:00:00.000Z" });
+		check(dev.writeTracked === true && JSON.parse(dev.trackedText).probes.F2.count === 3, "changed probe results rewrite the witness outside release runs");
+		check(JSON.parse(dev.trackedText).at === "2026-08-24T09:00:00.000Z", "witness rewrite stamps the run it records");
+
+		const ro = planSettingsWitnessUpdate({ trackedJson: tracked, freshProbes: probesB, readonly: true, now: "2026-08-24T09:00:00.000Z" });
+		check(ro.writeTracked === false, "readonly release runs never rewrite the tracked witness");
+		check(typeof ro.notice === "string" && ro.notice.length > 0, "readonly release runs surface witness drift as a notice, not a silent skip");
+
+		const roSame = planSettingsWitnessUpdate({ trackedJson: tracked, freshProbes: probesA, readonly: true, now: "2026-08-24T09:00:00.000Z" });
+		check(roSame.writeTracked === false && roSame.notice === null, "readonly runs with matching probes stay silent and clean");
+
+		const missingDev = planSettingsWitnessUpdate({ trackedJson: null, freshProbes: probesA, readonly: false, now: "2026-08-24T09:00:00.000Z" });
+		check(missingDev.writeTracked === true, "a missing witness is created outside release runs");
+		const missingRo = planSettingsWitnessUpdate({ trackedJson: null, freshProbes: probesA, readonly: true, now: "2026-08-24T09:00:00.000Z" });
+		check(missingRo.writeTracked === false && typeof missingRo.notice === "string", "readonly runs never create the witness themselves");
 	}
 
 	let attempts = 0;
