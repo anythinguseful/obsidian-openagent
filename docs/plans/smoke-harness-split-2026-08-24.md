@@ -260,9 +260,9 @@ free:
 
 | Pick | Approach | Tradeoff |
 |---|---|---|
-|  | Stop after the exclusive guards | Honest and cheap; the 7k file mostly remains |
-|  | Split multi-file blocks by *subject* rather than by file read | Genuinely shrinks the file; requires judgement per block, so it is no longer a verbatim move |
-|  | Group runtime guards into `test/smoke/runtime.cjs` behind a `plugin` parameter | Removes 77 checks from the orchestrator; touches how guards receive the plugin |
+| 3a ✅ | Stop after the exclusive guards | Honest and cheap; the 6.5k file mostly remains |
+| 3b | Split multi-file blocks by *subject* rather than by file read | Genuinely shrinks the file; requires judgement per block, so it is no longer a verbatim move |
+| 3c | Group runtime guards into `test/smoke/runtime.cjs` behind a `plugin` parameter | Removes 77 checks from the orchestrator; touches how guards receive the plugin |
 
 Recommendation: take the exclusive guards now, then stop and re-decide. The
 enabler goal is already partly met — a future Settings or ChatApp refactor now
