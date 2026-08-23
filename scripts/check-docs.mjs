@@ -144,6 +144,7 @@ check(hubFailures.length === 0, "docs hub lists every material document with mat
 const smokeDir = join(root, "test", "smoke");
 const smokePathFailures = [];
 const smokeDirnameFailures = [];
+const smokeShadowFailures = [];
 for (const entry of readdirSync(smokeDir, { withFileTypes: true })) {
 	if (!entry.isFile() || !entry.name.endsWith(".cjs")) continue;
 	const rel = `test/smoke/${entry.name}`;
@@ -151,6 +152,12 @@ for (const entry of readdirSync(smokeDir, { withFileTypes: true })) {
 	const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 	if (entry.name !== "harness.cjs" && /\b__dirname\b/.test(code)) {
 		smokeDirnameFailures.push(rel);
+	}
+	// A block-local `read` shadows the harness helper with its own anchor, so
+	// two calls that look identical resolve to different files. One reader per
+	// module, imported from the harness.
+	if (entry.name !== "harness.cjs" && /(?:const|let|var)\s+read\s*=/.test(code)) {
+		smokeShadowFailures.push(rel);
 	}
 	for (const match of code.matchAll(/path\.join\(\s*ROOT\s*,\s*([^)]+)\)/g)) {
 		const segments = [...match[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
@@ -169,6 +176,11 @@ check(
 	smokeDirnameFailures.length === 0,
 	"smoke modules: only the harness anchors on __dirname",
 	`__dirname outside the smoke harness (breaks when guards move deeper): ${smokeDirnameFailures.join("; ")}`,
+);
+check(
+	smokeShadowFailures.length === 0,
+	"smoke modules: no block-local read() shadows the harness helper",
+	`block-local read() shadows the harness helper (same call, different anchor): ${smokeShadowFailures.join("; ")}`,
 );
 
 console.log(`\n${checks} source/docs checks, ${failures.length} failure(s)`);

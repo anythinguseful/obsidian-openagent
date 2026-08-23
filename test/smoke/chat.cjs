@@ -7,7 +7,7 @@
  * that shadow read() with a __dirname-relative helper differ.
  */
 
-const { ROOT, read, fs, path } = require("./harness.cjs");
+const { read } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -59,8 +59,7 @@ module.exports = function chatGuards() {
 	// ---- v0.1.21 — slash medium batch (Hermes Desktop parity): /status,
 	// /save, /profile, /approvals + the arg-stage popover (argumentMode).
 	{
-		const read = (p) => fs.readFileSync(path.join(ROOT, p.replace(/^\.\.\//, "")), "utf8");
-		const app4 = read("../src/ui/ChatApp.tsx");
+		const app4 = read("src/ui/ChatApp.tsx");
 		const ok =
 			app4.includes('case "/status"') && app4.includes('case "/save"') &&
 			app4.includes('case "/profile"') && app4.includes('case "/approvals"') &&
@@ -84,8 +83,7 @@ module.exports = function chatGuards() {
 	// pivot (model_switch.py PATH B exact_moa_preset_name, enabled-only,
 	// #55187; the "moa:" prefix is never a bare name).
 	{
-		const read = (p) => fs.readFileSync(path.join(ROOT, p.replace(/^\.\.\//, "")), "utf8");
-		const app14 = read("../src/ui/ChatApp.tsx");
+		const app14 = read("src/ui/ChatApp.tsx");
 		const ok =
 			app14.includes('"/moa"') &&
 			app14.includes("moaUsage()") &&

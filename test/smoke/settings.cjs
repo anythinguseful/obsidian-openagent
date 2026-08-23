@@ -1,14 +1,18 @@
 /**
- * Smoke guards whose only source inputs are src/settingsTab.ts and
- * src/settings.ts.
+ * Smoke guards whose subject is Settings.
  *
- * Moved verbatim from test/smoke.test.cjs (Phase 3 of the smoke/harness
- * split). Guard conditions and messages are unchanged; only the enclosing
- * function, one level of indentation, and the repo-root anchor for blocks
- * that shadow read() with a __dirname-relative helper differ.
+ * Selection is by subject, not by file read: a settings-lane guard may also
+ * assert on styles.css or the real-preview witness, and splitting it by file
+ * would tear one assertion in half. Blocks that depend on a shared top-level
+ * variable of the orchestrator stay there.
+ *
+ * Moved verbatim from test/smoke.test.cjs (Phases 3 and 3b of the
+ * smoke/harness split). Guard conditions and messages are unchanged; only the
+ * enclosing function, one level of indentation, and the repo-root path anchor
+ * differ.
  */
 
-const { ROOT, read, fs, path } = require("./harness.cjs");
+const { read } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -167,8 +171,7 @@ module.exports = function settingsGuards() {
 	// "kan itu deskripsi untuk settingan LM studio, kenapa ada yang lain
 	// juga?"). The LM Studio row must never again carry Ollama/OpenRouter.
 	{
-		const read = (p) => fs.readFileSync(path.join(ROOT, p.replace(/^\.\.\//, "")), "utf8");
-		const tab3 = read("../src/settingsTab.ts");
+		const tab3 = read("src/settingsTab.ts");
 		const ok =
 			tab3.includes("baseUrlDesc(viewed.id)") &&
 			tab3.includes('case "lmstudio"') && tab3.includes('case "ollama"') &&
@@ -189,7 +192,7 @@ module.exports = function settingsGuards() {
 		// whole tab (focus lost after char 1) and polluted favoriteModels with
 		// half-typed ids ("g", "gp", …).
 		const fs = require("fs");
-		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
+		const stab = read("src/settingsTab.ts");
 		if (
 			stab.includes("commitCustomModel") &&
 			stab.includes('customModel.inputEl.addEventListener("keydown"') &&
@@ -209,8 +212,8 @@ module.exports = function settingsGuards() {
 		// returns after the first pass). The standalone "Add GitHub tap" row
 		// must stay gone.
 		const fs = require("fs");
-		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
-		const css = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
+		const stab = read("src/settingsTab.ts");
+		const css = read("styles.css");
 		if (
 			stab.includes("hubTapCandidate") &&
 			stab.includes('cls: "oa-hub-tap-hint-btn"') &&
@@ -230,7 +233,7 @@ module.exports = function settingsGuards() {
 		// kepano/obsidian-skills (skills/ subtree) ONLY — the five Hermes
 		// taps were removed. Stays single-tap; customs come via the search box.
 		const fs = require("fs");
-		const hub = fs.readFileSync(path.join(ROOT, "src/agent/hub.ts"), "utf8");
+		const hub = read("src/agent/hub.ts");
 		if (
 			hub.includes('repo: "kepano/obsidian-skills/skills"') &&
 			!hub.includes('repo: "openai/skills"') &&
@@ -244,8 +247,8 @@ module.exports = function settingsGuards() {
 		}
 
 		// owner directive 2026-07-25: dead tap catalogs must be pruned (load × remove)
-		const mn = fs.readFileSync(path.join(ROOT, "src/main.ts"), "utf8");
-		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
+		const mn = read("src/main.ts");
+		const stab = read("src/settingsTab.ts");
 		if (
 			hub.includes("export function pruneHubCache") &&
 			hub.includes("export function allHubTaps") &&
@@ -267,7 +270,7 @@ module.exports = function settingsGuards() {
 		// Notifications v0.1.142: Workspace/Safety remain actionable,
 		// Notifications returns with real controls in the shared tab/search
 		// registry, while still-empty Appearance/About remain hidden.
-		const stab5 = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
+		const stab5 = read("src/settingsTab.ts");
 		const memSection = stab5.slice(stab5.indexOf("private memory("), stab5.indexOf("private automations("));
 		const genSection = stab5.slice(stab5.indexOf("private general("), stab5.indexOf("private providers("));
 		const agentSection = stab5.slice(stab5.indexOf("private agent("), stab5.indexOf("private profiles("));
@@ -497,10 +500,9 @@ module.exports = function settingsGuards() {
 	// py + desktop model-settings.tsx parity): tolerant read / loud write,
 	// official seeds, recursion guard, settings draft editor, null-until-saved.
 	{
-		const read = (p) => fs.readFileSync(path.join(ROOT, "test", p), "utf8");
-		const moa = read("../src/agent/moa.ts");
-		const set12 = read("../src/settings.ts");
-		const st12 = read("../src/settingsTab.ts");
+		const moa = read("src/agent/moa.ts");
+		const set12 = read("src/settings.ts");
+		const st12 = read("src/settingsTab.ts");
 		const ok =
 			moa.includes('provider: "openai-codex", model: "gpt-5.5"') &&
 			moa.includes('provider: "openrouter", model: "deepseek/deepseek-v4-pro"') &&
@@ -532,8 +534,8 @@ module.exports = function settingsGuards() {
 	{
 		const fs = require("fs");
 		const path = require("path");
-		const st = fs.readFileSync(path.join(ROOT, "src", "settingsTab.ts"), "utf8");
-		const css = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
+		const st = read("src/settingsTab.ts");
+		const css = read("styles.css");
 		const p = (n) => st.indexOf(n);
 		const order =
 			p('"Backup & Restore"') >= 0 &&
@@ -555,8 +557,8 @@ module.exports = function settingsGuards() {
 		}
 	}
 	{
-		const css20 = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
-		const tab20 = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
+		const css20 = read("styles.css");
+		const tab20 = read("src/settingsTab.ts");
 		const ok =
 			css20.includes(".oa-quickask .oa-spin {") &&
 			css20.includes("animation: oa-calm-fade 1.2s ease-in-out infinite !important;") &&
