@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Agent — Settings card layout (preview)</title>
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --bg-card: #262626;
+    --bg-hover: #2c2c2c;
+    --border: #3f3f3f;
+    --border-soft: #343434;
+    --text: #dcddde;
+    --text-muted: #999;
+    --text-faint: #7a7a7a;
+    --accent: #8a5cf5;
+    --accent-soft: rgba(138, 92, 245, 0.16);
+    --radius: 8px;
+    --radius-s: 4px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .oa-settings {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* banner */
+  .preview-note {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 16px;
+    background: #232323;
+  }
+
+  /* header */
+  .oa-settings-header-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .oa-settings-header-version {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: #2f2f2f;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
+  .oa-settings-header-desc { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+
+  /* search */
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0 14px;
+    background: #262626;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    color: var(--text-faint);
+  }
+  .search svg { flex: none; }
+
+  /* tab strip */
+  .oa-settings-tabstrip { position: relative; }
+  .oa-settings-tabs {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border-soft);
+    position: relative;
+    padding-bottom: 0;
+  }
+  .oa-settings-tabs::-webkit-scrollbar { display: none; }
+  .oa-settings-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 12.5px;
+    padding: 8px 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: var(--radius-s) var(--radius-s) 0 0;
+  }
+  .oa-settings-tab:hover { color: var(--text); }
+  .oa-settings-tab.is-active { color: var(--text); font-weight: 600; }
+  .oa-inkbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background: var(--accent);
+    transition: left 0.18s ease, width 0.18s ease;
+    pointer-events: none;
+  }
+
+  /* section */
+  .oa-section { margin-top: 18px; }
+  .oa-section-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .oa-section-desc { color: var(--text-muted); font-size: 12.5px; margin-bottom: 12px; }
+
+  /* card */
+  .oa-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .oa-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .oa-card-header:hover { background: var(--bg-hover); }
+  .oa-card-title { font-weight: 600; font-size: 13.5px; }
+  .oa-card-desc { color: var(--text-muted); font-size: 12px; margin-top: 1px; line-height: 1.45; }
+  .oa-card-chevron {
+    margin-left: auto;
+    color: var(--text-faint);
+    flex: none;
+    margin-top: 3px;
+    transition: transform 0.15s ease;
+    display: inline-flex;
+  }
+  .oa-card.is-collapsed .oa-card-chevron { transform: rotate(-90deg); }
+  .oa-card-body { border-top: 1px solid var(--border-soft); }
+  .oa-card.is-collapsed .oa-card-body { display: none; }
+
+  /* rows — flat with separators */
+  .oa-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 14px;
+  }
+  .oa-row + .oa-row { border-top: 1px solid var(--border-soft); }
+  .oa-row:hover { background: var(--bg-hover); }
+  .oa-row-info { flex: 1 1 auto; min-width: 0; }
+  .oa-row-name { font-size: 13px; font-weight: 500; }
+  .oa-row-desc { color: var(--text-muted); font-size: 12px; margin-top: 1px; line-height: 1.45; }
+  .oa-row.is-muted .oa-row-name { color: var(--text-muted); font-weight: 400; }
+  .oa-row-control { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+
+  /* controls */
+  select, input[type="text"], input[type="number"] {
+    background: #2f2f2f;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font: inherit;
+    font-size: 12.5px;
+    padding: 6px 9px;
+    outline: none;
+  }
+  select { min-width: 150px; }
+  input[type="text"] { width: 190px; }
+  input[type="number"] { width: 92px; text-align: right; }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .toggle {
+    width: 36px; height: 20px; border-radius: 999px;
+    background: #4a4a4a; position: relative; cursor: pointer; flex: none;
+    transition: background 0.15s ease;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: left 0.15s ease;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { left: 18px; }
+
+  .seg { display: inline-flex; background: #2b2b2b; border: 1px solid var(--border); border-radius: 6px; padding: 2px; gap: 2px; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; color: var(--text-muted);
+    font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  }
+  .seg button.is-on { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+
+  .btn {
+    appearance: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px;
+    background: var(--accent); color: #fff; border-radius: 6px; padding: 6px 12px; font-weight: 500;
+  }
+  .btn-ghost {
+    background: transparent; color: var(--text); border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--bg-hover); }
+  .icon-btn {
+    appearance: none; border: 0; background: transparent; color: var(--text-faint);
+    cursor: pointer; border-radius: 6px; padding: 5px; display: inline-flex;
+  }
+  .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+
+  /* slider with % inside the number box (seamless, v0.1.189) */
+  .slider { display: flex; align-items: center; gap: 12px; width: 250px; }
+  .slider input[type="range"] { flex: 1 1 auto; accent-color: var(--accent); }
+  .numwrap { position: relative; flex: 0 0 66px; }
+  .numwrap input[type="number"] { width: 100%; }
+  .numwrap.has-unit input[type="number"] { padding-right: 22px; }
+  .numwrap .unit {
+    position: absolute; top: 50%; right: 9px; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 12px; pointer-events: none;
+  }
+
+  /* note outside cards */
+  .oa-note {
+    border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--accent);
+    background: #232323;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .sub-row { padding: 6px 14px 6px 14px; border-top: 1px solid var(--border-soft); display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .sub-row .path { flex: 1; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="oa-settings">
+
+  <div class="preview-note">PREVIEW — mockup statis untuk menilai LAYOUT saja. Belum terhubung ke settings asli · ikon tab dihilangkan agar ringkas · klik tab &amp; klik header card untuk mencoba.</div>
+
+  <div class="oa-settings-header-name">Open Agent <span class="oa-settings-header-version">v0.1.147 · 2026-08-22 15:00Z</span></div>
+  <div class="oa-settings-header-desc">A self-improving AI agent for your vault.</div>
+
+  <div class="search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    Search settings…
+  </div>
+
+  <div class="oa-settings-tabstrip">
+    <div class="oa-settings-tabs" id="tabs">
+      <button class="oa-settings-tab" data-tab="general">General</button>
+      <button class="oa-settings-tab" data-tab="providers">Providers</button>
+      <button class="oa-settings-tab" data-tab="model">Model</button>
+      <button class="oa-settings-tab is-active" data-tab="workspace">Workspace</button>
+      <button class="oa-settings-tab" data-tab="safety">Safety</button>
+      <button class="oa-settings-tab" data-tab="chat">Chat</button>
+      <button class="oa-settings-tab" data-tab="appearance">Appearance</button>
+      <button class="oa-settings-tab" data-tab="commands">Commands</button>
+      <button class="oa-settings-tab" data-tab="profiles">Profiles</button>
+      <button class="oa-settings-tab" data-tab="capabilities">Capabilities</button>
+      <button class="oa-settings-tab" data-tab="memory">Memory &amp; Context</button>
+      <button class="oa-settings-tab" data-tab="notifications">Notifications</button>
+      <button class="oa-settings-tab" data-tab="automations">Automations</button>
+      <button class="oa-settings-tab" data-tab="advanced">Advanced</button>
+      <button class="oa-settings-tab" data-tab="about">About</button>
+    </div>
+    <span class="oa-inkbar" id="inkbar"></span>
+  </div>
+
+  <!-- ===================== WORKSPACE ===================== -->
+  <div class="oa-section" id="tab-workspace">
+    <div class="oa-section-title">Workspace</div>
+    <div class="oa-section-desc">Where the agent works by default — the vault folder behind its file operations.</div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div>
+          <div class="oa-card-title">Scope</div>
+          <div class="oa-card-desc">How much of the vault the agent can see and touch.</div>
+        </div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Workspace mode</div><div class="oa-row-desc">Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.</div></div>
+          <div class="oa-row-control"><select><option>Whole vault</option><option>Preferred folder</option><option>Strict folder boundary</option></select></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Workspace folder</div><div class="oa-row-desc">Vault-relative base for path routing (not a boundary).</div></div>
+          <div class="oa-row-control">
+            <input type="text" value="Projects/My project">
+            <button class="icon-btn" title="Reset to default"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+          </div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Excluded folders</div><div class="oa-row-desc">Vault folders the agent can never read, list, or write. Chosen with a picker.</div></div>
+          <div class="oa-row-control"><button class="btn">Add folder</button></div>
+        </div>
+        <div class="sub-row"><span class="path">Private</span><button class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button></div>
+        <div class="sub-row"><span class="path">Tmp/cache</span><button class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button></div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">File-read limit</div><div class="oa-row-desc">Maximum characters returned from one vault file request (1,000–20,000).</div></div>
+          <div class="oa-row-control"><input type="number" value="20,000"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="oa-note">Strict is logical Obsidian path containment, not a physical filesystem sandbox. A symlink or junction located under the Strict root is treated as in scope and may point outside the vault on desktop platforms.</div>
+  </div>
+
+  <!-- ===================== SAFETY ===================== -->
+  <div class="oa-section" id="tab-safety" hidden>
+    <div class="oa-section-title">Safety</div>
+    <div class="oa-section-desc">Approval and guardrails — what the agent may do without asking you first.</div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Approvals</div><div class="oa-card-desc">When the agent must ask before acting.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Approval mode</div><div class="oa-row-desc">Manual: approve everything · Cautious: risky actions ask · YOLO: never ask.</div></div>
+          <div class="oa-row-control"><div class="seg"><button>Manual</button><button class="is-on">Cautious</button><button>YOLO</button></div></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Approval timeout</div><div class="oa-row-desc">Auto-deny an unanswered approval prompt after this many seconds. 0 = wait forever.</div></div>
+          <div class="oa-row-control"><input type="number" value="30"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Guardrails</div><div class="oa-card-desc">Extra protections for the content the agent sees and the files it changes.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Redact secrets</div><div class="oa-row-desc">Mask detected API keys, tokens, and private keys before the model sees them.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Checkpoints</div><div class="oa-row-desc">Keep a rollback copy of every note the agent changes. On by default.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MEMORY & CONTEXT ===================== -->
+  <div class="oa-section" id="tab-memory" hidden>
+    <div class="oa-section-title">Memory &amp; Context</div>
+    <div class="oa-section-desc">Persistent memory (MEMORY.md + USER.md) and the context injected into every chat.</div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Context</div><div class="oa-card-desc">What gets injected into every conversation.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Context file</div><div class="oa-row-desc">Vault file injected into every conversation. Empty disables.</div></div>
+          <div class="oa-row-control"><input type="text" value="AGENTS.md"></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Attach active note by default</div><div class="oa-row-desc">New chats start with the active-note context chip enabled.</div></div>
+          <div class="oa-row-control"><span class="toggle"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Memory folder</div><div class="oa-row-desc">Vault folder for MEMORY.md and USER.md.</div></div>
+          <div class="oa-row-control"><input type="text" value="Open Agent/memory"></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">User profile</div><div class="oa-row-desc">Let the agent build a model of who you are (USER.md).</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Structured memory</div><div class="oa-card-desc">Typed facts the agent extracts and recalls automatically, Hindsight-style.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Structured memory</div><div class="oa-row-desc">Extract durable facts from conversations and recall them in later chats.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Retain every N turns</div><div class="oa-row-desc">How often the agent distills the conversation into facts.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="1" max="10" value="5"><span class="numwrap"><input type="number" value="5"></span></div></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Recall budget</div><div class="oa-row-desc">Maximum facts recalled and injected per message.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="1" max="20" value="8"><span class="numwrap"><input type="number" value="8"></span></div></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Embedding model</div><div class="oa-row-desc">Pick a model to enable semantic recall — off = keyword recall only.</div></div>
+          <div class="oa-row-control"><select><option>off (keyword recall only)</option><option>embedding-gemma-300m</option></select></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Compression</div><div class="oa-card-desc">What happens when a long conversation nears the context limit.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Compression</div><div class="oa-row-desc">Summarize older context when conversations get large.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Compress when above</div><div class="oa-row-desc">Start compacting once the conversation fills this share of the context window.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="10" max="99" value="80"><span class="numwrap has-unit"><input type="number" value="80"><span class="unit">%</span></span></div></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Preserve recent tail</div><div class="oa-row-desc">Keep this share of the most recent messages untouched when compressing.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="5" max="50" value="20"><span class="numwrap has-unit"><input type="number" value="20"><span class="unit">%</span></span></div></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Keep last N messages</div><div class="oa-row-desc">Minimum recent messages never folded into the summary.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="0" max="24" value="4"><span class="numwrap"><input type="number" value="4"></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== NOTIFICATIONS ===================== -->
+  <div class="oa-section" id="tab-notifications" hidden>
+    <div class="oa-section-title">Notifications</div>
+    <div class="oa-section-desc">Optional native desktop banners and an independent app-generated completion cue.</div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Native desktop notifications</div><div class="oa-card-desc">Optional OS banners layered on top of existing Obsidian notices.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row is-muted">
+          <div class="oa-row-info"><div class="oa-row-name">Native notification status</div><div class="oa-row-desc">Supported · permission not requested. Use the test button to request it.</div></div>
+          <div class="oa-row-control"></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Enable native notifications</div><div class="oa-row-desc">Master switch. Off by default; event choices below are ready when you opt in.</div></div>
+          <div class="oa-row-control"><span class="toggle"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Chat completed</div><div class="oa-row-desc">Away-only banner after the final interactive turn.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Chat error</div><div class="oa-row-desc">Away-only generic alert. Stop/abort never counts as an error.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Approval required</div><div class="oa-row-desc">Alerts while away, or while the chat pane is not visible.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Input required</div><div class="oa-row-desc">Alerts while away, or while the chat pane is not visible.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Automation completed</div><div class="oa-row-desc">Away-only; also requires that automation's Notify switch.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Automation error</div><div class="oa-row-desc">Away-only generic alert, independent of the Notify switch.</div></div>
+          <div class="oa-row-control"><span class="toggle on"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Test native notification</div><div class="oa-row-desc">Sends a test banner — the only action that may ask for OS permission.</div></div>
+          <div class="oa-row-control"><button class="btn">Request permission &amp; test</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="oa-card">
+      <div class="oa-card-header">
+        <div><div class="oa-card-title">Completion sound</div><div class="oa-card-desc">Independent per-vault cue for a successful chat turn.</div></div>
+        <span class="oa-card-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span>
+      </div>
+      <div class="oa-card-body">
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Play completion sound</div><div class="oa-row-desc">Plays after a successful turn; never for errors, approvals, or Stop.</div></div>
+          <div class="oa-row-control"><span class="toggle"></span></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Completion sound preset</div><div class="oa-row-desc">Preview works even while completion sound is off.</div></div>
+          <div class="oa-row-control"><select><option>Two-note comfort</option><option>Soft chime</option></select><button class="btn btn-ghost">Preview</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- placeholder for unimplemented tabs -->
+  <div class="oa-section" id="tab-empty" hidden>
+    <div class="oa-note">Preview only — content for this tab isn't included in the mockup.</div>
+  </div>
+
+</div>
+
+<script>
+  var IMPLEMENTED = { workspace: true, safety: true, memory: true, notifications: true };
+
+  var inkbar = document.getElementById("inkbar");
+  function placeInk() {
+    var active = document.querySelector(".oa-settings-tab.is-active");
+    if (!active) return;
+    inkbar.style.left = active.offsetLeft + "px";
+    inkbar.style.width = active.offsetWidth + "px";
+  }
+
+  document.querySelectorAll(".oa-settings-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".oa-settings-tab").forEach(function (b) { b.classList.remove("is-active"); });
+      btn.classList.add("is-active");
+      placeInk();
+
+      var key = btn.getAttribute("data-tab");
+      var ids = ["workspace", "safety", "memory", "notifications"];
+      ids.forEach(function (id) {
+        var sec = document.getElementById("tab-" + id);
+        if (sec) sec.hidden = (id !== key);
+      });
+      var empty = document.getElementById("tab-empty");
+      if (empty) empty.hidden = IMPLEMENTED[key] === true;
+    });
+  });
+
+  document.querySelectorAll(".oa-card-header").forEach(function (h) {
+    h.addEventListener("click", function () {
+      h.parentElement.classList.toggle("is-collapsed");
+    });
+  });
+
+  document.querySelectorAll(".toggle").forEach(function (t) {
+    t.addEventListener("click", function () { t.classList.toggle("on"); });
+  });
+
+  document.querySelectorAll(".seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var seg = b.parentElement;
+      seg.querySelectorAll("button").forEach(function (x) { x.classList.remove("is-on"); });
+      b.classList.add("is-on");
+    });
+  });
+
+  window.addEventListener("load", function () { placeInk(); });
+  window.addEventListener("resize", function () { placeInk(); });
+</script>
+</body>
+</html>

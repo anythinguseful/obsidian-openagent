@@ -1,0 +1,14 @@
+.github/workflows/ci.yml
+package.json
+package-lock.json
+scripts/build-vendor.mjs
+scripts/release.mjs
+src/ui/attach/pdf.ts
+test/smoke.test.cjs
+test/pdf-security-browser-entry.ts
+test/pdf-security-browser.test.cjs
+test/fixtures/pdf-security/valid.pdf
+test/fixtures/pdf-security/sixty-pages.pdf
+test/fixtures/pdf-security/truncated.pdf
+test/fixtures/pdf-security/malformed.pdf
+test/fixtures/pdf-security/cve-2024-4367-fontmatrix.pdf

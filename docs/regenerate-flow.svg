@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 690" font-family="Segoe UI, Inter, system-ui, sans-serif">
+	<defs>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+			<path d="M0,0 L10,5 L0,10 z" fill="#8a8a95"/>
+		</marker>
+		<style>
+			.bub { fill:#26262e; stroke:#3c3c48; rx:10; }
+			.usr { fill:#2b3345; stroke:#45506b; }
+			.ast { fill:#26262e; stroke:#3c3c48; }
+			.thinking { fill:#1f2a24; stroke:#2f5c44; }
+			.p1 { fill:#2d2418; stroke:#6b5626; }
+			.fix { fill:#1f2a24; stroke:#3fb950; }
+			.t  { fill:#d8d8de; font-size:12.5px; }
+			.ts { fill:#9a9aa5; font-size:11.5px; }
+			.tf { fill:#8a8a95; font-size:11px; }
+			.acc { fill:#8fa8ff; }
+			.grn { fill:#3fb950; }
+			.amb { fill:#e3b341; }
+			.red { fill:#f87171; }
+			.head { fill:#ececf1; font-size:13.5px; font-weight:600; }
+			.num { fill:#6d8dff; font-size:12px; font-weight:700; }
+			.mono { font-family:Consolas, ui-monospace, monospace; }
+		</style>
+	</defs>
+
+	<rect width="980" height="690" fill="#17171c"/>
+
+	<text x="16" y="30" class="t" style="font-size:16px;font-weight:650">Skema Regenerate — klik ↻ di jawaban terakhir</text>
+	<text x="16" y="48" class="ts">what happens after you click Regenerate on the last assistant reply (happy path, sebagaimana kodenya berjalan)</text>
+
+	<!-- ======================= PANEL 1 ======================= -->
+	<g transform="translate(12,64)">
+		<rect x="0" y="0" width="227" height="330" class="bub" rx="10"/>
+		<text x="12" y="22" class="num">1 · SEBELUM KLIK</text>
+		<!-- user bubble -->
+		<rect x="20" y="38" width="187" height="30" class="usr" rx="8"/>
+		<text x="28" y="57" class="t">Explain the agent loop…</text>
+		<!-- assistant bubble -->
+		<rect x="20" y="78" width="187" height="150" class="ast" rx="8"/>
+		<text x="28" y="96" class="ts">jawaban AI (turn terakhir):</text>
+		<text x="28" y="112" class="t">Here's the loop in one pass:</text>
+		<text x="28" y="128" class="t">1. Assemble — …</text>
+		<text x="28" y="144" class="t">2. Decide — …</text>
+		<text x="28" y="160" class="tf">…</text>
+		<!-- hover actions -->
+		<rect x="20" y="200" width="187" height="20" fill="#1b1b21" rx="4"/>
+		<text x="26" y="214" class="tf">hover → aksi:</text>
+		<text x="110" y="214" class="ts">Insert · Copy ·</text><text x="172" y="214" class="acc" style="font-weight:700">↻</text>
+		<!-- note -->
+		<text x="20" y="252" class="ts">Tombol ↻ hanya ada di</text>
+		<text x="20" y="266" class="ts">jawaban TERAKHIR, dan</text>
+		<text x="20" y="280" class="ts">hanya saat agent diam</text>
+		<text x="20" y="294" class="ts">(bukan sedang berjalan).</text>
+		<text x="20" y="316" class="tf mono">ti === turns.length - 1</text>
+	</g>
+
+	<g transform="translate(241,214)"><line x1="0" y1="0" x2="14" y2="0" stroke="#8a8a95" stroke-width="1.5" marker-end="url(#arr)"/></g>
+
+	<!-- ======================= PANEL 2 ======================= -->
+	<g transform="translate(257,64)">
+		<rect x="0" y="0" width="227" height="330" class="bub" rx="10"/>
+		<text x="12" y="22" class="num">2 · POTONG RIWAYAT</text>
+		<!-- step a -->
+		<rect x="14" y="34" width="199" height="72" class="p1" rx="8"/>
+		<text x="22" y="52" class="t">runSlash(/retry) mencari</text>
+		<text x="22" y="67" class="t">turn <tspan class="amb">user TERAKHIR</tspan>, lalu</text>
+		<text x="22" y="82" class="t">membaca teksnya →</text>
+		<text x="22" y="97" class="ts">"Explain the agent loop…"</text>
+		<!-- step b -->
+		<rect x="14" y="118" width="199" height="92" class="p1" rx="8"/>
+		<text x="22" y="136" class="t">Riwayat dipotong SEBELUM</text>
+		<text x="22" y="151" class="t">turn user itu:</text>
+		<text x="22" y="168" class="ts">· layar: U1 &amp; A1 hilang</text>
+		<text x="22" y="183" class="ts">· messagesRef ikut dipotong</text>
+		<text x="22" y="198" class="ts">  (yang terkirim ke API jujur)</text>
+		<!-- faded bubbles -->
+		<rect x="20" y="222" width="187" height="24" class="usr" rx="8" opacity="0.25"/>
+		<rect x="20" y="252" width="187" height="50" class="ast" rx="8" opacity="0.25"/>
+		<text x="20" y="322" class="tf">…dan teks user disimpan utuh</text>
+	</g>
+
+	<g transform="translate(486,214)"><line x1="0" y1="0" x2="14" y2="0" stroke="#8a8a95" stroke-width="1.5" marker-end="url(#arr)"/></g>
+
+	<!-- ======================= PANEL 3 ======================= -->
+	<g transform="translate(502,64)">
+		<rect x="0" y="0" width="227" height="330" class="bub" rx="10"/>
+		<text x="12" y="22" class="num">3 · KIRIM ULANG OTOMATIS</text>
+		<!-- fix box -->
+		<rect x="14" y="34" width="199" height="104" class="fix" rx="8"/>
+		<text x="22" y="52" class="t"><tspan class="grn">runAgent() membaca riwayat</tspan></text>
+		<text x="22" y="67" class="t"><tspan class="grn">dari turnsRef.current</tspan> (cermin</text>
+		<text x="22" y="82" class="t">sinkron), BUKAN dari state yang</text>
+		<text x="22" y="97" class="t">"terfoto" closure lebih awal.</text>
+		<text x="22" y="116" class="ts">→ potongan di panel 2 terlihat</text>
+		<text x="22" y="130" class="ts">  benar → tidak ada duplikasi</text>
+		<!-- rebuild -->
+		<rect x="14" y="150" width="199" height="56" class="ast" rx="8"/>
+		<text x="22" y="168" class="t">Turn user dibuat ulang (U1′)</text>
+		<text x="22" y="183" class="t">+ turn asisten KOSONG (A1′)</text>
+		<text x="22" y="198" class="ts">→ bubble user tampil lagi</text>
+		<!-- stream box -->
+		<rect x="14" y="218" width="199" height="68" class="thinking" rx="8"/>
+		<text x="22" y="236" class="t">ThinkingBar "Thinking…"</text>
+		<text x="22" y="252" class="ts">POST /v1/chat/completions</text>
+		<text x="22" y="267" class="ts">token mengalir → mengetik live</text>
+		<text x="22" y="282" class="ts">(reasoning/tool jalan seperti biasa)</text>
+		<text x="14" y="310" class="tf">28ms setelah klik, bukan input baru —</text>
+		<text x="14" y="323" class="tf">composer tidak ikut berubah</text>
+	</g>
+
+	<g transform="translate(731,214)"><line x1="0" y1="0" x2="14" y2="0" stroke="#8a8a95" stroke-width="1.5" marker-end="url(#arr)"/></g>
+
+	<!-- ======================= PANEL 4 ======================= -->
+	<g transform="translate(747,64)">
+		<rect x="0" y="0" width="221" height="330" class="bub" rx="10"/>
+		<text x="12" y="22" class="num">4 · HASIL AKHIR</text>
+		<rect x="14" y="38" width="181" height="30" class="usr" rx="8"/>
+		<text x="22" y="57" class="t">Explain the agent loop…</text>
+		<rect x="14" y="78" width="181" height="128" class="ast" rx="8"/>
+		<text x="22" y="96" class="ts">jawaban BARU (menggantikan):</text>
+		<text x="22" y="112" class="t">Here's the loop in one pass:</text>
+		<text x="22" y="128" class="t">1. Assemble — …</text>
+		<text x="22" y="144" class="tf">…</text>
+		<rect x="14" y="214" width="181" height="56" class="fix" rx="8"/>
+		<text x="22" y="232" class="t"><tspan class="grn">Jumlah bubble SAMA:</tspan></text>
+		<text x="22" y="247" class="t">1 user + 1 asisten — tidak dobel</text>
+		<text x="22" y="262" class="ts">persistSession() → tersimpan</text>
+		<rect x="14" y="278" width="181" height="38" class="p1" rx="8"/>
+		<text x="22" y="294" class="ts">Kalau provider gagal: **Error:** di</text>
+		<text x="22" y="309" class="ts">bubble — ↻ tetap tersedia utk ulang</text>
+	</g>
+
+	<!-- ======================= BOTTOM STRIP ======================= -->
+	<g transform="translate(12,414)">
+		<rect x="0" y="0" width="956" height="120" class="bub" rx="10"/>
+		<text x="14" y="24" class="head">Kenapa dulu sempat dobel — dan kenapa sekarang aman</text>
+		<text x="14" y="48" class="t"><tspan class="red">Lama:</tspan> runAgent membaca `turns` dari closure-nya — foto riwayat SEBELUM dipotong.</text>
+		<text x="14" y="65" class="ts">Potong (panel 2) sudah jalan, tapi foto lama itu yang dipakai → seluruh riwayat terpasang ulang 2×.</text>
+		<text x="14" y="86" class="t"><tspan class="grn">Sekarang:</tspan> setTurnsSynced mem-flush turnsRef secara sinkron; runAgent membaca turnsRef.current.</text>
+		<text x="14" y="103" class="ts">Dijaga dua lapis: tes klik otomatis tiap release (menghitung bubble 2→1 gagal=merah) + smoke guard mengunci `withUser = [...turnsRef.current, …]`.</text>
+		<text x="14" y="118" class="tf">catatan jujur: lampiran file/@[[ref]] TIDAK ikut dikirim ulang — yang dikirim ulang hanya teks promptnya.</text>
+	</g>
+
+	<!-- footnote strip: conditions -->
+	<g transform="translate(12,548)">
+		<rect x="0" y="0" width="956" height="128" class="bub" rx="10"/>
+		<text x="14" y="24" class="head">Syarat tombol tampil &amp; cabang gagal</text>
+		<text x="14" y="48" class="t">Tampil hanya di turn assistant TERAKHIR · teks jawaban tidak kosong · agent sedang tidak berjalan.</text>
+		<text x="14" y="70" class="ts">Kalau jawaban lama berakhir **Error:** — tetap boleh regenerate (teks error dihitung konten, tombol tetap muncul).</text>
+		<text x="14" y="92" class="ts">Kalau run baru gagal 429/5xx → retry otomatis; koneksi putus → 2×; 401/403/404 → langsung berhenti dengan pesan jelas.</text>
+		<text x="14" y="114" class="ts">Kalau kamu interrupt di tengah (Stop): riwayat TIDAK pernah terpotong setengah — AbortController membatalkan stream saja.</text>
+	</g>
+</svg>

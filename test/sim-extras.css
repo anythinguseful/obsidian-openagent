@@ -1,0 +1,71 @@
+/**
+ * sim-extras.css — small structural shims for native Obsidian controls the
+ * trimmed obsidian-sim.css does not cover (setting rows + toggle pill).
+ * Hand-mirrored from the reference app.css; preview-only, never shipped.
+ */
+
+.setting-item {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2, 8px);
+	padding: 10px 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+.setting-item-info {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+.setting-item-name {
+	font-size: var(--font-ui-medium);
+	line-height: 1.4;
+	color: var(--text-normal);
+}
+.setting-item-description {
+	font-size: var(--font-ui-small);
+	line-height: 1.45;
+	color: var(--text-muted);
+	margin-top: 2px;
+}
+.setting-item-control {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* toggle pill — same geometry/colors as current Obsidian */
+.checkbox-container {
+	position: relative;
+	flex: 0 0 auto;
+	width: 32px;
+	height: 20px;
+	border-radius: 10px;
+	background: var(--background-modifier-border-hover);
+	box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+	cursor: pointer;
+	transition: background 120ms ease-in-out;
+}
+.checkbox-container input[type="checkbox"] {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+}
+.checkbox-container::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--background-primary);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	transition: transform 120ms ease-in-out;
+}
+.checkbox-container.is-enabled {
+	background: var(--interactive-accent);
+}
+.checkbox-container.is-enabled::after {
+	transform: translateX(12px);
+}

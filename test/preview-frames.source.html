@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html class="theme-dark">
+<head>
+<meta charset="utf-8">
+<title>Open Agent UI preview</title>
+<style>
+	/* Obsidian dark-theme variables (approximation) */
+	:root,
+	.theme-dark {
+		--background-primary: #1e1e1e;
+		--background-secondary: #262626;
+		--background-modifier-border: #363636;
+		--background-modifier-border-hover: #4f4f4f;
+		--background-modifier-hover: rgba(255, 255, 255, 0.06);
+		--background-modifier-active-hover: rgba(255, 255, 255, 0.1);
+		--text-normal: #dcddde;
+		--text-muted: #999999;
+		--text-faint: #666666;
+		--text-accent: #a48cff;
+		--text-on-accent: #ffffff;
+		--text-error: #fb464c;
+		--interactive-accent: #7b6cd9;
+		--interactive-accent-rgb: 123, 108, 217;
+		--interactive-accent-hover: #8a7ae8;
+		--color-green: #2ea043;
+		--color-green-rgb: 46, 160, 67;
+		--color-red: #f85149;
+		--color-red-rgb: 248, 81, 73;
+		--color-orange: #db6d28;
+		--color-orange-rgb: 219, 109, 40;
+		--font-ui-smaller: 11px;
+		--font-ui-small: 12.5px;
+		--font-ui-medium: 14px;
+		--font-ui-larger: 18px;
+		--font-text-size: 14.5px;
+		--font-monospace: "JetBrains Mono", ui-monospace, monospace;
+		--shadow-s: 0 2px 8px rgba(0, 0, 0, 0.3);
+		--shadow-l: 0 8px 24px rgba(0, 0, 0, 0.45);
+	}
+	body {
+		margin: 0;
+		background: var(--background-primary);
+		font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+	}
+	.frame {
+		display: flex;
+		gap: 18px;
+		padding: 18px;
+		align-items: flex-start;
+	}
+	.view {
+		width: 380px;
+		height: 640px;
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 12px;
+		overflow: hidden;
+		position: relative;
+		background: var(--background-primary);
+	}
+	.view.wide {
+		width: 560px;
+	}
+	.label {
+		color: var(--text-faint);
+		font-size: 12px;
+		margin-bottom: 6px;
+		font-family: var(--font-monospace);
+	}
+	code {
+		background: var(--background-secondary);
+		border-radius: 4px;
+		padding: 1px 5px;
+		font-size: 0.9em;
+	}
+</style>
+</head>
+<body>
+<!-- ============================================================================
+     SOURCE FILE — NOT THE STYLED PREVIEW.
+     This file intentionally carries NO plugin CSS: build-preview.mjs parses the
+     frames below and injects obsidian-sim.css + styles.css into the finished,
+     self-contained pages under preview/.
+     → Open preview/index.html instead. Everything outside the frame markers
+       (this banner included) is discarded by the build.
+============================================================================ -->
+<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#8a2b2b;color:#fff;font:13px/1.5 -apple-system,'Segoe UI',sans-serif;padding:8px 14px;border-bottom:2px solid #c25b5b;">
+	<b>⚠ Source file — unstyled by design.</b> Plugin CSS is injected at build time. The real preview lives in <b>preview/index.html</b> (run <code style="background:rgba(0,0,0,.25);padding:1px 5px;border-radius:4px;">npm run release</code> to regenerate).
+</div>
+<div class="frame">
+
+	<!-- ============ frame 1: conversation ============ -->
+	<div>
+		<div class="label">conversation · interleaved trace (chronological, auto-collapse) · sources <!-- badge:convo --></div>
+		<div class="view oa-view" style="height:640px" data-real="convo">
+			<div class="oa-upload-root">
+			<div class="oa-app">
+				<header class="oa-topbar">
+					<button class="oa-icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM9 3v18"/></svg></button>
+					<span class="oa-topbar-title">Open Agent</span>
+					<div class="oa-profile-picker"><button class="oa-profile-pill" title="Profile: Default — each profile has its own persona, memory, skills &amp; chats"><span class="oa-profile-dot oa-color-blue"></span><span class="oa-profile-pill-label">Default</span><svg class="oa-profile-pill-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div>
+					<span class="oa-topbar-status"><span class="oa-pulse-dot"></span> working</span>
+					<span class="oa-spacer"></span>
+					<button class="oa-icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+					<button class="oa-icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+				</header>
+				<div class="oa-body">
+					<div class="oa-chat-container">
+						<div class="oa-chat-scroll">
+							<div class="oa-chat-content">
+
+								<div class="oa-msg oa-msg-user">
+									<div class="oa-msg-main">
+										<div class="oa-msg-content"><span class="oa-user-text">Fetch https://example.com/agent-design and save a summary to Projects/agent-design.md</span></div>
+									</div>
+								</div>
+								
+								<div class="oa-msg oa-msg-assistant">
+									<div class="oa-msg-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8M4 8h16v12H4zM9 13v1M15 13v1M8 4h8v4H8z"/></svg></div>
+									<div class="oa-msg-main">
+										<div class="oa-msg-content">
+											<div class="oa-reasoning">
+												<button class="oa-reasoning-trigger"><span class="oa-reasoning-bullet"></span><span class="oa-reasoning-title">Thought</span><span class="oa-reasoning-meta">Thought for 2.4s</span><span class="oa-reasoning-chevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+											</div>
+											<div class="oa-steps">
+												<button class="oa-steps-trigger"><span class="oa-steps-swap"><span class="oa-steps-swap-main"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="oa-steps-swap-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="oa-steps-trigger-label">Steps</span><span class="oa-steps-tools">web_fetch</span><span class="oa-steps-count">1</span><span class="oa-steps-chevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+											</div>
+											<div class="oa-reasoning">
+												<button class="oa-reasoning-trigger"><span class="oa-reasoning-bullet"></span><span class="oa-reasoning-title">Thought</span><span class="oa-reasoning-meta">Thought for 1.3s</span><span class="oa-reasoning-chevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+											</div>
+											<div class="oa-steps">
+												<button class="oa-steps-trigger"><span class="oa-steps-swap"><span class="oa-steps-swap-main"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="oa-steps-swap-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="oa-steps-trigger-label">Steps</span><span class="oa-steps-tools">write_note</span><span class="oa-steps-count">1</span><span class="oa-steps-chevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+											</div>
+											<div class="oa-markdown">Summary saved to <code>Projects/agent-design.md</code> — the page covers the agent loop, toolsets, and the skill learning loop.</div>
+											<div class="oa-sources"><span class="oa-sources-label">Sources</span><div class="oa-sources-list"><span class="oa-source"><button class="oa-source-chip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span>example.com</span></button><span class="oa-source-card"><span class="oa-source-card-domain">example.com</span><span class="oa-source-card-title">Visited source</span><span class="oa-source-card-desc">https://example.com/agent-design</span></span></span></div></div>
+										</div>
+									</div>
+								</div>
+								
+								<div class="oa-msg oa-msg-user">
+									<div class="oa-msg-main">
+										<div class="oa-msg-content"><span class="oa-user-text">Now link it from Projects/MOC</span></div>
+									</div>
+								</div>
+								
+								<div class="oa-msg oa-msg-assistant">
+									<div class="oa-msg-avatar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8M4 8h16v12H4zM9 13v1M15 13v1M8 4h8v4H8z"/></svg></div>
+									<div class="oa-msg-main">
+										<div class="oa-msg-content">
+											<div class="oa-reasoning">
+												<button class="oa-reasoning-trigger"><span class="oa-reasoning-bullet"></span><span class="oa-reasoning-title">Thought</span><span class="oa-reasoning-meta">Thought for 0.8s</span><span class="oa-reasoning-chevron"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+											</div>
+											<div class="oa-steps is-open">
+												<button class="oa-steps-trigger"><span class="oa-steps-swap"><span class="oa-steps-swap-main"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><span class="oa-steps-swap-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></span><span class="oa-steps-trigger-label">Steps</span><span class="oa-steps-tools">read_note · edit_note</span><span class="oa-steps-count">2</span><span class="oa-steps-chevron is-open"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span></button>
+												<div class="oa-steps-content"><span class="oa-steps-bar"></span>
+													<div class="oa-steps-items">
+														<div class="oa-steps-item"><span class="oa-steps-item-icon is-done"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span><div class="oa-steps-item-main"><div class="oa-steps-item-label"><code>read_note</code></div></div></div>
+														<div class="oa-steps-item"><span class="oa-steps-item-icon is-running"><span class="oa-loader-circular"></span></span><div class="oa-steps-item-main"><div class="oa-steps-item-label"><code>edit_note</code></div></div></div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="oa-composer-zone">
+						<div class="oa-overlay">
+							<div class="oa-approval">
+								<div class="oa-approval-head">
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+									<span>Allow <code>delete_note</code> — destructive action?</span>
+								</div>
+								<pre class="oa-approval-args">{
+  "path": "Projects/old-draft.md"
+}</pre>
+								<div class="oa-approval-actions">
+									<button class="oa-btn oa-btn-primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> Allow once</button>
+									<button class="oa-btn">Always allow</button>
+									<button class="oa-btn oa-btn-danger"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg> Deny</button>
+								</div>
+							</div>
+						</div>
+						<div class="oa-prompt-input">
+							<div class="oa-prompt-attachments">
+								<span class="oa-attach-chip is-on">
+									<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3zM15 3v6h6M9 13h6M9 17h6"/></svg>
+									<span class="oa-attach-chip-name">agent-loop design</span>
+									<button class="oa-attach-chip-x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+								</span>
+								<span class="oa-attach-chip is-file">
+									<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7zM14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></svg>
+									<span class="oa-attach-chip-name">meeting-notes.txt</span>
+									<span class="oa-attach-chip-size">4 KB</span>
+									<button class="oa-attach-chip-x"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+								</span>
+							</div>
+							<textarea class="oa-prompt-textarea" rows="1" placeholder="Ask anything…  (/ for commands)"></textarea>
+							<div class="oa-prompt-actions">
+								<button class="oa-attach-toggle" title="Attach files — drag & drop anywhere"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+								<button class="oa-attach-toggle" title="Attach the active note (Inbox) as context"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></button>
+								<span class="oa-spacer"></span>
+								<div class="oa-model-picker">
+									<button class="oa-model-pill">
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8M4 8h16v12H4zM9 13v1M15 13v1M8 4h8v4H8z"/></svg>
+										<span class="oa-model-pill-label">hermes-4-70b</span>
+										<svg width="11" height="11" class="oa-model-pill-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
+									</button>
+								</div>
+								<button class="oa-prompt-action oa-prompt-action-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5h14v14H5z"/></svg></button>
+							</div>
+						</div>
+						<div class="oa-statusbar">
+							<span class="oa-statusbar-item">OpenRouter</span>
+							<span class="oa-statusbar-sep"></span>
+							<span class="oa-statusbar-item">hermes-4-70b</span>
+							<span class="oa-statusbar-sep"></span>
+							<span class="oa-statusbar-item">↑4.2k ↓965</span>
+							<span class="oa-spacer"></span>
+							<span class="oa-statusbar-item oa-statusbar-personality">researcher</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			</div>
+		</div><!-- /view -->
+	</div>
+
+	<!-- ============ frame 2: sessions panel + model menu ============ -->
+	<div>
+		<div class="label">sessions panel · model menu <!-- badge:panel --></div>
+		<div class="view oa-view" style="height:640px" data-real="panel">
+			<div class="oa-upload-root">
+			<div class="oa-app">
+				<header class="oa-topbar">
+					<button class="oa-icon-btn is-on"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM9 3v18"/></svg></button>
+					<span class="oa-topbar-title">Open Agent</span>
+					<div class="oa-profile-picker"><button class="oa-profile-pill" title="Profile: Default — each profile has its own persona, memory, skills &amp; chats"><span class="oa-profile-dot oa-color-blue"></span><span class="oa-profile-pill-label">Default</span><svg class="oa-profile-pill-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div>
+					<span class="oa-spacer"></span>
+					<button class="oa-icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+					<button class="oa-icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+				</header>
+				<div class="oa-body">
+					<div class="oa-chat-container">
+						<div class="oa-chat-scroll">
+							<div class="oa-chat-content">
+								<div class="oa-empty">
+									<svg width="26" height="26" class="oa-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9L12 18l1.9-5.4 5.8-1.9-5.8-1.9L12 3zM5 3v4M3 5h4M19 17v4m-2-2h4"/></svg>
+									<div class="oa-empty-title">How can I help?</div>
+									<div class="oa-empty-sub">OpenRouter · hermes-4-70b</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="oa-composer-zone">
+						<div class="oa-prompt-input">
+							<textarea class="oa-prompt-textarea" rows="1" placeholder="Ask anything…  (/ for commands)"></textarea>
+							<div class="oa-prompt-actions">
+								<button class="oa-attach-toggle" title="Attach files — drag & drop anywhere"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+								<button class="oa-attach-toggle" title="Attach the active note (Inbox) as context"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></button>
+								<span class="oa-spacer"></span>
+								<div class="oa-model-picker">
+									<button class="oa-model-pill">
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8M4 8h16v12H4zM9 13v1M15 13v1M8 4h8v4H8z"/></svg>
+										<span class="oa-model-pill-label">hermes-4-70b</span>
+										<svg width="11" height="11" class="oa-model-pill-chevron is-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>
+									</button>
+									<div class="oa-model-menu">
+										<div class="oa-model-menu-search">
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg>
+											<input value="hermes">
+										</div>
+										<div class="oa-model-menu-list">
+											<button class="oa-model-menu-item is-active">nousresearch/hermes-4-70b</button>
+											<button class="oa-model-menu-item">nousresearch/hermes-4-405b</button>
+											<button class="oa-model-menu-item">nousresearch/hermes-3-llama-3.1-405b</button>
+										</div>
+										<div class="oa-model-menu-footer">
+											<button><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg> Fetch models</button>
+											<button><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Provider settings</button>
+										</div>
+									</div>
+								</div>
+								<button class="oa-prompt-action oa-prompt-action-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+							</div>
+						</div>
+						<div class="oa-statusbar">
+							<span class="oa-statusbar-item">OpenRouter</span>
+							<span class="oa-statusbar-sep"></span>
+							<span class="oa-statusbar-item">hermes-4-70b</span>
+							<span class="oa-spacer"></span>
+							<span class="oa-statusbar-item oa-statusbar-personality">default</span>
+						</div>
+					</div>
+				</div>
+				<div class="oa-panel-backdrop">
+					<aside class="oa-panel">
+						<div class="oa-panel-head">
+							<span>Chats</span>
+							<span class="oa-spacer"></span>
+							<button class="oa-icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+							<button class="oa-icon-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+						</div>
+						<div class="oa-panel-search">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg>
+							<input placeholder="Search chats…">
+						</div>
+						<div class="oa-panel-list">
+							<div class="oa-panel-group">
+								<div class="oa-panel-group-label">Today</div>
+								<div class="oa-panel-row is-active">
+									<div class="oa-panel-row-text">
+										<span class="oa-panel-row-title">Summarize my active note and…</span>
+										<span class="oa-panel-row-meta">6 turns · hermes-4-70b</span>
+									</div>
+									<button class="oa-panel-row-del" style="display:inline-flex"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg></button>
+								</div>
+								<div class="oa-panel-row">
+									<div class="oa-panel-row-text">
+										<span class="oa-panel-row-title">Weekly plan for Projects</span>
+										<span class="oa-panel-row-meta">2 turns · hermes-4-70b</span>
+									</div>
+								</div>
+							</div>
+							<div class="oa-panel-group">
+								<div class="oa-panel-group-label">Yesterday</div>
+								<div class="oa-panel-row">
+									<div class="oa-panel-row-text">
+										<span class="oa-panel-row-title">Memory cleanup & USER.md review</span>
+										<span class="oa-panel-row-meta">11 turns · claude-sonnet-4</span>
+									</div>
+								</div>
+								<div class="oa-panel-row">
+									<div class="oa-panel-row-text">
+										<span class="oa-panel-row-title">Create daily-review skill</span>
+										<span class="oa-panel-row-meta">4 turns · hermes-4-70b</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</aside>
+				</div>
+			</div>
+			</div>
+		</div><!-- /view -->
+	</div>
+
+	<!-- ============ frame 3: settings ============ -->
+	<div>
+		<div class="label">settings · providers (connection setup · routing context · explicit editor selection)</div>
+		<div class="view wide" style="height:640px; overflow-y:auto; padding:16px 20px;">
+			<div class="oa-settings">
+				<div class="oa-settings-header">
+					<div class="oa-settings-header-name"><span>Open Agent</span><span class="oa-settings-header-version">v0.1.136</span></div>
+					<div class="oa-settings-header-desc">A self-improving AI agent for your vault. Agent framework modeled after Hermes Agent, settings after Hermes Desktop, and a chat UI built with prompt-kit components.</div>
+				</div>
+				<div class="oa-settings-tabstrip">
+					<button class="oa-tab-nav is-disabled" aria-label="Scroll tabs left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+					<div class="oa-settings-tabs" role="tablist">
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">⚙</span><span>General</span></button>
+						<button class="oa-settings-tab is-active" role="tab" aria-selected="true"><span class="nav-icon">🔑</span><span>Providers</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▣</span><span>Model</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🤖</span><span>Chat</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">👤</span><span>Profiles</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧩</span><span>Capabilities</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧠</span><span>Memory &amp; Context</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕘</span><span>Sessions</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕐</span><span>Automations</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▸</span><span>Advanced</span></button>
+					</div>
+					<button class="oa-tab-nav" aria-label="Scroll tabs right"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+				</div>
+				<div class="oa-settings-content">
+					<div class="oa-section-title">
+						<h2>Providers</h2>
+						<div class="oa-section-desc">Add and test connection details here. Choose the provider + model used by chat in the Model tab; a profile can override that pair.</div>
+					</div>
+					<div class="oa-provider-route">
+						<span class="oa-provider-route-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg></span>
+						<div class="oa-provider-route-main">
+							<div class="oa-provider-route-label">Provider used by chat</div>
+							<div class="oa-provider-route-value"><span>OpenRouter</span><span>·</span><span class="oa-provider-route-model">meta-llama/llama-3.3-70b-instruct</span><span class="oa-provider-route-badge">Global default</span></div>
+							<div class="oa-provider-route-desc">This is routing context, not the connection currently open below.</div>
+						</div>
+						<button class="oa-mini-btn">Choose provider &amp; model</button>
+					</div>
+					<div class="oa-subsection"><div class="oa-subsection-title">Provider connections</div><div class="oa-subsection-desc">Select a row to edit or test that connection; this never changes the provider used by chat.</div></div>
+					<div class="oa-provider-group-label">Configured</div>
+					<div class="oa-provider-list">
+						<button class="oa-provider-row is-viewed" aria-pressed="true"><span class="oa-provider-dot is-set"></span><span class="oa-provider-name">OpenRouter</span><span class="oa-provider-url">https://openrouter.ai/api/v1</span><span class="oa-provider-statuses"><span class="oa-provider-status is-ready">Configured</span><span class="oa-provider-status is-in-use">In use</span></span></button>
+						<button class="oa-provider-row" aria-pressed="false"><span class="oa-provider-dot is-set"></span><span class="oa-provider-name">LM Studio (local)</span><span class="oa-provider-url">http://localhost:1234/v1</span><span class="oa-provider-statuses"><span class="oa-provider-status is-ready">Configured</span></span></button>
+					</div>
+					<div class="oa-provider-group-label">Needs setup</div>
+					<div class="oa-provider-list">
+						<button class="oa-provider-row" aria-pressed="false"><span class="oa-provider-dot"></span><span class="oa-provider-name">OpenAI</span><span class="oa-provider-url">https://api.openai.com/v1</span><span class="oa-provider-statuses"><span class="oa-provider-status is-needed">Needs setup</span></span></button>
+					</div>
+					<div class="oa-subsection"><div class="oa-subsection-title">Configure OpenRouter</div><div class="oa-subsection-desc">Changes below affect only this connection. Editing or testing it does not make it the provider used by chat.</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">OpenRouter base URL</div><div class="setting-item-description">OpenAI-compatible root, port included — e.g. http://localhost:1234/v1 (LM Studio), http://localhost:11434/v1 (Ollama), https://openrouter.ai/api/v1</div></div><div class="setting-item-control"><input type="text" value="https://openrouter.ai/api/v1"></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">API key</div><div class="setting-item-description">For OpenRouter. Stored locally in this vault's plugin data.</div></div><div class="setting-item-control"><input type="password" value="sk-or-v1-••••••••••"><button class="clickable-icon" aria-label="Show key">◉</button><button class="clickable-icon" aria-label="Clear key">×</button></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Test connection</div><div class="setting-item-description">Tests OpenRouter using the URL + key above, then saves its model catalog. It does not activate this provider.</div></div><div class="setting-item-control"><button class="mod-cta">Test connection</button></div></div>
+					<div class="oa-provider-group-label oa-disclosure"><span class="oa-disclosure-chevron">›</span><span>Custom headers — OpenRouter</span></div>
+					<div class="oa-test-result is-ok">✓ 181 models available on OpenRouter.</div>
+				</div>
+			</div>
+		</div><!-- /view -->
+	</div>
+	<!-- ============ frame 4: settings · capabilities ============ -->
+	<div>
+		<div class="label">settings · capabilities (per-tool toggles · per-skill enable · mcp.json import)</div>
+		<div class="view wide" style="height:640px; overflow-y:auto; padding:16px 20px;">
+			<div class="oa-settings">
+				<div class="oa-settings-header">
+					<div class="oa-settings-header-name"><span>Open Agent</span><span class="oa-settings-header-version">v0.1.0</span></div>
+					<div class="oa-settings-header-desc">A self-improving AI agent for your vault. Agent framework modeled after Hermes Agent, settings after Hermes Desktop, and a chat UI built with prompt-kit components.</div>
+				</div>
+				<div class="oa-settings-tabstrip">
+					<button class="oa-tab-nav is-disabled" aria-label="Scroll tabs left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+					<div class="oa-settings-tabs" role="tablist">
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">⚙</span><span>General</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🔑</span><span>Providers</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▣</span><span>Model</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🤖</span><span>Agent</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">👤</span><span>Profiles</span></button>
+						<button class="oa-settings-tab is-active" role="tab" aria-selected="true"><span class="nav-icon">🧩</span><span>Capabilities</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧠</span><span>Memory</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕘</span><span>Sessions</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕐</span><span>Automations</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▸</span><span>Advanced</span></button>
+						<div class="oa-tab-ink" style="width: 96px; transform: translateX(388px)"></div>
+					</div>
+					<button class="oa-tab-nav" aria-label="Scroll tabs right"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+				</div>
+				<div class="oa-settings-content">
+					<div class="oa-section-title">
+						<h2>Capabilities</h2>
+						<div class="oa-section-desc">What the agent can do: built-in toolsets, learned skills, and external MCP servers.</div>
+					</div>
+
+					<div class="oa-subsection"><h3 class="oa-subsection-title">Tools</h3><div class="oa-subsection-desc">Hermes-style toolsets — disable a whole toolset, or single tools.</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Vault tools</div><div class="setting-item-description">read / write / edit / delete / rename notes, list files, search</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Web tools</div><div class="setting-item-description">fetch and read web pages</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="oa-tool-groups">
+						<div class="oa-tool-group-label">Vault tools · 8</div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">read_note</div><div class="setting-item-description">Read the full content of a note by path.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">write_note</div><div class="setting-item-description">Create or overwrite a note at a path.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">delete_note</div><div class="setting-item-description">Move a note to the vault trash.</div></div><div class="setting-item-control"><div class="checkbox-container"><input type="checkbox"></div></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">rename_move_note</div><div class="setting-item-description">Rename or move a note to a new path.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+						<div class="oa-tool-group-label">Web tools · 1</div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">web_fetch</div><div class="setting-item-description">Fetch a web page and return readable text.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					</div>
+
+					<div class="oa-subsection"><h3 class="oa-subsection-title">Skills</h3><div class="oa-subsection-desc">The learning loop — agentskills.io SKILL.md files the agent reads and authors.</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Enable skills</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="oa-skills-browser">
+						<input class="oa-skills-search" type="search" placeholder="Search skills…">
+						<div class="oa-skill-list">
+							<div class="oa-skill-row">
+								<div class="oa-skill-head"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div><span class="oa-skill-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span><span class="oa-skill-name">daily-review</span><span class="oa-skill-desc">Scan daily notes and assemble the weekly review</span><button class="oa-skill-delete">Delete</button></div>
+								<div class="oa-skill-body">1. Read today's daily note. 2. Collect open tasks and links. 3. Append a summary section to the weekly review note.</div>
+							</div>
+							<div class="oa-skill-row is-open is-disabled">
+								<div class="oa-skill-head"><div class="checkbox-container"><input type="checkbox"></div><span class="oa-skill-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></span><span class="oa-skill-name">meeting-notes</span><span class="oa-skill-desc">Structure raw meeting dumps into clean notes</span><button class="oa-skill-delete">Delete</button></div>
+								<div class="oa-skill-body">1. Extract attendees, agenda and decisions. 2. Rewrite as Summary / Decisions / Action items. 3. Link people with [[wikilinks]] and tag #meeting.</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="oa-subsection"><h3 class="oa-subsection-title">MCP servers</h3><div class="oa-subsection-desc">External tool servers over the Model Context Protocol. Config only for now — the runtime client arrives in a later update.</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Enable MCP</div><div class="setting-item-description">Master switch for MCP integrations. Stored now; nothing connects until the runtime client ships.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="oa-mcp-list">
+						<div class="oa-mcp-server">
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">filesystem</div><div class="setting-item-description">stdio · npx -y @modelcontextprotocol/server-filesystem /path/to/dir</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div><button class="clickable-icon" aria-label="Remove server"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Command</div><div class="setting-item-description">Executable spawned over stdio, e.g. npx</div></div><div class="setting-item-control"><input type="text" value="npx"></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Arguments</div><div class="setting-item-description">Space-separated arguments passed to the command.</div></div><div class="setting-item-control"><input type="text" value="-y @modelcontextprotocol/server-filesystem /path/to/dir"></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Environment</div><div class="setting-item-description">KEY=VALUE pairs, one per line.</div></div><div class="setting-item-control"><textarea rows="2"></textarea></div></div>
+						</div>
+					</div>
+					<div class="setting-item"><div class="setting-item-info"></div><div class="setting-item-control"><button>Add MCP server</button></div></div>
+					<div class="oa-mcp-import">
+						<textarea class="oa-mcp-import-text" rows="5" placeholder='{"mcpServers": {"filesystem": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]}}}'></textarea>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Import mcp.json</div><div class="setting-item-description">Paste a standard mcp.json document above. Servers are merged by name.</div></div><div class="setting-item-control"><button>Import</button></div></div>
+					</div>
+					<div class="oa-mcp-note">Runtime client coming soon — configured servers are saved but not connected yet.</div>
+
+					<div class="oa-subsection"><h3 class="oa-subsection-title">Browse Hub</h3><div class="oa-subsection-desc">Hermes-style skills hub — search trusted GitHub taps progressively, preview + security-scan, one-click install into the active profile.</div></div>
+					<div class="oa-hub">
+						<div class="oa-hub-chips">
+							<span class="oa-hub-chips-label">Hubs:</span>
+							<span class="oa-hub-chip oa-trust-trusted">openai/skills<span class="oa-hub-chip-count">18</span></span>
+							<span class="oa-hub-chip oa-trust-trusted">anthropics/skills<span class="oa-hub-chip-count">32</span></span>
+							<span class="oa-hub-chip oa-trust-trusted">huggingface/skills<span class="oa-hub-chip-count">24</span></span>
+							<span class="oa-hub-chip oa-trust-trusted">NVIDIA/skills<span class="oa-hub-chip-count">11</span></span>
+							<span class="oa-hub-chip oa-trust-trusted">vercel-labs/agent-skills<span class="oa-hub-chip-count">27</span></span>
+							<span class="oa-hub-chip oa-trust-community">myorg/vault-skills<span class="oa-hub-chip-count">6</span><span class="oa-hub-chip-x">×</span></span>
+						</div>
+						<div class="oa-hub-controls">
+							<input class="oa-hub-search" type="search" value="pdf" placeholder="Search hub skills… (e.g. pdf, review, research)">
+							<button class="oa-mini-btn">Update all</button>
+						</div>
+						<div class="oa-hub-count">3 results</div>
+						<div class="oa-hub-results">
+							<div class="oa-hub-row">
+								<div class="oa-hub-row-main">
+									<div class="oa-hub-row-head">
+										<span class="oa-hub-row-name">pdf-toolkit</span>
+										<span class="oa-hub-trust oa-trust-trusted">trusted</span>
+										<span class="oa-hub-installed-badge">installed</span>
+										<span class="oa-hub-row-src">anthropics/skills</span>
+									</div>
+									<div class="oa-hub-row-desc">Read, split, merge and extract text from PDF files with page-level control.</div>
+								</div>
+								<div class="oa-hub-row-actions">
+									<button class="oa-mini-btn">Preview</button>
+									<button class="oa-mini-btn">Uninstall</button>
+								</div>
+							</div>
+							<div class="oa-hub-row">
+								<div class="oa-hub-row-main">
+									<div class="oa-hub-row-head">
+										<span class="oa-hub-row-name">pdf-writer</span>
+										<span class="oa-hub-trust oa-trust-trusted">trusted</span>
+										<span class="oa-hub-row-src">openai/skills</span>
+									</div>
+									<div class="oa-hub-row-desc">Generate polished PDF documents from markdown with templates and fonts.</div>
+								</div>
+								<div class="oa-hub-row-actions">
+									<button class="oa-mini-btn">Preview</button>
+									<button class="oa-mini-btn oa-mini-cta">Install</button>
+								</div>
+							</div>
+							<div class="oa-hub-row">
+								<div class="oa-hub-row-main">
+									<div class="oa-hub-row-head">
+										<span class="oa-hub-row-name">vault-pdf-notes</span>
+										<span class="oa-hub-trust oa-trust-community">community</span>
+										<span class="oa-hub-row-src">myorg/vault-skills</span>
+									</div>
+									<div class="oa-hub-row-desc">Turn PDF highlights into atomic literature notes with citations.</div>
+								</div>
+								<div class="oa-hub-row-actions">
+									<button class="oa-mini-btn">Preview</button>
+									<button class="oa-mini-btn oa-mini-cta">Install</button>
+								</div>
+							</div>
+						</div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Add GitHub tap</div><div class="setting-item-description">Extra skills repo to browse (owner/repo[/subdir]) — custom taps are community trust.</div></div><div class="setting-item-control"><input type="text" placeholder="myorg/my-skills"><button>Add tap</button></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Install from URL</div><div class="setting-item-description">Direct https:// link to a SKILL.md — scanned by the Skills Guard before install.</div></div><div class="setting-item-control"><input type="text" placeholder="https://example.com/path/SKILL.md"><button>Fetch &amp; install</button></div></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ============ frame 5: settings · model (fallback chain) ============ -->
+	<div>
+		<div class="label">settings · model (fallback chain editor)</div>
+		<div class="view wide" style="height:640px; overflow-y:auto; padding:16px 20px;">
+			<div class="oa-settings">
+				<div class="oa-settings-header">
+					<div class="oa-settings-header-name"><span>Open Agent</span><span class="oa-settings-header-version">v0.1.0</span></div>
+					<div class="oa-settings-header-desc">A self-improving AI agent for your vault with a model resilience chain.</div>
+				</div>
+				<div class="oa-settings-content">
+					<div class="oa-section-title">
+						<h2>Model</h2>
+						<div class="oa-section-desc">Which brain to think with, and who takes over when it fails.</div>
+					</div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Model</div><div class="setting-item-description">Pick from fetched models, or type any model id your provider accepts.</div></div><div class="setting-item-control"><select><option>nousresearch/hermes-4-70b</option></select><input type="text" placeholder="custom model id"></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Reasoning effort</div><div class="setting-item-description">Hermes effort ladder — sent to providers that support it, ignored elsewhere.</div></div><div class="setting-item-control"><select><option>medium</option></select></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Temperature</div><div class="setting-item-description">0 = deterministic, 1 = creative, -1 = omit.</div></div><div class="setting-item-control"><input type="range" min="-1" max="2" step="0.05" value="0.7"></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Streaming</div><div class="setting-item-description">Stream tokens as they arrive; falls back to buffered replies automatically.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="oa-subsection"><h3 class="oa-subsection-title">Fallback models</h3><div class="oa-subsection-desc">Tried in order when the primary model fails — 429/5xx after retries, auth errors immediately. Only the turn in progress switches; the next message uses the primary again.</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Fallback 1</div></div><div class="setting-item-control"><select><option>Anthropic (OpenAI-compatible)</option></select><input type="text" value="claude-sonnet-4-20250514"><button class="clickable-icon" aria-label="Remove fallback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Fallback 2</div></div><div class="setting-item-control"><select><option>LM Studio (local)</option></select><input type="text" placeholder="model id, e.g. anthropic/claude-sonnet-4" value="qwen3-30b"><button class="clickable-icon" aria-label="Remove fallback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>
+					<div class="setting-item"><div class="setting-item-info"></div><div class="setting-item-control"><button>Add fallback</button></div></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ============ frame 6: settings · profiles ============ -->
+	<div>
+		<div class="label">settings · profiles (SOUL identity + session overlay · swatches · keep/trash delete)</div>
+		<div class="view wide" style="height:640px; overflow-y:auto; padding:16px 20px;">
+			<div class="oa-settings">
+				<div class="oa-settings-header">
+					<div class="oa-settings-header-name"><span>Open Agent</span><span class="oa-settings-header-version">v0.1.0</span></div>
+					<div class="oa-settings-header-desc">A self-improving AI agent for your vault. Agent framework modeled after Hermes Agent, settings after Hermes Desktop, and a chat UI built with prompt-kit components.</div>
+				</div>
+				<div class="oa-settings-tabstrip">
+					<button class="oa-tab-nav is-disabled" aria-label="Scroll tabs left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+					<div class="oa-settings-tabs" role="tablist">
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">⚙</span><span>General</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🔑</span><span>Providers</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▣</span><span>Model</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🤖</span><span>Agent</span></button>
+						<button class="oa-settings-tab is-active" role="tab" aria-selected="true"><span class="nav-icon">👤</span><span>Profiles</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧩</span><span>Capabilities</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧠</span><span>Memory</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕘</span><span>Sessions</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕐</span><span>Automations</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▸</span><span>Advanced</span></button>
+						<div class="oa-tab-ink" style="width: 70px; transform: translateX(316px)"></div>
+					</div>
+					<button class="oa-tab-nav" aria-label="Scroll tabs right"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+				</div>
+				<div class="oa-settings-content">
+					<div class="oa-section-title">
+						<h2>Profiles</h2>
+						<div class="oa-section-desc">Hermes-style identities: persona + optional provider/model pin — each with its own memory, skills and chats.</div>
+					</div>
+					<div class="oa-profile-list">
+						<div class="oa-profile-item is-active">
+							<span class="oa-profile-dot oa-color-blue"></span>
+							<div class="oa-profile-item-main">
+								<div class="oa-profile-item-name"><span>Default</span><span class="oa-profile-badge">active</span></div>
+								<div class="oa-profile-item-sub">default identity · follows global</div>
+							</div>
+							<div class="oa-profile-item-actions">
+								<button class="oa-icon-btn" title="Edit profile"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+								<button class="oa-icon-btn" title="Clone (persona + pins, data starts empty)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+								<button class="oa-icon-btn oa-danger" title="Delete profile"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+							</div>
+						</div>
+						<div class="oa-profile-item">
+							<span class="oa-profile-dot oa-color-cyan"></span>
+							<div class="oa-profile-item-main">
+								<div class="oa-profile-item-name"><span>Research</span></div>
+								<div class="oa-profile-item-sub">custom SOUL · overlay: researcher · LM Studio (local) · qwen3-30b</div>
+							</div>
+							<div class="oa-profile-item-actions">
+								<button class="oa-mini-btn">Set active</button>
+								<button class="oa-icon-btn" title="Edit profile"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+								<button class="oa-icon-btn" title="Clone (persona + pins, data starts empty)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+								<button class="oa-icon-btn oa-danger" title="Delete profile"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+							</div>
+						</div>
+						<div class="oa-profile-form">
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Name</div></div><div class="setting-item-control"><input type="text" value="Research"></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Color</div><div class="setting-item-description">Dot color in the chat profile pill.</div></div></div>
+							<div class="oa-swatches">
+								<button class="oa-swatch oa-color-gray" title="gray"></button>
+								<button class="oa-swatch oa-color-red" title="red"></button>
+								<button class="oa-swatch oa-color-orange" title="orange"></button>
+								<button class="oa-swatch oa-color-yellow" title="yellow"></button>
+								<button class="oa-swatch oa-color-green" title="green"></button>
+								<button class="oa-swatch oa-color-cyan is-active" title="cyan"></button>
+								<button class="oa-swatch oa-color-blue" title="blue"></button>
+								<button class="oa-swatch oa-color-purple" title="purple"></button>
+							</div>
+							<div class="oa-setting-item-info oa-profile-soul-head"><div class="setting-item-name">Soul (identity)</div><div class="setting-item-description">Durable identity, injected verbatim at the top of the system prompt. Empty = built-in default identity. Tone &amp; style durables go here — project rules belong in the context file.</div></div>
+							<textarea class="oa-profile-soul" rows="6" placeholder="# Personality&#10;You are …">You are a meticulous vault research assistant. You favor thorough investigation: search widely, cross-reference notes, cite file paths, and say plainly when sources are thin.</textarea>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Personality overlay</div><div class="setting-item-description">Session-level style layered on top of the SOUL — new chats start here, /personality overrides per chat.</div></div><div class="setting-item-control"><select><option>researcher</option></select></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Provider pin</div><div class="setting-item-description">Force a provider for this profile, or follow the global active provider.</div></div><div class="setting-item-control"><select><option>LM Studio (local)</option></select></div></div>
+							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Model pin</div><div class="setting-item-description">Force a model for this profile, or follow the global model.</div></div><div class="setting-item-control"><input type="text" placeholder="Follow global" value="qwen3-30b"></div></div>
+							<button class="oa-mini-btn">Done</button>
+						</div>
+					</div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">New profile</div><div class="setting-item-description">Blank starts clean; clone copies the active profile's persona and pins (memory, skills &amp; chats start empty).</div></div><div class="setting-item-control"><input type="text" placeholder="Profile name (e.g. Research)"><button>Create blank</button><button class="mod-cta">Clone active</button></div></div>
+					<div class="oa-profile-note">Cron automations always run on the Default profile. API keys stay global — profiles isolate agent data (memory, skills, chats), not secrets or vault-tool access.</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- ============ frame 7: settings · automations (cron v2) ============ -->
+	<div>
+		<div class="label">settings · automations (status dots incl. completed · presets + live cron validation · run history · missed-run notice · Tahap D: focus skills / max runs / chain / notify / [SILENT])</div>
+
+		<div class="label">missed-run notice (on startup)</div>
+		<div class="view wide" style="height:auto; padding:14px 18px;">
+			<div class="oa-missed-notice" style="background: var(--background-secondary); border-radius: 8px; padding: 10px 14px;">
+				<span>Open Agent: 2 automations missed while Obsidian was closed.</span>
+				<div class="oa-missed-actions"><button class="mod-cta">Run all now</button><button>Skip</button></div>
+			</div>
+		</div>
+
+		<div class="view wide" style="height:780px; overflow-y:auto; padding:16px 20px;">
+			<div class="oa-settings">
+				<div class="oa-settings-tabstrip">
+					<div class="oa-settings-tabs" role="tablist">
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">⚙</span><span>General</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🔑</span><span>Providers</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▣</span><span>Model</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🤖</span><span>Agent</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">👤</span><span>Profiles</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧩</span><span>Capabilities</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🧠</span><span>Memory</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">🕘</span><span>Sessions</span></button>
+						<button class="oa-settings-tab is-active" role="tab" aria-selected="true"><span class="nav-icon">🕐</span><span>Automations</span></button>
+						<button class="oa-settings-tab" role="tab"><span class="nav-icon">▸</span><span>Advanced</span></button>
+						<div class="oa-tab-ink" style="width: 90px; transform: translateX(606px)"></div>
+					</div>
+				</div>
+				<div class="oa-settings-content">
+					<div class="oa-section-title">
+						<h2>Automations</h2>
+						<div class="oa-section-desc">Hermes-style cron — natural-language tasks on a schedule, output archived and appended to a note.</div>
+					</div>
+
+					<div class="setting-item">
+						<div class="setting-item-info">
+							<div class="setting-item-name"><span class="oa-cron-dot is-ok" title="last run ok"></span> Daily vault digest</div>
+							<div class="setting-item-description"><div>Daily at 09:00 → openagent/Reports.md · next in 14h · last 10h ago · 12 runs · skills 1 · notify</div></div>
+						</div>
+						<div class="setting-item-control">
+							<div class="checkbox-container is-enabled"><input type="checkbox" checked></div>
+							<button class="clickable-icon" title="Run now"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+							<button class="clickable-icon" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+							<button class="clickable-icon" title="Run history"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+							<button class="clickable-icon" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+						</div>
+					</div>
+					<div class="oa-cron-history">
+						<a class="oa-cron-history-link">20260719-0900 Daily vault digest</a>
+						<a class="oa-cron-history-link">20260718-0901 Daily vault digest</a>
+						<a class="oa-cron-history-link">20260717-0900 Daily vault digest</a>
+					</div>
+
+					<div class="setting-item">
+						<div class="setting-item-info">
+							<div class="setting-item-name"><span class="oa-cron-dot is-error" title="last run failed"></span> Broken links sweep</div>
+							<div class="setting-item-description">
+								<div>Weekdays at 09:00 → openagent/Maintenance.md · next in 38h · last 2d ago · 5 runs</div>
+								<div class="oa-cron-last-error">No active provider configured. Open Settings → Open Agent → Providers.</div>
+							</div>
+						</div>
+						<div class="setting-item-control">
+							<div class="checkbox-container is-enabled"><input type="checkbox" checked></div>
+							<button class="clickable-icon" title="Run now"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+							<button class="clickable-icon" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+							<button class="clickable-icon" title="Run history"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+							<button class="clickable-icon" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+						</div>
+					</div>
+
+					<div class="setting-item">
+						<div class="setting-item-info">
+							<div class="setting-item-name"><span class="oa-cron-dot is-completed" title="completed after 10 runs"></span> Launch-week monitoring</div>
+							<div class="setting-item-description"><div>Every 15 minutes → openagent/Reports.md · completed · last 3d ago · 10/10 runs</div></div>
+						</div>
+						<div class="setting-item-control">
+							<div class="checkbox-container"><input type="checkbox"></div>
+							<button class="clickable-icon" title="Run now"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+							<button class="clickable-icon" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+							<button class="clickable-icon" title="Run history"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+							<button class="clickable-icon" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+						</div>
+					</div>
+
+					<div class="setting-item">
+						<div class="setting-item-info">
+
+					<div class="setting-item-name"><span class="oa-cron-dot is-paused" title="paused"></span> Weekly review prep</div>
+							<div class="setting-item-description"><div>Weekly on Monday at 09:00 → Reviews/Weekly.md · paused · last 6d ago · 3 runs</div></div>
+						</div>
+						<div class="setting-item-control">
+							<div class="checkbox-container"><input type="checkbox"></div>
+							<button class="clickable-icon" title="Run now"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg></button>
+							<button class="clickable-icon" title="Edit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+							<button class="clickable-icon" title="Run history"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+							<button class="clickable-icon" title="Delete"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
+						</div>
+					</div>
+
+					<div class="oa-card oa-cron-new">
+						<h3>New automation</h3>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Name</div></div><div class="setting-item-control"><input type="text" placeholder="Daily vault digest"></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Prompt</div></div><div class="setting-item-control"><textarea rows="3" placeholder="Summarize notes modified today and append a digest."></textarea></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Target note</div></div><div class="setting-item-control"><input type="text" placeholder="openagent/Reports.md"></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Schedule</div></div><div class="setting-item-control"><select><option>Every 15 minutes</option><option>Hourly</option><option selected>Daily at 09:00</option><option>Weekdays at 09:00</option><option>Weekly on Monday at 09:00</option><option>Monthly on the 1st at 09:00</option><option>Custom cron expression…</option></select></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Cron expression</div><div class="setting-item-description"><div class="oa-field-error">Value 99 is out of range for the minute field (0–59).</div></div></div><div class="setting-item-control"><input type="text" value="99 9 * * *" placeholder="0 9 * * *"></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Focus skills</div><div class="setting-item-description">Skill docs injected into each run's prompt. Empty = no focus skills.</div></div><div class="setting-item-control"><div class="oa-skill-chips"><button type="button" class="oa-skill-chip is-on" aria-pressed="true">vault-digest</button><button type="button" class="oa-skill-chip" aria-pressed="false">link-doctor</button><button type="button" class="oa-skill-chip is-off" aria-pressed="false">weekly-review</button></div></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Max runs</div><div class="setting-item-description">Stop and disable after this many runs. 0 or empty = unlimited.</div></div><div class="setting-item-control"><input type="text" placeholder="0 = unlimited"></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Chain run context</div><div class="setting-item-description">Include the previous run's output (≤2000 chars) in the next run's prompt.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Notify on run</div><div class="setting-item-description">Show a notice when a scheduled run succeeds (errors always notify).</div></div><div class="setting-item-control"><div class="checkbox-container"><input type="checkbox"></div></div></div>
+						<div class="setting-item"><div class="setting-item-control"><button class="mod-cta">Add automation</button></div></div>
+					</div>
+
+					<div class="oa-cron-note">Runs only fire while Obsidian is open — missed runs are offered when you return. The agent can also manage automations from chat via the cronjob tool (Capabilities → Automation tools). Full run logs live under openagent/cron/runs/. Cron automations always run on the Default profile.</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+<script>
+	/* legacy dev-server hook — intentionally inert. The plugin CSS used to be
+	   fetched here when this file was served locally; today build-preview.mjs
+	   injects styles.css into the generated pages under preview/. Kept as a
+	   marker: build-preview.mjs strips frames at this boundary. */
+</script>
+</body>
+</html>

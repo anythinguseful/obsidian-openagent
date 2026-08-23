@@ -1,2 +1,10 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalize source text across platforms.
+* text=auto eol=lf
+
+# Binary security fixtures and packaged artifacts.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary

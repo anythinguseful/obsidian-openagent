@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · build · test · PDF security · docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install browser regression runtime
+        run: npx playwright install --with-deps chromium-headless-shell
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit and smoke tests
+        run: npm test
+
+      - name: Adversarial PDF browser regression
+        run: npm run test:pdf-security
+
+      - name: Source, docs, and metadata consistency
+        run: npm run check:docs
+
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=low

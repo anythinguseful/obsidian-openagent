@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Generated production/runtime artifacts
+/main.js
+/vendor/
+/release/
+/openagent-obsidian-plugin*.zip
+
+# Generated preview and test artifacts
+/preview/
+/test/dist/
+/test/real-preview/out/
+/test/real-preview/frames.json
+/test/real-preview/shots/
+/test/ui-preview.png
+/coverage/
+
+# Local Obsidian/plugin state and secrets
+/.obsidian/
+/data.json
+.env
+.env.*
+!.env.example
+
+# Logs, caches, OS, and editors
+*.log
+.cache/
+.npm/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Arena session handoffs
+agents/arena/handoffs/*.md
+!agents/arena/handoffs/.gitkeep
