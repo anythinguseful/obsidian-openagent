@@ -1,7 +1,7 @@
 ---
 title: "GitHub Release retention and publication"
 type: plan
-status: active
+status: done
 date: 2026-08-23
 tags: [openagent, plan, release, github, packaging]
 ---
@@ -144,7 +144,7 @@ npm run check:skills
 
 ### Phase 2 — fail-closed GitHub publisher
 
-**Status: done; live publication pending Phase 4**
+**Status: done**
 
 Goal: publish only an exact, pushed, green, non-existing release.
 
@@ -180,19 +180,23 @@ the durable source of release assets.
 
 ### Phase 4 — v0.1.151 publication
 
-**Status: pending owner merge, workflow installation, and dispatch**
+**Status: done — 2026-08-23**
 
-1. Release-tooling branch and PR: done.
-2. Exact-commit PR CI including PDF security: done.
-3. Owner merges the PR into `main`.
-4. Owner copies `agents/arena/workflows/release-github-actions.yml` to
-   `.github/workflows/release.yml` through GitHub UI (Arena may not write
-   workflow files).
-5. Wait for green `main` CI on the workflow-install commit.
-6. Dispatch **Publish GitHub Release** with `reconstructed=true`.
-7. The workflow runs the full release pipeline, dry-run, draft upload with
-   retry, remote byte verification, publication, and post-publication verify.
-8. Update the audit remediation note with the final release URL.
+1. Release-tooling PR [#1](https://github.com/anythinguseful/obsidian-openagent/pull/1)
+   and the witness-policy repair PR [#2](https://github.com/anythinguseful/obsidian-openagent/pull/2)
+   were merged into `main`.
+2. The target `0ccc352995c8d31b42a8935bfce1d2d25f4d5395` has green main CI:
+   [run 32654928557](https://github.com/anythinguseful/obsidian-openagent/actions/runs/32654928557).
+3. **Publish GitHub Release** completed successfully:
+   [run 32655385414](https://github.com/anythinguseful/obsidian-openagent/actions/runs/32655385414).
+4. The published, non-draft release is
+   [Open Agent v0.1.151](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151),
+   targeting that exact commit. After explicit owner approval, its final-report
+   asset and release body were corrected to disclose the required reconstructed
+   verification status. GitHub API verifies the exact six-asset inventory.
+5. The release is explicitly reconstructed: its checksums identify newly built
+   and reverified artifacts; they do not claim identity with the unavailable
+   historical ZIP bytes.
 
 ## GWT
 
@@ -267,3 +271,15 @@ it and record the run in the ignored sidecar
 re-asserts tree cleanliness immediately after the preview steps. Guards:
 planner and dirty-tree unit checks in `test/release-assets.test.cjs` plus the
 `release witness policy wired` smoke marker. See Lesson 180.
+
+## Publication record — 2026-08-23
+
+The GitHub Release retention contract is live: the immutable release retains the
+install ZIP, its checksum, clean-source ZIP, its checksum, source manifest, and
+final report. The install ZIP SHA-256 is
+`d58e7fc6c9ffa04445994d11017f4764973bd168b74d00cef614c6400f0e22fb`.
+
+The final report and release body explicitly disclose that v0.1.151 is a
+reconstructed verification release. The correction was made only after explicit
+owner approval; tag, target commit, install ZIP, checksums, clean-source archive,
+and source manifest were preserved.
