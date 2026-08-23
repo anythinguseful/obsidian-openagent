@@ -103,8 +103,32 @@ being duplicated.
 
 Each phase is one commit and must pass the full gate before the next begins.
 
-- **Phase 1** — `context.ts` plus `memory` (288 lines). Proves the pattern on
-  the cleanest renderer: zero class state, zero local helpers, five imports.
+- **Phase 1 — DONE (2026-08-24).** `context.ts` plus `memory` (288 lines).
+  Proved the pattern on the cleanest renderer: zero class state, zero local
+  helpers, five imports. Result: `settingsTab.ts` 4,938 → 4,650 lines;
+  `src/settings/sections/memory.ts` 307 lines. The moved body is byte-identical
+  to `git show HEAD:src/settingsTab.ts` L3745-4032 after one dedent level and
+  `this.` → `ctx.` over the six contract members — verified mechanically, and
+  the checker rejects any leftover `this.`.
+
+  Eleven guards were amended (the pre-flight scan predicted these among its 22):
+  `v0.1.126`, `v0.1.148`, `v0.1.175`, `v0.1.176`, `v0.1.178`, `v0.1.179`,
+  `v0.1.181`, `v0.1.186`, `v0.1.187`, `v0.1.94`, `settings IA`. All 289 `✓`
+  match the baseline exactly, and each of the eleven was individually red-proofed
+  by mutating the new module.
+
+  Three findings, written up as Lesson 189:
+  1. Five negative assertions (`!tab.includes(...)`) had to move with their
+     subject — left behind they stay green vacuously and never show as `✗`.
+  2. Count assertions must sum across owners *and* exclude scaffolding: the
+     `resetButton` count split 13 + 9, but a naive union read 23 because the
+     `sectionContext()` delegation line also matched. Narrowed to
+     `resetButton\(st`.
+  3. Pre-existing bug surfaced: `settingsTab.ts` holds a *second*
+     `compressionEnabled` toggle (L1532, "Enable compression") plus a
+     "Compression" row from `auxModelRow`, so two v0.1.175 pins were passing on
+     the wrong lines. Pins repointed; the duplicate itself is left untouched and
+     recorded under Open questions rather than fixed inside a refactor commit.
 - **Phase 2** — the shared file-local helpers (`copyText`, `exportStamp`,
   `stackedTextArea`), needed before any renderer that uses them can move.
 - **Phase 3** — `general`, `mcp`, `terminalSettings`.
@@ -203,3 +227,9 @@ guard goes red, restore.
 - Should the retained stateful renderers (`model`, `providers`, `cronForm`)
   eventually move behind a state-passing contract, or stay with the class
   permanently? — deferred; not needed for this batch.
+- **Duplicate `compressionEnabled` toggle (found in Phase 1).** The Model tab
+  renders "Enable compression" (`settingsTab.ts` L1532) and the Memory & Context
+  section renders "Compression" — two toggles writing the same setting, present
+  since before this refactor (`git show HEAD:src/settingsTab.ts` L1530/L3961).
+  Which one is the owner is a product decision, so it is not being settled
+  inside an extraction commit. Needs an owner answer before either is removed.

@@ -33,13 +33,17 @@ module.exports = function settingsGuards() {
 	// the embedding model is a DROPDOWN seeded from the active provider's
 	// catalog, not a hand-typed text field — consistent with the Model tab.
 	{
-		const tab = read("src/settingsTab.ts");
+		// 2026-08-24: the Memory & Context renderer moved to
+		// src/settings/sections/memory.ts, so the subject is read from there.
+		// The negative moves WITH it — left on settingsTab.ts it would be
+		// trivially true and would stop protecting anything.
+		const mem = read("src/settings/sections/memory.ts");
 		const ok =
-			tab.includes('setName("Embedding model")') &&
-			tab.includes("withCurrentModel(catalogOf(activeProvider), s.memoryEngineEmbedModel)") &&
-			tab.includes('"off (keyword recall only)"') &&
-			tab.includes('aria-label", "Embedding model"') &&
-			!tab.includes('setName("Embedding model").addText');
+			mem.includes('setName("Embedding model")') &&
+			mem.includes("withCurrentModel(catalogOf(activeProvider), s.memoryEngineEmbedModel)") &&
+			mem.includes('"off (keyword recall only)"') &&
+			mem.includes('aria-label", "Embedding model"') &&
+			!mem.includes('setName("Embedding model").addText');
 		if (ok) {
 			console.log("✓ v0.1.179: embedding model — catalog dropdown with off option (no manual typing)");
 		} else {
@@ -62,7 +66,7 @@ module.exports = function settingsGuards() {
 			tab.includes('this.subheading(containerEl, "System prompt"') &&
 			tab.includes('this.subheading(containerEl, "Scheduled tasks"') &&
 			tab.includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") &&
-			tab.includes("Pick a model to enable semantic recall");
+			read("src/settings/sections/memory.ts").includes("Pick a model to enable semantic recall"); // moved 2026-08-24
 		if (ok) {
 			console.log("✓ v0.1.181: settings layout — group labels on every tab + trimmed descriptions (real-DOM: rows back to 79px)");
 		} else {
@@ -280,12 +284,17 @@ module.exports = function settingsGuards() {
 		// Notifications returns with real controls in the shared tab/search
 		// registry, while still-empty Appearance/About remain hidden.
 		const stab5 = read("src/settingsTab.ts");
-		const memSection = stab5.slice(stab5.indexOf("private memory("), stab5.indexOf("private automations("));
+		// 2026-08-24: Memory & Context is no longer a slice of the class — it is
+		// its own module, so the section boundary is the file boundary.
+		const memSection = read("src/settings/sections/memory.ts");
 		const genSection = stab5.slice(stab5.indexOf("private general("), stab5.indexOf("private providers("));
 		const agentSection = stab5.slice(stab5.indexOf("private agent("), stab5.indexOf("private profiles("));
 		const workspaceSection = stab5.slice(stab5.indexOf("private workspace("), stab5.indexOf("private safety("));
 		const safetySection = stab5.slice(stab5.indexOf("private safety("), stab5.indexOf("private general("));
 		if (
+			/* the renderer left the class but the tab still owns wiring it up */
+			!stab5.includes("private memory(") &&
+			stab5.includes("memorySection(this.sectionContext(), host)") &&
 			stab5.includes('key: "agent", label: "Chat"') &&
 			stab5.includes('label: "Memory & Context"') &&
 			!stab5.includes('label: "Agent",') &&
@@ -435,17 +444,20 @@ module.exports = function settingsGuards() {
 	// the token-sized verbatim tail.
 	{
 		const setts = read("src/settings.ts");
-		const tab = read("src/settingsTab.ts");
+		const mem = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
 		const cm = read("src/agent/contextManager.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const ok =
 			setts.includes("compressionTargetRatio") &&
-			tab.includes('"Compression"') &&
-			tab.includes('"Compress when above"') &&
-			tab.includes('"Preserve recent tail"') &&
-			tab.includes('"Keep last N messages"') &&
-			tab.includes("markModified(stCompressionEnabled") &&
-			tab.includes("markModified(stCompressionTargetRatio") &&
+			/* NB: settingsTab.ts juga memuat "Compression" milik auxModelRow di tab
+			   Model, dan sebuah toggle compressionEnabled kedua. Subjek guard ini
+			   adalah blok Memory & Context, jadi pin harus ke modulnya. */
+			mem.includes('"Compression"') &&
+			mem.includes('"Compress when above"') &&
+			mem.includes('"Preserve recent tail"') &&
+			mem.includes('"Keep last N messages"') &&
+			mem.includes("markModified(stCompressionEnabled") &&
+			mem.includes("markModified(stCompressionTargetRatio") &&
 			cm.includes("export function pickTokenTailStart") &&
 			chat.includes("pickTokenTailStart(base, keepTokens)") &&
 			chat.includes("Math.min(startByMessages, startByTokens)");
@@ -463,6 +475,7 @@ module.exports = function settingsGuards() {
 	// markModified (maxTokens / modelContextLength / requestTimeoutMs).
 	{
 		const sm = read("src/settingsModified.ts");
+		const mem187 = read("src/settings/sections/memory.ts"); // Memory renderer pindah 2026-08-24
 		const tab = read("src/settingsTab.ts");
 		const ok =
 			sm.includes("export function setPath(") &&
@@ -473,15 +486,19 @@ module.exports = function settingsGuards() {
 			tab.includes("this.resetButton(stContextWindow, \"modelContextLength\")") &&
 			tab.includes("this.resetButton(stRequestTimeout, \"requestTimeoutMs\")") &&
 			tab.includes("this.resetButton(stTemperature, \"temperature\")") &&
-			tab.includes("this.resetButton(stMemoryCharLimit, \"memoryCharLimit\")") &&
-			tab.includes("this.resetButton(stCompressionThreshold, \"compressionThreshold\")") &&
+			mem187.includes("ctx.resetButton(stMemoryCharLimit, \"memoryCharLimit\")") &&
+			mem187.includes("ctx.resetButton(stCompressionThreshold, \"compressionThreshold\")") &&
 			/* toggles/enums/objects/lists never get a reset button */
-			!tab.includes("this.resetButton(stCompressionEnabled") &&
+			!mem187.includes("ctx.resetButton(stCompressionEnabled") && // subjek pindah
 			!tab.includes("this.resetButton(stApprovalMode") &&
-			!tab.includes("this.resetButton(stMemoryEnabled") &&
+			!mem187.includes("ctx.resetButton(stMemoryEnabled") && // subjek pindah
 			/* v0.1.188: exclusions are a picked LIST — no ↺ (per-row trash instead) */
 			!tab.includes("this.resetButton(stExclusions") &&
-			(tab.match(/this\.resetButton\(/g) || []).length === 22;
+			/* 2026-08-24: hitung CALL SITE nyata di kedua pemilik. Argumen pertama
+			   selalu variabel `st…`, jadi pola ini melewatkan baris delegasi di
+			   sectionContext() — kalau tidak jumlahnya 23 dan guard hijau karena
+			   sebab yang salah. 13 di settingsTab + 9 di modul memory. */
+			((tab + mem187).match(/resetButton\(st/g) || []).length === 22;
 		if (ok) {
 			console.log("✓ v0.1.187: ↺ reset-to-default on numeric/text fields (22 sites, toggles/enums/objects/lists excluded)");
 		} else {
@@ -757,6 +774,7 @@ module.exports = function settingsGuards() {
 	{
 		const stab126 = read("src/settingsTab.ts");
 		const bs126 = read("test/real-preview/build-settings.mjs");
+		const mem126 = read("src/settings/sections/memory.ts"); // Memory renderer pindah 2026-08-24
 		const strip126 = stab126.slice(stab126.indexOf("const SECTIONS"), stab126.indexOf("const SECTION_DESC"));
 		const idx126 = (needle) => strip126.indexOf(needle);
 		const ok =
@@ -784,8 +802,8 @@ module.exports = function settingsGuards() {
 			bs126.includes("probes.F35sliders") &&
 			stab126.includes('ariaLabel: "Max sessions kept"') &&
 			stab126.includes('ariaLabel: "Max tool iterations"') &&
-			stab126.includes('ariaLabel: "Memory nudge interval"') &&
-			stab126.includes("0 disables") &&
+			mem126.includes('ariaLabel: "Memory nudge interval"') && // pindah 2026-08-24
+			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
 			bs126.includes("workspaceMovedOut") &&
 			read("manifest.json").includes('"version": "0.1.151"');
@@ -1423,7 +1441,7 @@ module.exports = function settingsGuards() {
 		const threat = read("src/agent/threatPatterns.ts");
 		const tools = read("src/agent/tools.ts");
 		const setts = read("src/settings.ts");
-		const tab = read("src/settingsTab.ts");
+		const mem148 = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
 		const cron = read("src/agent/cron.ts");
 		const ok =
 			mem.includes("applyMemoryAdd") &&
@@ -1442,8 +1460,8 @@ module.exports = function settingsGuards() {
 			tools.includes('"remove"') &&
 			setts.includes("memoryCharLimit: 4000") &&
 			setts.includes("userCharLimit: 2500") &&
-			tab.includes('setName("Memory Budget")') &&
-			tab.includes('setName("Profile Budget")');
+			mem148.includes('setName("Memory Budget")') &&
+			mem148.includes('setName("Profile Budget")');
 		if (ok) {
 			console.log("✓ v0.1.148: memory parity — replace/remove + budgets + injection scan + drift guard, shared threat patterns");
 		} else {
@@ -1606,7 +1624,7 @@ module.exports = function settingsGuards() {
 		const sp = read("src/agent/systemPrompt.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const setts = read("src/settings.ts");
-		const tab = read("src/settingsTab.ts");
+		const mem176 = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
 		const main = read("src/main.ts");
 		const ok =
 			eng.includes("export function rankFacts") &&
@@ -1633,10 +1651,10 @@ module.exports = function settingsGuards() {
 			setts.includes("memoryEngineEnabled") &&
 			setts.includes("memoryEngineRetainEveryN") &&
 			setts.includes("memoryEngineRecallMax") &&
-			tab.includes('"Structured memory"') &&
-			tab.includes('"Retain every N turns"') &&
-			tab.includes('"Recall budget"') &&
-			tab.includes("markModified(stMemoryEngineEnabled") &&
+			mem176.includes('"Structured memory"') &&
+			mem176.includes('"Retain every N turns"') &&
+			mem176.includes('"Recall budget"') &&
+			mem176.includes("markModified(stMemoryEngineEnabled") &&
 			main.includes("new EngineMemoryStore(this.app, this.settings.memoryFolder)") &&
 			main.includes("this.engineMemory.setFolder(memoryFolder)");
 		if (ok) {
@@ -1651,7 +1669,7 @@ module.exports = function settingsGuards() {
 		const eng = read("src/agent/memoryEngine.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const setts = read("src/settings.ts");
-		const tab = read("src/settingsTab.ts");
+		const mem178 = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
 		const ok =
 			prov.includes("export async function embedTexts") &&
 			prov.includes("/embeddings") &&
@@ -1664,8 +1682,8 @@ module.exports = function settingsGuards() {
 			chat.includes("engine.searchObservations(q, 4, embed)") &&
 			chat.includes("setRecalledCount(facts.length + obs.length)") &&
 			setts.includes("memoryEngineEmbedModel") &&
-			tab.includes('"Embedding model"') &&
-			tab.includes("markModified(stMemoryEngineEmbedModel");
+			mem178.includes('"Embedding model"') &&
+			mem178.includes("markModified(stMemoryEngineEmbedModel");
 		if (ok) {
 			console.log("✓ v0.1.178: semantic recall — embedTexts + cosine fusion + observations in recall (optional, no server)");
 		} else {
@@ -1700,7 +1718,7 @@ module.exports = function settingsGuards() {
 			sc.includes("if (from !== num) num.value = String(v);") &&
 			!sc.includes("num.value = fmt(v)") &&
 			sc.includes('unit.className = "oa-slideinput-unit"') &&
-			tab.includes("unit: \"%\"") &&
+			read("src/settings/sections/memory.ts").includes("unit: \"%\"") && // slider % pindah 2026-08-24
 			css.includes(".oa-slideinput .oa-slideinput-numwrap {");
 		if (ok) {
 			console.log("✓ v0.1.186: % sliders — plain number in the box + visible \"%\" unit suffix (no more empty boxes)");
@@ -1874,7 +1892,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			(tab21.match(/markModified\(/g) || []).length === 66 && // v0.1.175 +4 · v0.1.176 +3 · v0.1.178 +1 · v0.1.187 +3 (maxTokens/contextWindow/requestTimeout)
+			((tab21 + read("src/settings/sections/memory.ts")).match(/markModified\(/g) || []).length === 66 && // 50 di settingsTab + 16 di modul memory (v0.1.175/176/178/187 tak berubah)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&
