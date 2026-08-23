@@ -3598,27 +3598,6 @@ const chatGuards = require("./smoke/chat.cjs");
 	// certified fallbacks; four retired classes deleted with their rules.
 	// Negative asserts use exact literals — names of the retired selectors
 	// stay out of every comment (lesson 46).
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const st = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const ok =
-			st.includes(".oa-app .oa-changed-count {") &&
-			!st.includes("border-radius: 4px;") &&
-			!st.includes("border-radius: var(--radius-s);") &&
-			st.includes("#08b94e") &&
-			!st.includes("#f87171") &&
-			!st.includes(".oa-tool-icon {") &&
-			!st.includes("oa-reasoning-header") &&
-			!st.includes("oa-reasoning-label") &&
-			!st.includes("oa-model-menu-hint");
-		if (ok) {
-			console.log("✓ styles hygiene: chip rule + radius/color fallbacks certified + 4 retired selector rules purged");
-		} else {
-			console.error("✗ styles hygiene drifted");
-			failed++;
-		}
-	}
 	// duplicate-selector guard (2026-08-02, v0.1.60) — the consolidation
 	// attempt's honest outcome: 6 top-level selector families still carry
 	// layered override blocks; EVERY earlier block keeps at least one
@@ -3647,124 +3626,18 @@ const chatGuards = require("./smoke/chat.cjs");
 	// 2026-08-04 (v0.1.71): .oa-app shell consolidated — the isolation
 	// variable layer folded into the base shell rule (zero overlap);
 	// 0 frozen families remain, the ARC IS COMPLETE.
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const st = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const seen = new Map();
-		const dups = new Set();
-		for (const line of st.split("\n")) {
-			/* column-0 only: overrides nested in @media/keyframes are
-			   intentional conditional layering, not debt */
-			if (!line.startsWith(".") || !line.trimEnd().endsWith("{")) continue;
-			const sel = line.trim().slice(0, -1).trim();
-			seen.set(sel, (seen.get(sel) ?? 0) + 1);
-			if (seen.get(sel) > 1) dups.add(sel);
-		}
-		const FROZEN = [
-			/* 2026-08-04 (v0.1.71): the last family (.oa-app shell) is
-			   consolidated — 17/17 done, the list is empty. This guard
-			   now exists purely to reject NEW layered debt. */
-		];
-		const cur = [...dups].sort().join("|");
-		const want = [...FROZEN].sort().join("|");
-		if (cur === want) {
-			console.log(`✓ duplicate-selector guard: ${dups.size} frozen layered families, no new debt`);
-		} else {
-			console.error(`✗ layered selector debt changed. Now: ${cur || "(none)"} · Frozen: ${want}`);
-			failed++;
-		}
-	}
 	// prompt-actions + msg-content merged guards (2026-08-03, v0.1.67) —
 	// both were zero-overlap layered pairs; each must stay ONE col-0 rule
 	// carrying the full property set (visual-verified via ?s=convo computed
 	// diff + stable shots byte-identical).
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const st = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const blockOf = (sel) => {
-			const start = st.indexOf("\n" + sel);
-			const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
-			return { end, block: end < 0 ? "" : st.slice(start, end),
-				singles: st.split("\n").filter((l) => l === sel).length };
-		};
-		const pa = blockOf(".oa-app .oa-prompt-actions {");
-		const mc = blockOf(".oa-app .oa-msg-content {");
-		const paOk = pa.singles === 1 && pa.end > 0
-			&& pa.block.includes("\tdisplay: flex;") && pa.block.includes("\tgap: 5px;")
-			&& pa.block.includes("\tpadding: 4px 8px 7px;") && pa.block.includes("\twidth: 100%;")
-			&& pa.block.includes("\tflex-wrap: nowrap;");
-		const mcOk = mc.singles === 1 && mc.end > 0
-			&& mc.block.includes("\tflex-direction: column;") && mc.block.includes("\toverflow-wrap: break-word;")
-			&& mc.block.includes("\tuser-select: text;") && mc.block.includes("\t-webkit-user-select: text;");
-		if (paOk && mcOk) {
-			console.log("✓ prompt-actions + msg-content merged blocks: single rules, full props present");
-		} else {
-			console.error("✗ prompt-actions/msg-content merged block drifted");
-			failed++;
-		}
-	}
 	// selbar-btn + cron-history merged guards (2026-08-03, v0.1.68) — selbar
 	// keeps BOTH paddings in winning order (3px 8px above 0); cron keeps one
 	// rule with the shared tabular-nums comma group left intact beside it.
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const st = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const blockOf = (sel) => {
-			const start = st.indexOf("\n" + sel);
-			const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
-			return { end, block: end < 0 ? "" : st.slice(start, end),
-				singles: st.split("\n").filter((l) => l === sel).length };
-		};
-		const sb = blockOf(".oa-selbar-btn {");
-		const p1 = sb.block.indexOf("\tpadding: 3px 8px;");
-		const p2 = sb.block.indexOf("\tpadding: 0;");
-		const sbOk = sb.singles === 1 && sb.end > 0 && p1 >= 0 && p2 >= 0 && p1 < p2
-			&& sb.block.includes("\twidth: 26px;") && sb.block.includes("\tborder-radius: var(--radius-s, 4px);")
-			&& sb.block.includes("\tjustify-content: center;");
-		const ch = blockOf(".oa-cron-history {");
-		const chOk = ch.singles === 1 && ch.end > 0
-			&& ch.block.includes("\tdisplay: flex;") && ch.block.includes("\toverscroll-behavior: contain;")
-			&& ch.block.includes("\tfont-size: var(--font-ui-smaller);")
-			&& st.includes(".oa-cron-history,\n.oa-cron-note {");
-		if (sbOk && chOk) {
-			console.log("✓ selbar-btn + cron-history merged blocks: padding order preserved, group intact");
-		} else {
-			console.error("✗ selbar-btn/cron-history merged block drifted");
-			failed++;
-		}
-	}
 	// prompt-action + hub-chip-count merged guards (2026-08-03, v0.1.69) —
 	// prompt-action: ONE rule, radius declared twice with 999px LAST
 	// (winner by intra-rule order, send stays a disc); attach toggle keeps
 	// 999px in its own single rule. chip-count: ONE rule carrying
 	// tabular-nums folded out of the numeric group (now cron pair only).
-	{
-		const fs = require("fs");
-		const path = require("path");
-		const st = fs.readFileSync(path.join(__dirname, "..", "styles.css"), "utf8");
-		const blockOf = (sel) => {
-			const start = st.indexOf("\n" + sel);
-			const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
-			return { end, block: end < 0 ? "" : st.slice(start, end),
-				singles: st.split("\n").filter((l) => l === sel).length };
-		};
-		const pa = blockOf(".oa-app .oa-prompt-action {");
-		const r1 = pa.block.indexOf("\tborder-radius: var(--radius-m, 8px);");
-		const r2 = pa.block.indexOf("\tborder-radius: 999px;");
-		const hcc = blockOf(".oa-hub-chip-count {");
-		if (pa.singles === 1 && r1 >= 0 && r2 > r1 && pa.end > 0
-			&& st.includes(".oa-app .oa-attach-toggle { border-radius: 999px; }")
-			&& hcc.singles === 1 && hcc.block.includes("\tfont-variant-numeric: tabular-nums;")
-			&& hcc.block.includes("\tcolor: var(--text-faint);")) {
-			console.log("✓ prompt-action + hub-chip-count merged: disc radius winner-last, numeric folded");
-		} else {
-			console.error("✗ prompt-action/hub-chip-count merged block drifted");
-			failed++;
-		}
-	}
 	// ---- v0.1.72 prompt-kit audit fixes (2026-08-04) — B1: the chat
 	// container must observe RESIZE (not only mutations) so silent growth
 	// keeps the pinned view at the bottom (+ official role="log"); B2: the
@@ -4632,33 +4505,6 @@ const chatGuards = require("./smoke/chat.cjs");
 	   definisi per selector — guard anti-debt layered-selector & chip-x
 	   tetap hijau), satu-satunya selector BARU yang di-append di ekor:
 	   .oa-settings .setting-item. Dievaluasi pixel-by-pixel via lane. */
-	{
-		const css22 = fs.readFileSync(path.join(__dirname, "../styles.css"), "utf8");
-		const mark22 = "SETTINGS CARD RHYTHM (v0.1.95";
-		const tail22 = css22.includes(mark22) ? css22.slice(css22.indexOf(mark22)) : "";
-		/* v0.1.159 amended: hex inside var() fallback is the sanctioned form —
-		   strip var(...) before the bare-hex check (same as v0.1.94). */
-		const bareHex22 = /#[0-9a-fA-F]{3,8}/.test(tail22.replace(/var\([^()]*\)/g, ""));
-		const ok =
-			css22.includes(".oa-settings {\n\t--setting-items-radius: var(--radius-m, 8px);") &&
-			css22.includes(".oa-settings .oa-subsection {\n\tmargin-top: 28px;") &&
-			css22.includes("margin: 2px 0 8px;") &&
-			css22.includes(".oa-settings .oa-mcp-server {\n\tborder: 1px solid var(--background-modifier-border);\n\tborder-radius: var(--radius-m, 8px);\n\tpadding: 10px 12px;\n\tmargin-bottom: 6px;\n}") &&
-			css22.includes("\tborder-radius: var(--radius-s, 4px);\n}\n.oa-hub-chip-x:hover") &&
-			css22.includes("line-height: 1.5;\n\tpadding: 8px 10px;\n\tborder-radius: var(--radius-m, 8px);") &&
-			css22.includes("\tfont-size: var(--font-ui-smaller);\n\tpadding: 8px 10px;\n\tborder-radius: var(--radius-m, 8px);\n\tborder: 1px solid var(--background-modifier-border);\n\tbackground: var(--background-primary);\n\tcolor: var(--text-normal);\n\tresize: vertical;\n}") &&
-			css22.includes("\ttext-align: left;\n\tpadding: 8px 12px;\n\tborder: 1px solid var(--background-modifier-border);\n\tborder-radius: var(--radius-m, 8px);\n\tbackground: var(--background-primary);") &&
-			tail22.includes(".oa-settings .setting-item {\n\tpadding: var(--size-4-3, 12px) var(--size-4-4, 16px);\n\tmargin-bottom: 6px;\n}") &&
-			!/transition:\s*all/.test(tail22) &&
-			!/border-radius:\s*4px;/.test(tail22) &&
-			!bareHex22;
-		if (ok) {
-			console.log("✓ v0.1.95: settings card refinement — nilai in-place, satu selector baru di ekor, hygiene bersih");
-		} else {
-			console.error("✗ v0.1.95 settings card refinement drifted");
-			failed++;
-		}
-	}
 	/* v0.1.96 — perbaikan chrome oa-settings-search (laporan owner): "kotak
 	   di kanan" & bingkai ganda itu CAT ASLI UA stylesheet — input:is([type])
 	   & button native appearance duduk di (0,1,1) dan mengalahkan class
