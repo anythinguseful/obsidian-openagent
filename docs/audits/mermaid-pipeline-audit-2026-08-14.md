@@ -11,7 +11,7 @@ tags: [openagent, audit, mermaid, historical]
 # Open Agent v0.1.143 — Audit Read-Only Pipeline Mermaid
 
 **Tanggal audit:** 2026-08-14 (Asia/Jakarta)  
-**Target:** `/home/user/releases/v0.1.143/obsidian-openagent-v0.1.143-clean-source`  
+**Target:** verified clean-source snapshot for v0.1.143 (historical release workspace; supporting proof is linked above)
 **Mode:** read-only terhadap protected source/release  
 **Keputusan:** **jangan memodifikasi v0.1.143**. Temuan layak ditangani sebagai patch baru **v0.1.144**, setelah persetujuan eksplisit.
 
@@ -77,7 +77,7 @@ Konfirmasi pengguna setelah audit:
 
 Ini memperkuat relevansi matrix Mermaid 11.13.0 sebagai compatibility reference untuk keluarga Obsidian 1.13.x. Nomor patch Obsidian, OS, dan versi Mermaid yang dibaca langsung dari runtime belum tersedia, sehingga mapping changelog tetap reference, bukan fingerprint binary aktual.
 
-Log `/home/user/uploads/obsidian.md-1786616796152.log`:
+Uploaded runtime log recorded in the linked evidence (SHA-256 below):
 
 - SHA-256: `5ccd8dafa4215a73a0620a1a96b16b571353d603eebdbc07c3d79697b62b0b35`;
 - tidak memiliki timestamp;

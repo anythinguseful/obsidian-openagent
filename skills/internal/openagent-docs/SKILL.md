@@ -20,7 +20,7 @@ artifact belongs and what project contracts it must satisfy.
 | Superseded diagnosis/plan | `docs/arsip/` | Mark `archived`; link to the replacement. |
 | Raw logs, matrices, checksums, screenshots | `evidence/` | Keep proof separate from readable narrative. |
 | User release summary | `RELEASES.md` | Concise behavior-oriented changelog. |
-| Release proof | `releases/vN/` | Final report, artifact hashes, source manifest. |
+| Release proof | GitHub Release assets | Install ZIP, checksums, clean source, source manifest, and final report; local `release/` is disposable staging. |
 
 ## Non-negotiable format
 
@@ -32,7 +32,8 @@ artifact belongs and what project contracts it must satisfy.
    into the narrative.
 4. Update `docs/README.md` when adding a material plan, study, audit, or
    reference note.
-5. Update `RELEASES.md` and `releases/vN/` together for a release.
+5. Update `RELEASES.md` and the immutable GitHub Release assets together; do
+   not depend on a machine-local archive path.
 6. Run `npm run check:docs` before calling documentation complete.
 
 ## Refactor/status discipline

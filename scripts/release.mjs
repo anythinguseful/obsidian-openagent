@@ -9,8 +9,10 @@
  * (styles.css is the one exception: zip-minified, sentinel-verified instead).
  *
  * Usage:
- *   npm run release                     full pipeline
- *   npm run release -- --skip-preview   when headless Chromium is unavailable
+ *   npm run release                                      full local pipeline
+ *   npm run release -- --skip-preview                    preview-only fallback
+ *   npm run release -- --github-ci-proof --skip-preview  exact-commit CI browser proof
+ *   npm run release -- --reconstructed                   disclose rebuilt historical bytes
  *
  * Exit code is non-zero on the first failing step (nothing half-shipped).
  */
@@ -21,12 +23,15 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { prepareReleaseAssets, verifyGithubCiProof } from "./release-assets.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
 const releaseDir = join(root, "release");
 const zipDest = join(releaseDir, `openagent-obsidian-plugin-v${manifest.version}.zip`);
 const skipPreview = process.argv.includes("--skip-preview");
+const useGithubCiProof = process.argv.includes("--github-ci-proof");
+const reconstructed = process.argv.includes("--reconstructed");
 const ARTIFACTS = ["main.js", "manifest.json", "styles.css", "vendor/pdf.worker.min.js"];
 const STAMP_RE = /20\d\d-\d\d-\d\d \d\d:\d\dZ/;
 
@@ -44,7 +49,14 @@ function step(name, cmd, args, opts = {}) {
 step("typecheck", "npx", ["tsc", "-noEmit", "-skipLibCheck"]);
 step("build", "node", ["esbuild.config.mjs", "production"]);
 step("tests", "npm", ["test"]);
-step("PDF security browser", "npm", ["run", "test:pdf-security"]);
+let pdfProof = "local adversarial PDF browser suite";
+if (useGithubCiProof) {
+	const proof = verifyGithubCiProof(root);
+	pdfProof = `exact-commit GitHub CI ${proof.url}`;
+	console.log(`\n== PDF security browser\n   verified by exact-commit GitHub CI: ${proof.url}`);
+} else {
+	step("PDF security browser", "npm", ["run", "test:pdf-security"]);
+}
 step("source/docs", "npm", ["run", "check:docs"]);
 step("development skills", "npm", ["run", "check:skills"]);
 
@@ -123,5 +135,17 @@ if (!ok) {
 console.log(`build stamp: ${stamp}`);
 console.log(`zip size: ${statSync(zipDest).size} bytes → ${zipDest}`);
 rmSync(staging, { recursive: true, force: true });
+
+const prepared = prepareReleaseAssets({
+	root,
+	releaseDir,
+	version: manifest.version,
+	buildStamp: stamp,
+	reconstructed,
+	preview: skipPreview ? "skipped (--skip-preview)" : "chat and Settings real-DOM passed",
+	pdfProof,
+});
+console.log("\n== GitHub Release assets ready");
+for (const asset of prepared.assets) console.log(`   ${asset.name} (${asset.size} B, ${asset.sha256})`);
 
 console.log("\nZIP SYNCED");

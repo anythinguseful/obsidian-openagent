@@ -1,8 +1,10 @@
 # Release Notes
 
-Changelog ringkas untuk pengguna. Detail verifikasi per rilis ada di
-`releases/vN/openagent-vN-final-report.md` (versi sebelum v0.1.139: lihat
-riwayat repository GitHub).
+Changelog ringkas untuk pengguna. Mulai v0.1.151, ZIP terverifikasi,
+checksum, clean source, source manifest, dan final report disimpan sebagai
+asset permanen di [GitHub Releases](https://github.com/anythinguseful/obsidian-openagent/releases).
+Arsip machine-local untuk versi sebelumnya tidak ikut dalam upload GitHub;
+catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 

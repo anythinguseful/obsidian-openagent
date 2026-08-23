@@ -1,12 +1,12 @@
 ---
 title: "Settings descriptions audit (2026-08-22)"
 type: audit
-status: applied
+status: done
 date: 2026-08-22
 tags: [openagent, audit, settings, copy]
 ---
 
-> **Status: applied** — seluruh A–E diterapkan 2026-08-22 (24 edit desc,
+> **Status: done** — seluruh A–E diterapkan 2026-08-22 (24 edit desc,
 > termasuk "Compression threshold" yang tertangkap guard), pin smoke di-amend,
 > guard v0.1.191 + voice rules di SKILL.md dibuat. Sisa saran proses
 > (pin angka default) menunggu prioritas.

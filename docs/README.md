@@ -23,7 +23,7 @@ resolve in both).
 
 | Document | What it is |
 | --- | --- |
-| [Working Agreement](working-agreement.md) | Binding process memory: owner's standing instructions, enforcement mechanisms, documentation rules, GitHub handoff bootstrap, and the Lessons log (1–177). **Read this first in any new session.** |
+| [Working Agreement](working-agreement.md) | Binding process memory: owner's standing instructions, enforcement mechanisms, documentation rules, GitHub handoff bootstrap, and the Lessons log (1–179). **Read this first in any new session.** |
 | [Backlog](backlog.md) | Deferred ideas with explicit reasons, unlock conditions, and cheap alternatives. |
 | [Hermes tools gap](studies/hermes-tools-gap-2026-08-09.md) | Live map of Hermes Agent tools vs Open Agent, with the recommended roadmap. |
 | [Reference sources](reference/reference-sources.md) | One-stop registry of verified official upstream sources allowed for parity work. |
@@ -63,10 +63,12 @@ Feature plans and port designs, with their implementation status.
 | [MCP runtime plan](plans/mcp-runtime-plan.md) | done | MCP runtime client (stdio + Streamable HTTP): consent-gated, `mcp__<server>__<tool>` tools, lazy spawn, interactive-path-only, plus a curated install catalog. |
 | [Blueprint catalog plan](plans/blueprint-catalog-plan.md) | done | Curated cron blueprints with typed slots (schedule + prompt pre-filled). |
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
-| [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | active | Safe, staged extraction of modal UI from the Settings owner. |
-| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Approved architecture choices, sequencing, and deferred refactor boundaries after skill installation. |
-| [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | draft | Security contract and witnesses required before extracting the MCP installer modal. |
-| [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | draft | Storage, migration, export, and diagnostic contract required before MCP catalog work continues. |
+| [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
+| [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
+| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 are complete; Stage 6 awaits the next owner-selected architecture target. |
+| [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
+| [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
+| [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | active | Move durable release assets from ephemeral root-workspace storage to immutable GitHub Releases, beginning with a reconstructed and reverified v0.1.151. |
 
 ## Studies (`studies/`)
 
@@ -81,7 +83,8 @@ Upstream research and parity notes — always verified against raw sources.
 | [Empty-state parity](studies/empty-state-parity-2026-08-01.md) | done | Hermes Desktop Intro empty state (v0.1.35). |
 | [Clarify tool study](studies/hermes-clarify-tool.md) | done | Hermes `clarify` tool, verified from source. |
 | [Slash parity](studies/hermes-slash-parity-2026-07-31.md) | done | Composer slash commands vs Hermes Desktop. |
-| [Tools gap](studies/hermes-tools-gap-2026-08-09.md) | active | Hermes vs Open Agent tool map + roadmap (all 🟡 closed as of v0.1.135). |
+| [Tools gap](studies/hermes-tools-gap-2026-08-09.md) | done | Historical Hermes tool-gap roadmap; all recommended gaps closed and the current inventory is 25 tools in 10 toolsets. |
+| [Memory & Context engine research](studies/memory-context-engine-research-2026-08-21.md) | done | Hindsight-style plugin-native memory design; retain, recall, reflect, mental models, and optional embeddings shipped in three phases. |
 | [Model menu parity](studies/model-menu-parity-2026-08-01.md) | done | Composer model menu (v0.1.32). |
 | [Model settings parity](studies/model-settings-parity-2026-07-30.md) | done | Model settings page vs Hermes Desktop. |
 | [Prompt-kit audit](studies/promptkit-audit.md) | done | prompt-kit components audit against the upstream clone. |
@@ -95,6 +98,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | Document | Status | Summary |
 | --- | --- | --- |
 | [Plugin audit 2026-08-09](audits/audit-2026-08-09.md) | done | Full plugin audit after v0.1.127. |
+| [Documentation consistency audit 2026-08-23](audits/documentation-consistency-audit-2026-08-23.md) | done | v0.1.151 source/test/release truth versus stale plan status, hub coverage, and release-proof contracts. |
 | [Plugin technical audit 2026-08-11](audits/plugin-audit-2026-08-11.md) | done | Historical v0.1.135 technical audit; its hardening findings informed later work. |
 | [Mermaid inline-percent audit 2026-08-13](audits/mermaid-inline-percent-audit-2026-08-13.md) | done | Root cause and regression scope for invalid trailing Mermaid comments. |
 | [Mermaid pipeline audit 2026-08-14](audits/mermaid-pipeline-audit-2026-08-14.md) | done | Historical read-only audit of Mermaid rendering, retry, and vault-write paths. |
@@ -104,6 +108,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | [Obsidian API audit](audits/obsidian-api-audit-2026-07-31.md) | done | API compatibility against Obsidian 1.13.4. |
 | [Settings tab audit](audits/settings-audit-2026-07-22.md) | done | Settings tab audit (v0.1.2 baseline). |
 | [Settings copy review](audits/settings-copy-review-2026-07-25.md) | done | UI copy review — fully approved, shipped as v0.1.11. |
+| [Settings descriptions audit 2026-08-22](audits/settings-descriptions-audit-2026-08-22.md) | done | Full Settings copy inventory; approved A–E changes and anti-regression voice/length guards shipped. |
 | [UI audit](audits/ui-audit.md) | done | UI audit using the vendored web-design-guidelines skill. |
 | [UI contract audit 2026-08-20](audits/ui-contract-audit-2026-08-20.md) | done | Bug-bounty pass of the openagent-ui contract: 14 rules verified, 3 warns, 1 contract clarification (var() fallback scoping). |
 
@@ -149,5 +154,6 @@ The `docs/` folder is an Obsidian-friendly vault:
   (Summary → Contract → Decisions → Impact → Phases → GWT → Risks → Open
   Questions).
 - **Release changelog** for users lives in [`RELEASES.md`](../RELEASES.md) at
-  the repository root; detailed verification stays per release in
-  `releases/vN/`.
+  the repository root; verified ZIPs, checksums, source manifest, and final
+  reports are retained as immutable GitHub Release assets. Local `release/` is
+  disposable staging and is never a documentation dependency.

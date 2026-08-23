@@ -105,7 +105,9 @@ Diadopsi 2026-08-18 dari `designdocs/agents/DOCS_GUIDE.md` repo obsidian-copilot
 5. Plan baru mulai dari `docs/plans/_TEMPLATE.md`; status frontmatter harus
    jujur (`draft` → `done` saat ship, `archived` saat digantikan).
 6. `RELEASES.md` di root mencatat changelog ringkas per rilis untuk pengguna;
-   detail verifikasi tetap di `releases/vN/openagent-vN-final-report.md`.
+   ZIP, checksum, clean source, source manifest, dan final report disimpan
+   permanen sebagai asset GitHub Release. Folder lokal `release/` hanya staging
+   ter-ignore dan tidak boleh menjadi dependency lintas sesi.
 
 ## Tabel routing (kalau kerja X → baca Y)
 
@@ -1591,8 +1593,6 @@ isi ke sini).
 - v0.1.167 (owner: "arrow key select tidak ikut"): highlight `.is-active` SUDAH pindah, tapi scroll list TIDAK — baris ter-highlight jatuh keluar pandangan setelah beberapa panah. Fix: efek `slashMenuRef` + scroll lokal (block:nearest, Hermes trigger-popover.tsx: topDelta/bottomDelta, ambil delta terkecil, index 0 → scrollTop 0). TIDAK pakai bantuan viewport-scroll (bisa ikut menggeser transcript). Bukti: 12×ArrowDown → active `/personality` fullyVisible (bottom==listH), 12×ArrowUp → balik scrollTop 0. Jebakan 121c lagi: komentar saya menulis kata yang di-pin ABSEN → ditulis ulang tanpa kata itu.
 
 ### 149. (2026-08-20) Model pill "ngunci" panjang → composer collapse: bug-nya di RANTAI flex, bukan di pill — flex item yang harus menyusut adalah wrapper (.oa-model-picker), bukan teks di dalamnya
-
-### 149. (2026-08-20) Model pill "ngunci" panjang → composer collapse: bug-nya di RANTAI flex, bukan di pill — flex item yang harus menyusut adalah wrapper (.oa-model-picker), bukan teks di dalamnya
 - Owner: nama model panjang membuat pill terkunci panjang, composer collapse saat panel dipersempit. Ukur DULU (rule 137 #5) dengan harness di viewport LEBAR + frame sempit (karena media query max-width:380px mengikuti VIEWPORT, bukan panel — mengukur pakai viewport kecil = menyesatkan). Bukti: label ellipsis ADA tapi tidak pernah aktif karena label = flex item `min-width:auto` (tak mau menyusut); dan yang lebih dalam: `.oa-model-picker` (wrapper) adalah flex item sebenarnya di row nowrap, juga `min-width:auto` → row overflow.
 - Fix rantai: `.oa-model-picker` jadi shrinkable flex item (`min-width:0; flex:0 1 210px; max-width:210px`); pill `display:flex; width:100%` (mengisi wrapper); label `flex:1 1 auto; min-width:0` (ellipsis aktif). Mirror di Quick Ask. Hasil terukur: 430→pill 210, 300→169, 240→109, semua `actionsOverflow:false` + send tetap terlihat + label terpotong.
 - Pelajaran: "teks tidak terpotong padahal sudah pakai ellipsis" hampir selalu = flex item `min-width:auto` di sepanjang rantai — periksa SEMUA leluhur flex sampai item yang benar-benar menjadi anak row, bukan cuma span teks.
@@ -1736,3 +1736,13 @@ isi ke sini).
 
 ### 123. (2026-08-19) GitHub rate-limit (429) di klon/raw — fakta parity harus bisa dibuktikan dari catatan verifikasi byte-level sesi sebelumnya, bukan re-fetch wajib
 - Saat diminta bandingkan dengan Hermes Desktop, klon & raw.githubusercontent sama-sama 429. Tapi perbandingan tetap bisa dilakukan jujur karena sesi ini SUDAH memverifikasi source Hermes byte-level (commit `aeabff6`/`6cf6ad4`) dan mencatatnya (studies + Lessons). Pelajaran: catat commit-sha + fakta kunci saat verifikasi, supaya saat network mati/rate-limit, klaim parity tetap berdasar bukti tersimpan, bukan re-fetch yang bisa gagal.
+
+### 178. (2026-08-23) Release archive yang hidup di root workspace tidak durable; GitHub Release menjadi pemilik asset, dan rekonstruksi wajib mengaku byte lama hilang
+- Audit v0.1.151 menemukan kontrak `releases/vN/` menunjuk folder yang dulu hidup di luar repository dan tidak ikut upload GitHub. Path machine-local bukan arsip lintas sesi. Keputusan owner: GitHub Releases memegang enam asset permanen (install ZIP+checksum, clean source+checksum, source manifest, final report); repo hanya menyimpan changelog/link, `release/` lokal hanya staging ter-ignore.
+- Publisher wajib fail-closed: exact pushed commit, CI browser hijau untuk SHA yang sama, checksum asset cocok, tag/release belum ada, dan konfirmasi versi eksplisit. `npm run release` tidak boleh publish otomatis.
+- Artefak historis yang hilang tidak boleh “dipulihkan” dengan checksum rekaan. v0.1.151 boleh diterbitkan sebagai reconstructed verification release setelah dibangun dan diuji ulang, dengan disclosure bahwa byte baru bukan byte ZIP lama yang hilang.
+
+### 179. (2026-08-23) Upload multi-asset GitHub Release bukan transaksi atomik; buat draft, retry per asset, verify, baru publish
+- `gh release create <tag> <6 assets>` gagal dua kali karena `uploads.github.com` menutup koneksi (`EOF`), sekali di asset keempat dan sekali di asset pertama. CLI membersihkan release/tag percobaan, tetapi satu perintah besar tidak memberi kontrol retry per asset dan bisa meninggalkan status yang sulit dibedakan pada kegagalan lain.
+- Protokol permanen: create DRAFT tanpa asset → upload SATU-SATU dengan retry terbatas → download+hash semua asset selama masih draft → publish (`--draft=false`) → download+hash lagi. Bila satu langkah gagal, hapus draft+tag dan laporkan cleanup; release parsial tidak boleh tampil publik.
+- Guard: `runWithRetries` diuji transient-success + exhausted-failure, publisher tetap dry-run default, dan live success hanya dicetak setelah release non-draft serta keenam byte remote cocok. Draft belum tentu punya tag ref: cleanup harus delete release dulu lalu cek `ls-remote` sebelum menghapus tag; `--cleanup-tag` buta sempat memberi 422 sesudah draft sebenarnya sudah terhapus.
