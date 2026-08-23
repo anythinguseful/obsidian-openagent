@@ -50,13 +50,15 @@ already provided proof. The owner approved it, and it shipped.
 
 ## Current work label
 
-> [!todo] **CURRENTLY WORKING — roadmap reassessment**
+> [!todo] **CURRENT PRIORITY — GitHub Release retention; architecture paused**
 >
 > Session Panel, Settings modal Phases 1–3, MCP credential isolation, and the
-> security-sensitive MCP Catalog extraction are complete. No further product
-> refactor is implicitly authorized. The next owner decision is whether to:
-> extract Settings section renderers, split the smoke/harness hotspot first,
-> extract a composer controller, or prioritize a feature/bug instead.
+> security-sensitive MCP Catalog extraction are complete. The owner selected
+> release-retention migration as the next task; see
+> [GitHub Release retention and publication](github-release-retention-2026-08-23.md).
+> No further product refactor is implicitly authorized. After release retention
+> is stable, the next architecture decision remains Settings section renderers,
+> smoke/harness split, composer controller, or product feature/bug work.
 
 ## Completed sequence
 
@@ -170,5 +172,5 @@ Before a release, run the complete `npm run verify` and release pipeline.
 
 ## Open Questions
 
-- Which Stage 6 candidate should receive the next dedicated plan? Waiting for
-  owner selection after documentation reconciliation.
+- Which Stage 6 architecture candidate should receive the next dedicated plan?
+  Deferred until the approved GitHub Release retention migration is complete.

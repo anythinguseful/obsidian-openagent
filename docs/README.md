@@ -68,6 +68,7 @@ Feature plans and port designs, with their implementation status.
 | [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 are complete; Stage 6 awaits the next owner-selected architecture target. |
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
+| [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | active | Move durable release assets from ephemeral root-workspace storage to immutable GitHub Releases, beginning with a reconstructed and reverified v0.1.151. |
 
 ## Studies (`studies/`)
 
