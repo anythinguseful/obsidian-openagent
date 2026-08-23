@@ -428,11 +428,21 @@ sertifikasi radius, dan dua guard minify. Dua hal baru di sini:
   persis `__dirname` monolit. Path literal tetap wajib lewat `read()` supaya
   terlihat oleh check-docs guard 1.
 
-**Tetap di monolit, dengan alasan.** Ketiganya guard *ketiadaan* file: blok
-`reasoning.tsx` (`!fs.existsSync` atas `chain-of-thought`/`steps`/
-`prompt-suggestion`), guard radius v0.1.94, dan guard multi-file yang membaca
-`scripts/release.mjs` + `manifest.json`. Blok pertama sempat ikut Phase 11 lalu
-ditarik kembali: check-docs guard 1 mewajibkan setiap literal
+**Tetap di monolit, dengan alasan.** Tiga `✓` tersisa, dan hanya satu di
+antaranya berupa blok mandiri:
+
+1. `✓ onload() completes` — bootstrap; memang milik orkestrator.
+2. `✓ system prompt assembles` — `await plugin.runner.assembleSystemPrompt()`,
+   pernyataan runtime di badan IIFE, bukan blok yang bisa dipindah utuh.
+3. `✓ prompt-kit: Reasoning …` — satu-satunya blok tersisa (28 baris).
+
+Catatan koreksi: guard radius v0.1.52/v0.1.94 **ikut pindah** ke `misc.cjs` dan
+`settings.cjs`; anggapan lama bahwa keduanya harus tinggal berasal dari survei
+regex yang sama dengan Lesson 183 — `s` di sana ternyata kunci objek
+`{ s: "4", m: "8", l: "12" }`, bukan variabel runtime. Diverifikasi ulang
+dengan AST sebelum dipindah.
+
+Blok nomor 3 sempat ikut Phase 11 lalu ditarik kembali: check-docs guard 1 mewajibkan setiap literal
 `path.join(ROOT, …)` resolve di disk, dan ini dibuktikan langsung dengan modul
 probe sekali pakai — bukan diasumsikan. Guard semacam ini hanya boleh pindah
 kalau path-nya lewat `read()`, seperti `pdf-worker.d.ts` di `preview.cjs`.
