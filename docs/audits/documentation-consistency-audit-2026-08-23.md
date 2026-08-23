@@ -57,7 +57,7 @@ witness yang sudah tracked sebagai bukti bahwa klaim “pending” telah selesai
 | --- | --- | --- | --- |
 | D1 | high | Empat plan/roadmap masih menyatakan ekstraksi modal dan MCP security work belum selesai, padahal source, test, dan release v0.1.151 membuktikan selesai. | Sesi berikutnya dapat mengulang refactor security-sensitive atau mengambil urutan kerja yang salah. |
 | D2 | medium | `docs/README.md` belum mencantumkan tiga dokumen material dan menampilkan status MCP credential decision yang tidak sama dengan frontmatter. | Hub tidak lagi menjadi indeks terpercaya. |
-| D3 | medium | Kontrak release menunjuk `releases/vN/`, tetapi tidak ada release report yang tracked, termasuk v0.1.151. | Pembaca tidak dapat membuka bukti rinci yang dijanjikan changelog. |
+| D3 | medium | Kontrak release dahulu menunjuk `releases/vN/`, tetapi tidak ada release report yang tracked, termasuk v0.1.151. | **Remediated 2026-08-23:** immutable GitHub Release sekarang menyimpan keenam asset dan `RELEASES.md` menautkannya. |
 | D4 | medium | `check:docs` hijau tetapi tidak memeriksa vocabulary status, kelengkapan hub, status parity, date/tags, link validity, atau release report. | Gate memberi green result pada drift yang seharusnya bisa dideteksi otomatis. |
 | D5 | low | Satu audit memakai status tidak terdokumentasi (`applied`), tiga path machine-specific masih ada di curated audits, dan Lesson 149 terduplikasi. | Taxonomy dan process memory lebih sulit diproses serta diaudit. |
 | D6 | low | Lessons 123–177 lengkap tetapi tersusun dalam beberapa lompatan dan blok menurun. | Tidak ada lesson hilang, tetapi urutan memperbesar risiko duplikasi dan menyulitkan pembacaan. |
@@ -194,12 +194,35 @@ The same-session follow-up completed:
 
 Still open by design:
 
-- D3: the uploaded repository still lacks the promised `releases/vN/` final
-  reports; no artifact hash was invented during a docs-only sync;
 - D4: strengthening `check:docs` changes project tooling and should be a
   separate test-first change;
 - D6: Lessons 123–177 remain out of numeric order. No lesson is missing; a
   large process-memory reorder is deferred to a dedicated reviewable cleanup.
+
+## D3 remediation — 2026-08-23
+
+D3 is resolved by the owner-approved GitHub Release contract, not by restoring
+an unavailable `releases/vN/` directory. [Open Agent v0.1.151](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151)
+is public, non-draft, and targets `0ccc352995c8d31b42a8935bfce1d2d25f4d5395`.
+It retains exactly these six immutable assets:
+
+1. `openagent-obsidian-plugin-v0.1.151.zip`
+2. `openagent-obsidian-plugin-v0.1.151.zip.sha256`
+3. `openagent-v0.1.151-clean-source.zip`
+4. `openagent-v0.1.151-clean-source.zip.sha256`
+5. `openagent-v0.1.151-source-manifest.sha256`
+6. `openagent-v0.1.151-final-report.md`
+
+The successful [publication workflow run](https://github.com/anythinguseful/obsidian-openagent/actions/runs/32655385414)
+built the complete set, downloaded and hash-verified the remote assets while
+the release was draft, then repeated verification after publication. The install
+ZIP checksum is `d58e7fc6c9ffa04445994d11017f4764973bd168b74d00cef614c6400f0e22fb`.
+
+The storage/remediation portion of D3 is complete. A separate publication-plan
+correction remains open: the immutable final report says `Verified release`
+instead of disclosing reconstructed historical bytes. This audit does not claim
+historical byte or checksum identity, and the no-overwrite rule means that
+successful release asset must not be silently replaced.
 
 ## Outcome
 
