@@ -47,8 +47,11 @@ npm run publish:release -- --publish --confirm vN
 ```
 
 GitHub Releases is the durable asset archive; `release/` is disposable local
-staging. Do not commit generated `main.js`, `vendor/`, preview output, browser
-downloads, dependency caches, or release assets.
+staging. If the local environment cannot reach GitHub's upload host, use the
+manual workflow template at `agents/arena/workflows/release-github-actions.yml`:
+the owner must copy it to `.github/workflows/release.yml` through GitHub UI
+after review. Do not commit generated `main.js`, `vendor/`, preview output,
+browser downloads, dependency caches, or release assets.
 
 Clean generated output with:
 

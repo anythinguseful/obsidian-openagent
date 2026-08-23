@@ -58,7 +58,7 @@ No historical checksum will be invented or claimed to match.
 | D2 | GitHub Releases is the primary and only durable binary archive. | Owner selection, 2026-08-23. |
 | D3 | Keep only `RELEASES.md` and release links in the repository; final reports and all generated proof files are GitHub assets. | Owner selection, 2026-08-23. |
 | D4 | Historical v0.1.139–v0.1.150 artifacts are not reconstructed without a separate request; their changelog remains historical. | Honesty boundary: original bytes are unavailable. |
-| D5 | No GitHub Actions workflow change is required. Existing CI supplies exact-commit browser proof; local tooling prepares and explicitly publishes assets. | Arena workflow boundary. |
+| D5 | Existing CI supplies exact-commit browser proof. Because the Arena sandbox cannot establish TLS to `uploads.github.com`, the owner approved a manual GitHub Actions release workflow as the publication transport; Arena stores the reviewed template outside `.github/workflows` for the owner to copy through GitHub UI. | Owner selection after two transactional upload failures, 2026-08-23. |
 
 ## Impact
 
@@ -97,6 +97,17 @@ Update current retention wording in:
 
 Historical lesson entries that truthfully describe the old machine-local archive
 remain historical; add a dated amendment rather than rewriting history.
+
+### GitHub Actions transport template
+
+- `agents/arena/workflows/release-github-actions.yml` is a reviewed template,
+  not an active workflow.
+- After this PR is merged, the owner copies it verbatim to
+  `.github/workflows/release.yml` through GitHub UI.
+- It checks out the default branch, runs the full browser-backed release,
+  performs publisher dry-run, then publishes and downloads/verifies all assets.
+- The workflow is manual-only and has `contents: write`; existing CI remains
+  read-only and unchanged.
 
 ### Not changed
 
@@ -169,17 +180,19 @@ the durable source of release assets.
 
 ### Phase 4 — v0.1.151 publication
 
-**Status: pending exact-commit GitHub CI and publication**
+**Status: pending owner merge, workflow installation, and dispatch**
 
-1. Push the release-tooling commit and open a PR.
-2. Obtain green GitHub CI for the exact release target, including PDF security.
-3. Run the full release pipeline. If local Chromium remains unavailable, do not
-   weaken the browser gate; use only the publisher's exact-commit green CI proof
-   path approved by this plan.
-4. Run publisher dry-run and inspect all asset names/checksums.
-5. Publish `v0.1.151` with the reconstructed-verification disclosure.
-6. Query the GitHub Release back and independently verify uploaded assets.
-7. Update the audit remediation note with the release URL.
+1. Release-tooling branch and PR: done.
+2. Exact-commit PR CI including PDF security: done.
+3. Owner merges the PR into `main`.
+4. Owner copies `agents/arena/workflows/release-github-actions.yml` to
+   `.github/workflows/release.yml` through GitHub UI (Arena may not write
+   workflow files).
+5. Wait for green `main` CI on the workflow-install commit.
+6. Dispatch **Publish GitHub Release** with `reconstructed=true`.
+7. The workflow runs the full release pipeline, dry-run, draft upload with
+   retry, remote byte verification, publication, and post-publication verify.
+8. Update the audit remediation note with the final release URL.
 
 ## GWT
 
@@ -224,9 +237,11 @@ published checksum files.
 > reconstructed rather than pretending historical identity.
 
 > [!risk]
-> Local Chromium is unavailable in the current sandbox. Mitigation: existing
-> GitHub CI runs the adversarial browser suite; any CI-proof fallback must bind
-> to the exact pushed release commit and be recorded in the report.
+> Local Chromium is unavailable and the Arena sandbox cannot establish TLS to
+> `uploads.github.com`. Mitigation: existing CI proves the browser suite; the
+> owner-installed manual release workflow builds and uploads from GitHub's own
+> runner. The reviewed publisher still performs dry-run, draft transaction,
+> retries, cleanup, and remote byte verification.
 
 ## Open Questions
 

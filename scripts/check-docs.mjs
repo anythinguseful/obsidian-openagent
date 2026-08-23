@@ -61,6 +61,8 @@ mustInclude("scripts/publish-release.mjs", "GITHUB RELEASE PUBLISHED AND VERIFIE
 mustInclude("RELEASES.md", "github.com/anythinguseful/obsidian-openagent/releases", "GitHub Releases is the durable release archive");
 mustNotInclude("RELEASES.md", "releases/vN/openagent-vN-final-report.md", "dead machine-local release-report contract");
 mustInclude("agents/arena/workflows/release.md", "npm run publish:release", "Arena release workflow includes explicit publication");
+mustInclude("agents/arena/workflows/release-github-actions.yml", "workflow_dispatch:", "owner-installable GitHub release transport remains manual-only");
+mustInclude("agents/arena/workflows/release-github-actions.yml", "contents: write", "release workflow declares the narrow permission required to upload assets");
 mustInclude("skills/internal/openagent-docs/SKILL.md", "GitHub Release assets", "documentation routing points to durable release proof");
 mustInclude("skills/internal/openagent-ui/SKILL.md", "preview/index.html", "preview workflow points to the maintained hub");
 mustNotInclude("skills/internal/openagent-ui/SKILL.md", "test/preview-final.html", "dead preview path");

@@ -16,11 +16,16 @@
    tree, synchronized version, pushed exact commit, successful exact-commit CI,
    untampered assets, and no existing tag/release.
 6. Publish only through the explicit form:
-   `npm run publish:release -- --publish --confirm vN`. The publisher creates
-   the immutable GitHub Release, downloads all assets again, and verifies their
-   sizes and SHA-256 against the local set.
-7. GitHub Releases is the durable archive. The machine-local `release/`
+   `npm run publish:release -- --publish --confirm vN`. The publisher creates a
+   draft, uploads each asset with bounded retry, verifies every remote byte,
+   publishes, then verifies again. Failed drafts are removed.
+7. If Arena cannot reach `uploads.github.com`, do not weaken or partially
+   publish. The owner copies the reviewed
+   `agents/arena/workflows/release-github-actions.yml` template to
+   `.github/workflows/release.yml` through GitHub UI after merge, waits for
+   green main CI, and dispatches it manually.
+8. GitHub Releases is the durable archive. The machine-local `release/`
    directory is staging only; run `npm run clean` after remote verification.
-8. Never silently rewrite an existing tag or release. Subsequent source changes
+9. Never silently rewrite an existing tag or release. Subsequent source changes
    belong to the next version. Reconstructed historical releases must say so
    and must never claim the missing original artifact checksum.

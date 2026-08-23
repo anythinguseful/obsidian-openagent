@@ -144,10 +144,16 @@ function main() {
 		console.log(`\nGITHUB RELEASE PUBLISHED AND VERIFIED: ${url}`);
 	} catch (err) {
 		if (draftCreated) {
-			const cleanup = spawnSync("gh", ["release", "delete", tag, "--yes", "--cleanup-tag"], { cwd: root, encoding: "utf8" });
+			/* Draft releases do not necessarily create a tag ref. Deleting with
+			   --cleanup-tag can therefore return 422 AFTER deleting the draft,
+			   falsely reporting cleanup failure. Delete the draft first, then
+			   remove a tag only when the remote proves one exists. */
+			const cleanup = spawnSync("gh", ["release", "delete", tag, "--yes"], { cwd: root, encoding: "utf8" });
 			if (cleanup.status !== 0) {
 				throw new Error(`${err instanceof Error ? err.message : String(err)}\nCleanup of failed draft ${tag} also failed: ${(cleanup.stderr || cleanup.stdout || "unknown error").trim()}`);
 			}
+			const remoteTag = run("git", ["ls-remote", "--tags", "origin", `refs/tags/${tag}`]).trim();
+			if (remoteTag) run("git", ["push", "origin", `:refs/tags/${tag}`]);
 			console.warn(`failed draft ${tag} was deleted; no partial release was retained`);
 		}
 		throw err;
