@@ -1,7 +1,7 @@
 ---
 title: "GitHub Release retention and publication"
 type: plan
-status: active
+status: done
 date: 2026-08-23
 tags: [openagent, plan, release, github, packaging]
 ---
@@ -180,7 +180,7 @@ the durable source of release assets.
 
 ### Phase 4 — v0.1.151 publication
 
-**Status: publication transport completed; reconstruction disclosure remains open**
+**Status: done — 2026-08-23**
 
 1. Release-tooling PR [#1](https://github.com/anythinguseful/obsidian-openagent/pull/1)
    and the witness-policy repair PR [#2](https://github.com/anythinguseful/obsidian-openagent/pull/2)
@@ -189,18 +189,14 @@ the durable source of release assets.
    [run 32654928557](https://github.com/anythinguseful/obsidian-openagent/actions/runs/32654928557).
 3. **Publish GitHub Release** completed successfully:
    [run 32655385414](https://github.com/anythinguseful/obsidian-openagent/actions/runs/32655385414).
-   Its public final report, however, says `Verified release` rather than
-   `Reconstructed verification release`; this proves that the dispatched input
-   was not recorded as the required `reconstructed=true` value.
 4. The published, non-draft release is
    [Open Agent v0.1.151](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151),
-   targeting that exact commit. Its six assets were uploaded and independently
-   downloaded and checksum-verified by the successful workflow before and after
-   publication.
-5. The retention/publication transport is proven, but Phase 4 is not marked
-   done: the immutable final-report asset lacks the required reconstruction
-   disclosure. The no-overwrite contract prohibits replacing this successful
-   release or its assets silently.
+   targeting that exact commit. After explicit owner approval, its final-report
+   asset and release body were corrected to disclose the required reconstructed
+   verification status. GitHub API verifies the exact six-asset inventory.
+5. The release is explicitly reconstructed: its checksums identify newly built
+   and reverified artifacts; they do not claim identity with the unavailable
+   historical ZIP bytes.
 
 ## GWT
 
@@ -283,8 +279,7 @@ install ZIP, its checksum, clean-source ZIP, its checksum, source manifest, and
 final report. The install ZIP SHA-256 is
 `d58e7fc6c9ffa04445994d11017f4764973bd168b74d00cef614c6400f0e22fb`.
 
-**Open correction:** the published final report identifies itself as a verified
-release, but does not disclose reconstructed historical bytes. That conflicts
-with this plan's v0.1.151 contract. Do not silently replace the successful
-release; resolve its immutable-report discrepancy through an explicitly approved
-follow-up.
+The final report and release body explicitly disclose that v0.1.151 is a
+reconstructed verification release. The correction was made only after explicit
+owner approval; tag, target commit, install ZIP, checksums, clean-source archive,
+and source manifest were preserved.

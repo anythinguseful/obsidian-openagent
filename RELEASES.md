@@ -10,7 +10,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 # Open Agent v0.1.151 — MCP credential isolation & catalog hardening 🔐
 
-**Release archive:** [Open Agent v0.1.151 on GitHub](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151) retains the six published assets, including the install ZIP and SHA-256. The retention plan records an open correction: the immutable final-report asset does not yet include the required reconstructed-release disclosure, so no historical byte identity or checksum is claimed here.
+**Release archive:** [Open Agent v0.1.151 on GitHub](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151) is a reconstructed verification release with six published assets, including the install ZIP and SHA-256. The artifacts were rebuilt and reverified from the tracked v0.1.151 source; they do **not** claim byte identity with the unavailable historical ZIP.
 
 - MCP catalog secrets now live in a plugin-private secret store, separate from exportable settings.
 - Legacy n8n API keys migrate once; imports strip catalog secrets; Reset Everything clears the secret store.

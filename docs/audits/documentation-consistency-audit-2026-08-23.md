@@ -218,11 +218,10 @@ built the complete set, downloaded and hash-verified the remote assets while
 the release was draft, then repeated verification after publication. The install
 ZIP checksum is `d58e7fc6c9ffa04445994d11017f4764973bd168b74d00cef614c6400f0e22fb`.
 
-The storage/remediation portion of D3 is complete. A separate publication-plan
-correction remains open: the immutable final report says `Verified release`
-instead of disclosing reconstructed historical bytes. This audit does not claim
-historical byte or checksum identity, and the no-overwrite rule means that
-successful release asset must not be silently replaced.
+D3 is fully remediated. After explicit owner approval, the final-report asset
+and release body were corrected to disclose reconstructed historical bytes while
+preserving the tag, target commit, and the five other assets. This audit does not
+claim historical byte or checksum identity.
 
 ## Outcome
 
