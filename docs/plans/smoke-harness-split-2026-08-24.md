@@ -354,3 +354,36 @@ Then only test/smoke/settings.cjs is edited, not a 7k-line file
 - q3: Should the entry point stay `test/smoke.test.cjs`, or become several
   entries in the `npm test` chain? — status: waiting for owner;
   **recommendation: keep one entry point** (avoids touching CI workflow).
+
+## Progress — 2026-08-24 (parser-verified)
+
+`test/smoke.test.cjs` **7.012 → 5.353 baris (−24%)**, 289 `✓` utuh di setiap
+fase. Modul: `harness.cjs`, `styles.cjs`, `settings.cjs`, `chat.cjs`,
+**`agent.cjs`** (baru). Gerbang tiap fase: diff `✓` terurut kosong, plus
+`npm test` / typecheck / build / `check:docs` 38.
+
+Sisa monolit **145 blok** (angka dari AST, bukan regex):
+
+| klaster | blok | baris | catatan |
+| --- | --- | --- | --- |
+| preview | 55 | 1.529 | terbesar; sebaiknya dipecah beberapa sesi |
+| settings | 40 | 1.166 | modul tujuan sudah ada |
+| chat | 32 | 868 | modul tujuan sudah ada |
+| quickask | 12 | 376 | rata-rata 6,3 file/blok — termahal |
+| styles | 2 | 40 | sisa; salah satunya pakai runtime `s` |
+| lain | 4 | 112 | tanpa `read()` literal |
+
+**Koreksi angka.** Tabel domain di atas dan q2 ("pilot `styles` (30 guards)")
+berasal dari survei regex dan **salah**; lihat Lesson 183. Fakta AST: tidak ada
+deklarasi `read()` di module scope (459 semuanya di dalam blok), hanya 6
+variabel di badan IIFE, dan **1** blok yang benar-benar memakai runtime `s`.
+Rencana "naikkan variabel bersama ke harness" dibatalkan sebelum ditulis karena
+premisnya tidak ada.
+
+**Penghalang nyata yang tersisa** hanyalah blok yang masih memakai
+`fs`/`path`/`__dirname` inline — mekanis, ditulis ulang ke `read()` saat pindah.
+
+`agent.cjs` adalah satu-satunya modul domain yang mengimpor `ROOT`/`fs`/`path`:
+guard v0.1.18 melakukan `fs.readdirSync` untuk membuktikan tak ada panggilan
+`fileManager.trashFile` langsung di luar shim. Alasannya didokumentasikan di
+header modul.
