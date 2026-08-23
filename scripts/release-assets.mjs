@@ -134,6 +134,59 @@ export function assertTrackedTreeClean(root) {
 	if (status) throw new Error(`Tracked source is dirty; commit or restore it before releasing:\n${status}`);
 }
 
+/**
+ * Decide how the settings-audit witness (a TRACKED file) may be updated after
+ * a settings real-preview run. Pure function — unit-tested without a browser.
+ *
+ * Born from run 32653162333: the harness used to rewrite the tracked witness
+ * with a fresh `at` timestamp on EVERY run, so `npm run release` guaranteed a
+ * dirty tracked tree before the fail-closed clean-tree check introduced by
+ * the GitHub-release-retention work even ran. The release pipeline now passes
+ * `readonly: true` and may never touch the tracked witness; the full run
+ * result is still recorded in the ignored sidecar by the harness.
+ *
+ * Returns `{ writeTracked, trackedText?, notice }`:
+ * - probe results identical to the tracked witness → never rewrite (the old
+ *   `at` stays; pure timestamp churn must not dirty the tree);
+ * - dev run with changed results → rewrite the witness (visible diff, commit
+ *   the new evidence deliberately);
+ * - readonly (release) run with changed results → no rewrite, only a notice;
+ *   the release stays green on machine-dependent probe detail while the drift
+ *   is surfaced loudly instead of swallowed.
+ */
+export function planSettingsWitnessUpdate({ trackedJson, freshProbes, readonly = false, now }) {
+	const freshText = JSON.stringify({ at: now, probes: freshProbes }, null, 2);
+	let trackedProbes = null;
+	if (trackedJson != null) {
+		try {
+			trackedProbes = JSON.parse(trackedJson)?.probes ?? null;
+		} catch {
+			trackedProbes = null;
+		}
+	}
+	if (trackedProbes === null) {
+		if (readonly) {
+			return {
+				writeTracked: false,
+				notice:
+					"tracked settings witness is missing or unreadable; this run is recorded only in the ignored sidecar — commit a witness via a standalone settings-preview run",
+			};
+		}
+		return { writeTracked: true, trackedText: freshText, notice: null };
+	}
+	if (JSON.stringify(trackedProbes) === JSON.stringify(freshProbes)) {
+		return { writeTracked: false, notice: null };
+	}
+	if (readonly) {
+		return {
+			writeTracked: false,
+			notice:
+				"settings witness differs from this run's probe results; the tracked witness was left untouched for the release — rerun the settings preview standalone and commit the updated witness",
+		};
+	}
+	return { writeTracked: true, trackedText: freshText, notice: null };
+}
+
 export function currentCommit(root) {
 	return git(root, ["rev-parse", "HEAD"]).trim();
 }

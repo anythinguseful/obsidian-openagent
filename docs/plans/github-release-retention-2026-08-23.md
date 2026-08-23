@@ -246,3 +246,24 @@ published checksum files.
 ## Open Questions
 
 - None. Scope and retention layout were approved by the owner on 2026-08-23.
+
+## Addendum 2026-08-23 — first release runs failed on the clean-tree invariant
+
+The first two `Publish GitHub Release` dispatches (runs 32652756389 and
+32653162333) failed in "Build complete verified asset set". The first real
+error was not the trailing exit-code line but
+`Tracked source is dirty; … M test/real-preview/settings-audit-probes.json`:
+the settings preview harness rewrote that TRACKED witness with a fresh `at`
+timestamp on every run, so the clean-tree assertion introduced by this plan
+rejected every release run before preparation. The Node.js 20 annotation on
+those runs is an unrelated actions deprecation warning.
+
+Fix (test-first): the witness write now goes through the pure
+`planSettingsWitnessUpdate` policy in `scripts/release-assets.mjs`; identical
+probe results never rewrite the witness, release runs
+(`OA_RELEASE_WITNESS=readonly`, passed by `scripts/release.mjs`) never touch
+it and record the run in the ignored sidecar
+`test/real-preview/out/settings-audit-probes.json`, and `release.mjs`
+re-asserts tree cleanliness immediately after the preview steps. Guards:
+planner and dirty-tree unit checks in `test/release-assets.test.cjs` plus the
+`release witness policy wired` smoke marker. See Lesson 180.

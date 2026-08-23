@@ -641,6 +641,31 @@ plugin.manifest = { id: "openagent", version: "0.1.0", name: "Open Agent", autho
 		}
 	}
 
+	/* release-witness guard (run 32653162333): the settings harness writes a
+	   TRACKED witness; its rewrite policy must go through the pure planner so
+	   a release run (OA_RELEASE_WITNESS=readonly, passed by release.mjs) can
+	   never dirty the tracked tree the fail-closed clean assertion protects.
+	   release.mjs must also re-assert tree cleanliness right after the preview
+	   steps, so drift fails at the exact step that caused it. */
+	{
+		const bs = read("test/real-preview/build-settings.mjs");
+		const rel = read("scripts/release.mjs");
+		const witnessPolicy =
+			bs.includes("planSettingsWitnessUpdate") &&
+			bs.includes('process.env.OA_RELEASE_WITNESS') &&
+			bs.includes('"readonly"') &&
+			bs.includes('out", "settings-audit-probes.json');
+		const releaseWiring =
+			rel.includes('OA_RELEASE_WITNESS: "readonly"') &&
+			rel.includes("assertTrackedTreeClean(root)");
+		if (witnessPolicy && releaseWiring) {
+			console.log("✓ release witness policy wired (readonly release runs never dirty the tracked tree)");
+		} else {
+			console.error(`✗ release witness policy drifted (witnessPolicy:${witnessPolicy} releaseWiring:${releaseWiring})`);
+			failed++;
+		}
+	}
+
 	// providers guard: buffered completion must single-shot emit onReasoning/
 	// onToken — regression guard for "empty assistant bubbles when streaming is
 	// off or the stream dies before the first token".
@@ -4229,6 +4254,9 @@ plugin.manifest = { id: "openagent", version: "0.1.0", name: "Open Agent", autho
 	// (F18) must exist in build-settings.mjs with element-order assertions,
 	// the aggregate red-probe gate must fail loudly, and release.mjs must
 	// wire the settings audit as a real step (graduated, no longer manual).
+	// 2026-08-23: the step now carries the readonly-witness env (run
+	// 32653162333) — the marker follows the call prefix, not the closing
+	// paren, so the env argument does not break the pin.
 	{
 		const fs = require("fs");
 		const path = require("path");
@@ -4239,7 +4267,7 @@ plugin.manifest = { id: "openagent", version: "0.1.0", name: "Open Agent", autho
 			bs.includes('"H:Backup & Restore"') &&
 			bs.includes("getComputedStyle(normalTitle).color") &&
 			bs.includes("fixed === false") &&
-			rel.includes('step("settings preview", "node", ["test/real-preview/build-settings.mjs"])')
+			rel.includes('step("settings preview", "node", ["test/real-preview/build-settings.mjs"]')
 		) {
 			console.log("✓ settings pixel lane: F18 general-groups probe + red gate + wired into release");
 		} else {
