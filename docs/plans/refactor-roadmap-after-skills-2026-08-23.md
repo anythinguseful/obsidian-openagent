@@ -41,7 +41,7 @@ presented was:
 | **Pisahkan session panel dari ChatApp** | Paling kecil dan aman: daftar/pencarian/rename/load sesi menjadi surface terpisah; ChatApp tetap pemilik agent loop. | **done** |
 | **Pisahkan section Settings** | Mulai dari satu section berisiko rendah, lalu buat pola renderer reusable untuk mengecilkan settingsTab tanpa mengubah UI. | awaiting a new decision/plan |
 | **Pisahkan composer controller** | Ekstrak input, queue, slash, attachment, history, dan keyboard dari ChatApp; nilai tinggi tetapi blast radius lebih besar. | deferred |
-| **Pecah smoke/harness test** | Kurangi hotspot test dahulu agar refactor plugin berikutnya lebih mudah dan diagnosis failure lebih jelas. | deferred |
+| **Pecah smoke/harness test** | Kurangi hotspot test dahulu agar refactor plugin berikutnya lebih mudah dan diagnosis failure lebih jelas. | **selected 2026-08-24** — plan: [Smoke/harness split](smoke-harness-split-2026-08-24.md) |
 
 The owner asked, **“mana yang anda sarankan kita kerjakan duluan?”** The
 recommendation was Session Panel because its boundary was clearest, it left the
@@ -50,15 +50,23 @@ already provided proof. The owner approved it, and it shipped.
 
 ## Current work label
 
-> [!todo] **CURRENT PRIORITY — GitHub Release retention; architecture paused**
+> [!todo] **CURRENT PRIORITY — smoke/harness split (planning)**
 >
-> Session Panel, Settings modal Phases 1–3, MCP credential isolation, and the
-> security-sensitive MCP Catalog extraction are complete. The owner selected
-> release-retention migration as the next task; see
-> [GitHub Release retention and publication](github-release-retention-2026-08-23.md).
-> No further product refactor is implicitly authorized. After release retention
-> is stable, the next architecture decision remains Settings section renderers,
-> smoke/harness split, composer controller, or product feature/bug work.
+> Session Panel, Settings modal Phases 1–3, MCP credential isolation, the
+> security-sensitive MCP Catalog extraction, and release retention are all
+> complete and verified in `main`.
+>
+> On **2026-08-24** the owner selected the **smoke/harness split** as the Stage 6
+> target, chosen as an enabler: `test/smoke.test.cjs` string-pins the very files
+> the remaining candidates would move (`src/settingsTab.ts` ×46,
+> `src/ui/ChatApp.tsx` ×30), so splitting it first avoids paying the
+> pin-amendment cost twice. Its plan is
+> [Smoke/harness split](smoke-harness-split-2026-08-24.md), currently `draft`
+> with three open questions; the owner deferred ordering and scope
+> (“kita bahas nanti”), so **no implementation is authorized yet**.
+>
+> Settings section renderers and the composer controller remain deferred and
+> still require their own plans. No product refactor is implicitly authorized.
 
 ## Completed sequence
 
@@ -121,17 +129,26 @@ These shipped with the v0.1.150 Settings modularization release.
 
 ### Stage 6 — reassess large owners
 
-**Status: active; no implementation selected**
+**Status: active; target selected 2026-08-24, implementation not yet authorized**
 
 Current hotspots at v0.1.151:
 
+- `test/smoke.test.cjs`: 7,012 lines — **selected target**;
 - `src/ui/ChatApp.tsx`: approximately 5.3k lines;
-- `src/settingsTab.ts`: approximately 4.9k lines;
-- `test/smoke.test.cjs`: approximately 7.0k lines.
+- `src/settingsTab.ts`: approximately 4.9k lines.
 
-Candidate order remains a product/architecture decision. A new refactor must
-receive its own plan and behavior witnesses; this roadmap does not authorize a
-broad rewrite.
+The owner selected the smoke/harness split first because it is an enabler
+rather than an end in itself: the harness pins `src/settingsTab.ts` 46 times and
+`src/ui/ChatApp.tsx` 30 times as raw text, so either remaining candidate would
+otherwise have to amend those pins inside a 7k-line file. Its dedicated plan is
+[Smoke/harness split](smoke-harness-split-2026-08-24.md).
+
+That plan is `draft` and carries three open questions (pin-conversion scope,
+pilot domain and domain list, entry-point shape). Ordering and scope were
+deferred by the owner, so implementation is **not** authorized yet.
+
+A new refactor must receive its own plan and behavior witnesses; this roadmap
+does not authorize a broad rewrite.
 
 ## Contract
 
@@ -173,4 +190,6 @@ Before a release, run the complete `npm run verify` and release pipeline.
 ## Open Questions
 
 - Which Stage 6 architecture candidate should receive the next dedicated plan?
-  Deferred until the approved GitHub Release retention migration is complete.
+  **Answered 2026-08-24: the smoke/harness split**, now planned in
+  [Smoke/harness split](smoke-harness-split-2026-08-24.md). Its own ordering and
+  scope questions remain open there.

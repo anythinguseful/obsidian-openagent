@@ -69,6 +69,7 @@ Feature plans and port designs, with their implementation status.
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
 | [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | done | Durable assets live in the [reconstructed, reverified v0.1.151 GitHub Release](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151). |
+| [Smoke/harness split](plans/smoke-harness-split-2026-08-24.md) | draft | Stage 6 target: split the 7,012-line `test/smoke.test.cjs` into a shared harness plus domain guard modules, conserving all 195 checks. Ordering and scope await the owner. |
 
 ## Studies (`studies/`)
 
