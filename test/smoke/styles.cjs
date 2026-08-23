@@ -1,9 +1,16 @@
 /**
  * Smoke guards whose only source input is styles.css.
  *
- * Moved verbatim from test/smoke.test.cjs (Phase 2 of the smoke/harness
- * split). Guard conditions and messages are unchanged; only the enclosing
- * function and one level of indentation differ.
+ * Moved verbatim from test/smoke.test.cjs (Phases 2 and 4 of the smoke/
+ * harness split). Guard conditions and messages are unchanged; only the
+ * enclosing function and one level of indentation differ.
+ *
+ * Phase 4 added the CSS-only rule-order family: hub chip ×, the chip-x /
+ * reasoning-content / tool-chevron / reasoning merged blocks, the model-menu
+ * cluster, the .oa-app shell, and the two search-chrome paint guards. Those
+ * blocks used to read styles.css through a block-local fs/path pair anchored
+ * on __dirname; on the move they were rewritten to the harness read(), which
+ * is what check-docs guards 2 and 3 require.
  */
 
 const { read } = require("./harness.cjs");
@@ -128,5 +135,221 @@ module.exports = function stylesGuards() {
 		}
 	}
 
+	{
+		// hub chip × (owner 2026-07-23): the real app styles every bare button
+		// with input-height and — via button:not(.clickable-icon), which beats
+		// our single-class rule — a background + shadow, inflating community
+		// tap chips into gray pills. The chip-scoped override must exist.
+		const css = read("styles.css");
+		if (css.includes(".oa-settings .oa-hub-chip .oa-hub-chip-x")) {
+			console.log("✓ hub chip ×: app button-reset overridden — community tap chips stay chip-sized");
+		} else {
+			console.error("✗ hub chip ×: app button-reset override missing (community chips inflate)");
+			failed++;
+		}
+	}
+	// chip-x merged-order guard (2026-08-03, v0.1.61) — the single
+	// .oa-hub-chip-x rule must keep font-weight:600 ABOVE `font: inherit`
+	// so the shorthand still wins (computed weight 400, proven identical to
+	// the layered era by real-render computed-style diff). If a future edit
+	// moves it below the shorthand, the × button silently turns bold.
+	{
+		const st = read("styles.css");
+		const sel = ".oa-hub-chip-x {";
+		const start = st.indexOf("\n" + sel);
+		const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+		const block = end < 0 ? "" : st.slice(start, end);
+		const w = block.indexOf("\tfont-weight: 600;");
+		const f = block.indexOf("\tfont: inherit;");
+		const singles = st.split("\n").filter((l) => l === sel).length;
+		if (start >= 0 && end >= 0 && w >= 0 && f >= 0 && w < f && singles === 1) {
+			console.log("✓ chip-x merged block: single layered-free rule, font-weight above font shorthand");
+		} else {
+			console.error("✗ chip-x merged block drifted (order or count)");
+			failed++;
+		}
+	}
+	// reasoning-content merged-structure guard (2026-08-03, v0.1.62) —
+	// the consolidated .oa-app .oa-reasoning-content rule must stay a SINGLE
+	// col-0 rule carrying both former blocks' properties with the shared
+	// margin-top deduplicated (visual-verified byte-identical, incl. the
+	// stable moa.png disclosure shot). A re-layered second rule or a dropped
+	// property fails here before any pixel can drift.
+	{
+		const st = read("styles.css");
+		const sel = ".oa-app .oa-reasoning-content {";
+		const start = st.indexOf("\n" + sel);
+		const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+		const block = end < 0 ? "" : st.slice(start, end);
+		const singles = st.split("\n").filter((l) => l === sel).length;
+		const mt = block.split("\n").filter((l) => l === "\tmargin-top: 5px;").length;
+		if (singles === 1 && start >= 0 && end >= 0 && mt === 1
+			&& block.includes("\tmax-height: 240px;") && block.includes("\tpadding-left: 2px;")
+			&& block.includes("\tfont-style: italic;") && block.includes("\tline-height: 1.55;")) {
+			console.log("✓ reasoning-content merged block: single rule, deduped margin-top, all props present");
+		} else {
+			console.error("✗ reasoning-content merged block drifted (count or props)");
+			failed++;
+		}
+	}
+	// tool-chevron merged-structure guard (2026-08-03, v0.1.63) — single
+	// col-0 rule carrying display/color/flex/transition with the living
+	// .is-open rotate variant right beside it (visual-verified: 3 chevrons
+	// closed + 1 open rotate matrix byte-identical, fcard.png identical).
+	{
+		const st = read("styles.css");
+		const sel = ".oa-app .oa-tool-chevron {";
+		const open = ".oa-app .oa-tool-chevron.is-open {";
+		const start = st.indexOf("\n" + sel);
+		const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+		const block = end < 0 ? "" : st.slice(start, end);
+		const singles = st.split("\n").filter((l) => l === sel).length;
+		const opens = st.split("\n").filter((l) => l === open).length;
+		if (singles === 1 && opens === 1 && start >= 0 && end >= 0
+			&& block.includes("\tdisplay: inline-flex;") && block.includes("\tcolor: var(--text-faint);")
+			&& block.includes("\tflex: 0 0 auto;") && block.includes("\ttransition: transform 150ms ease;")) {
+			console.log("✓ tool-chevron merged block: single rule, 4 props, is-open variant intact");
+		} else {
+			console.error("✗ tool-chevron merged block drifted (count or props)");
+			failed++;
+		}
+	}
+	// reasoning-merged guard (2026-08-03, v0.1.66; rewritten 2026-08-04 v0.1.74):
+	// single rule, border-left+padding-left, font-size deduped. The
+	// cot-step-body twin guard went with the ChainOfThought purge (v0.1.74)
+	// — its CSS is gone on purpose, and Guard B now keeps the purge lasting.
+	{
+		const st = read("styles.css");
+		const blockOf = (sel) => {
+			const start = st.indexOf("\n" + sel);
+			const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+			return { start, end, block: end < 0 ? "" : st.slice(start, end),
+				singles: st.split("\n").filter((l) => l === sel).length };
+		};
+		const r = blockOf(".oa-app .oa-reasoning {");
+		const rOk = r.singles === 1 && r.end > 0
+			&& r.block.includes("\tborder-left: 2px solid var(--background-modifier-border);")
+			&& r.block.includes("\tpadding-left: 10px;")
+			&& r.block.split("\n").filter((l) => l === "\tfont-size: var(--font-ui-smaller);").length === 1;
+		if (rOk) {
+			console.log("✓ reasoning merged block: single rule, prop order counters shorthand (cot twin retired v0.1.74)");
+		} else {
+			console.error("✗ reasoning merged block drifted");
+			failed++;
+		}
+	}
+	// model-menu cluster merged guards (2026-08-04, v0.1.70) — all five
+	// frozen families folded winner-last into their base rules: menu width
+	// 300px after 270px; item flex/interface/ui-small after block/monospace/
+	// ui-smaller; footer gains the column trio after border-top; footer
+	// button flex-start/auto after center/32px; sibling border-left none
+	// after the hairline. Computed styles proven identical by the
+	// dbg-menumerge probe diff (menu scenario, real pill click).
+	{
+		const st = read("styles.css");
+		const blockOf = (sel) => {
+			const start = st.indexOf("\n" + sel);
+			const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+			return { end, block: end < 0 ? "" : st.slice(start, end),
+				singles: st.split("\n").filter((l) => l === sel).length };
+		};
+		const mm = blockOf(".oa-app .oa-model-menu {");
+		const mi = blockOf(".oa-app .oa-model-menu-item {");
+		const mf = blockOf(".oa-app .oa-model-menu-footer {");
+		const mb = blockOf(".oa-app .oa-model-menu-footer button {");
+		const ms = blockOf(".oa-app .oa-model-menu-footer button + button {");
+		const ok = mm.singles === 1 && mm.end > 0
+			/* v0.1.185 amended: full-width above composer (slash-menu parity) —
+			   the old 270/300px right-anchored popover is gone */
+			&& mm.block.indexOf("\twidth: min(820px, calc(100% - 24px));") >= 0
+			&& mm.block.indexOf("\tleft: 12px;") >= 0
+			&& mm.block.indexOf("\tright: 12px;") >= 0
+			&& mi.singles === 1 && mi.end > 0
+			&& mi.block.indexOf("\tdisplay: block;") >= 0
+			&& mi.block.indexOf("\tdisplay: flex;") > mi.block.indexOf("\tdisplay: block;")
+			&& mi.block.indexOf("\tfont-size: var(--font-ui-smaller);") >= 0
+			&& mi.block.indexOf("\tfont-size: var(--font-ui-small);") > mi.block.indexOf("\tfont-size: var(--font-ui-smaller);")
+			&& mf.singles === 1 && mf.end > 0
+			&& mf.block.indexOf("\tdisplay: flex;") >= 0
+			&& mf.block.indexOf("\tflex-direction: column;") > mf.block.indexOf("\tdisplay: flex;")
+			&& mb.singles === 1 && mb.end > 0
+			&& mb.block.indexOf("\tjustify-content: center;") >= 0
+			&& mb.block.indexOf("\tjustify-content: flex-start;") > mb.block.indexOf("\tjustify-content: center;")
+			&& mb.block.indexOf("\theight: 32px;") >= 0
+			&& mb.block.indexOf("\theight: auto;") > mb.block.indexOf("\theight: 32px;")
+			&& ms.singles === 1 && ms.end > 0
+			&& ms.block.indexOf("\tborder-left: 1px solid var(--background-modifier-border);") >= 0
+			&& ms.block.indexOf("\tborder-left: none;") > ms.block.indexOf("\tborder-left: 1px solid var(--background-modifier-border);");
+		if (ok) {
+			console.log("✓ model-menu cluster folded: width/display/footer/button/sibling winners stay last");
+		} else {
+			console.error("✗ model-menu folded block drifted");
+			failed++;
+		}
+	}
+	// .oa-app shell merged guard (2026-08-04, v0.1.71) — the LAST frozen
+	// family: ONE col-0 rule carries the base shell (6 props, original
+	// order) with the nine isolation neutralizations folded in after the
+	// font-size line. The defence-(1) banner comment stays by the reset;
+	// its rule now lives at the top of the sheet.
+	{
+		const st = read("styles.css");
+		const start = st.indexOf("\n.oa-app {");
+		const end = start < 0 ? -1 : st.indexOf("\n}\n", start);
+		const block = end < 0 ? "" : st.slice(start, end);
+		const singles = st.split("\n").filter((l) => l === ".oa-app {").length;
+		const props = ["\tposition: relative;", "\tdisplay: flex;", "\tflex-direction: column;",
+			"\theight: 100%;", "\tcolor: var(--text-normal);", "\tfont-size: var(--font-ui-medium);"];
+		const vars = ["--interactive-normal: transparent;", "--interactive-hover: transparent;",
+			"--input-shadow: none;", "--input-shadow-hover: none;", "--input-height: auto;",
+			"--input-border-width-focus: 0;", "--background-modifier-border-focus: transparent;",
+			"--background-modifier-form-field: transparent;", "--background-modifier-form-field-hover: transparent;"];
+		let i = -1, orderOk = true;
+		for (const pr of props) { const k = block.indexOf(pr); if (k <= i) orderOk = false; i = k; }
+		const fsz = block.indexOf("\tfont-size: var(--font-ui-medium);");
+		const allVars = vars.every((v) => block.indexOf(v) > fsz);
+		if (singles === 1 && end > 0 && orderOk && i >= 0 && allVars) {
+			console.log("✓ .oa-app shell merged: single rule, 6 base props + 9 isolation vars folded in order");
+		} else {
+			console.error("✗ .oa-app merged block drifted");
+			failed++;
+		}
+	}
+	{
+		const css23 = read("styles.css");
+		const ok =
+			css23.includes(".oa-settings-search .oa-settings-search-input {\n\tflex: 1 1 auto;\n\tmin-width: 0;\n\tpadding: 2px 0;\n}") &&
+			css23.includes('.oa-settings .oa-settings-search input.oa-settings-search-input[type="search"],') &&
+			css23.includes("\t-webkit-appearance: none !important;\n\tappearance: none !important;\n\tbackground: transparent !important;\n\tborder: 0 !important;\n\tbox-shadow: none !important;\n\toutline: none !important;") &&
+			css23.includes('.oa-settings .oa-settings-search input.oa-settings-search-input[type="search"]:focus-visible') &&
+			css23.includes(".oa-settings-search .oa-settings-search-input::placeholder {\n\tcolor: var(--text-faint);\n}") &&
+			css23.includes(".oa-settings-search .oa-settings-search-clear {\n\tdisplay: none; /* zero layout when empty") &&
+			css23.includes(".oa-settings-search.has-query .oa-settings-search-clear {\n\tdisplay: flex;\n}") &&
+			css23.includes(".oa-settings-search .oa-settings-search-clear:focus-visible {") &&
+			!css23.includes(".oa-settings-search-clear {\n\tvisibility: hidden;") &&
+			!css23.includes(".oa-settings-search.has-query .oa-settings-search-clear {\n\tvisibility: visible;");
+		if (ok) {
+			console.log("✓ v0.1.96: search chrome — UA paint dimatikan (appearance:none + prefix), ghost box hilang, fokus × bercincin");
+		} else {
+			console.error("✗ v0.1.96 search chrome fix drifted");
+			failed++;
+		}
+	}
+	{
+		const css24 = read("styles.css");
+		const ok =
+			css24.includes('.oa-settings .oa-settings-search input.oa-settings-search-input[type="search"]:hover,\n' +
+				'.oa-settings .oa-settings-search input.oa-settings-search-input[type="search"]:active,') &&
+			css24.includes("\tbackground: transparent !important;\n\tborder: 0 !important;\n\tbox-shadow: none !important;\n\toutline: none !important;") &&
+			css24.includes("\tfilter: none !important;\n\ttransform: none !important;\n\ttext-shadow: none !important;\n\ttransition: none !important;\n\tanimation: none !important;") &&
+			css24.includes("later/stronger\n   theme hover rule could still restore fill, border, motion, or shadow") &&
+			!css24.includes(".oa-settings-search .oa-settings-search-input:hover,");
+		if (ok) {
+			console.log("✓ v0.1.97: search input hover pinned neutral — tidak ada yang bergerak saat hover");
+		} else {
+			console.error("✗ v0.1.97 search-input hover pin drifted");
+			failed++;
+		}
+	}
 	return failed;
 };
