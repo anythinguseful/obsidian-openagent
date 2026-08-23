@@ -23,7 +23,7 @@ resolve in both).
 
 | Document | What it is |
 | --- | --- |
-| [Working Agreement](working-agreement.md) | Binding process memory: owner's standing instructions, enforcement mechanisms, documentation rules, GitHub handoff bootstrap, and the Lessons log (1–177). **Read this first in any new session.** |
+| [Working Agreement](working-agreement.md) | Binding process memory: owner's standing instructions, enforcement mechanisms, documentation rules, GitHub handoff bootstrap, and the Lessons log (1–179). **Read this first in any new session.** |
 | [Backlog](backlog.md) | Deferred ideas with explicit reasons, unlock conditions, and cheap alternatives. |
 | [Hermes tools gap](studies/hermes-tools-gap-2026-08-09.md) | Live map of Hermes Agent tools vs Open Agent, with the recommended roadmap. |
 | [Reference sources](reference/reference-sources.md) | One-stop registry of verified official upstream sources allowed for parity work. |

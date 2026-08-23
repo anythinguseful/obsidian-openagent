@@ -13,6 +13,7 @@ const { pathToFileURL } = require("node:url");
 		parsePublishArgs,
 		prepareReleaseAssets,
 		releaseAssetPaths,
+		runWithRetries,
 		selectSuccessfulCiCheck,
 		sha256Buffer,
 		verifyReleaseAssetSet,
@@ -107,6 +108,17 @@ const { pathToFileURL } = require("node:url");
 	} finally {
 		rmSync(repo, { recursive: true, force: true });
 	}
+
+	let attempts = 0;
+	const retried = runWithRetries(() => {
+		attempts++;
+		if (attempts < 3) throw new Error("transient upload EOF");
+		return "uploaded";
+	}, { attempts: 4, delayMs: 0 });
+	check(retried === "uploaded" && attempts === 3, "transient upload failures retry without duplicating a successful call");
+	attempts = 0;
+	assert.throws(() => runWithRetries(() => { attempts++; throw new Error("still down"); }, { attempts: 2, delayMs: 0 }), /still down/);
+	check(attempts === 2, "upload retry stops at the configured fail-closed limit");
 
 	const ci = selectSuccessfulCiCheck(
 		{

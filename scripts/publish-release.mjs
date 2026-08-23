@@ -9,6 +9,7 @@ import {
 	currentCommit,
 	parsePublishArgs,
 	releaseAssetPaths,
+	runWithRetries,
 	sha256File,
 	verifyGithubCiProof,
 	verifyReleaseAssetSet,
@@ -56,8 +57,9 @@ function assertReleaseAbsent(tag) {
 	}
 }
 
-function verifyRemoteAssets(tag, localAssets) {
-	const remote = JSON.parse(run("gh", ["release", "view", tag, "--json", "url,tagName,assets"]));
+function verifyRemoteAssets(tag, localAssets, { requirePublished = false } = {}) {
+	const remote = JSON.parse(run("gh", ["release", "view", tag, "--json", "url,tagName,isDraft,assets"]));
+	if (requirePublished && remote.isDraft) throw new Error(`GitHub Release ${tag} is still a draft.`);
 	const byName = new Map((remote.assets ?? []).map((asset) => [asset.name, asset]));
 	for (const local of localAssets) {
 		const asset = byName.get(local.name);
@@ -109,21 +111,47 @@ function main() {
 	}
 
 	const paths = releaseAssetPaths(releaseDir, version);
-	run("gh", [
-		"release",
-		"create",
-		tag,
-		"--target",
-		head,
-		"--title",
-		`Open Agent v${version}`,
-		"--notes-file",
-		paths.finalReport,
-		...verified.assets.map((asset) => asset.path),
-	], { stdio: "inherit", encoding: undefined });
+	let draftCreated = false;
+	try {
+		run("gh", [
+			"release",
+			"create",
+			tag,
+			"--draft",
+			"--target",
+			head,
+			"--title",
+			`Open Agent v${version}`,
+			"--notes-file",
+			paths.finalReport,
+		]);
+		draftCreated = true;
 
-	const url = verifyRemoteAssets(tag, verified.assets);
-	console.log(`\nGITHUB RELEASE PUBLISHED AND VERIFIED: ${url}`);
+		for (const asset of verified.assets) {
+			runWithRetries(
+				() => run("gh", ["release", "upload", tag, asset.path]),
+				{
+					attempts: 5,
+					delayMs: 1500,
+					onRetry: (err, attempt, total) => console.warn(`upload retry ${attempt}/${total - 1} for ${asset.name}: ${err instanceof Error ? err.message : String(err)}`),
+				},
+			);
+		}
+
+		verifyRemoteAssets(tag, verified.assets);
+		run("gh", ["release", "edit", tag, "--draft=false", "--latest"]);
+		const url = verifyRemoteAssets(tag, verified.assets, { requirePublished: true });
+		console.log(`\nGITHUB RELEASE PUBLISHED AND VERIFIED: ${url}`);
+	} catch (err) {
+		if (draftCreated) {
+			const cleanup = spawnSync("gh", ["release", "delete", tag, "--yes", "--cleanup-tag"], { cwd: root, encoding: "utf8" });
+			if (cleanup.status !== 0) {
+				throw new Error(`${err instanceof Error ? err.message : String(err)}\nCleanup of failed draft ${tag} also failed: ${(cleanup.stderr || cleanup.stdout || "unknown error").trim()}`);
+			}
+			console.warn(`failed draft ${tag} was deleted; no partial release was retained`);
+		}
+		throw err;
+	}
 }
 
 try {

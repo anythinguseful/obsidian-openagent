@@ -208,6 +208,22 @@ export function prepareReleaseAssets({
 	return { ...verifyReleaseAssetSet(paths), paths, commit };
 }
 
+export function runWithRetries(action, { attempts = 5, delayMs = 1000, onRetry } = {}) {
+	if (!Number.isInteger(attempts) || attempts < 1) throw new Error("Retry attempts must be a positive integer.");
+	let lastError;
+	for (let attempt = 1; attempt <= attempts; attempt++) {
+		try {
+			return action(attempt);
+		} catch (err) {
+			lastError = err;
+			if (attempt === attempts) break;
+			onRetry?.(err, attempt, attempts);
+			if (delayMs > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs * attempt);
+		}
+	}
+	throw lastError;
+}
+
 export function selectSuccessfulCiCheck(payload, headSha, name = RELEASE_CI_CHECK_NAME) {
 	const runs = Array.isArray(payload?.check_runs) ? payload.check_runs : [];
 	return runs.find((run) =>

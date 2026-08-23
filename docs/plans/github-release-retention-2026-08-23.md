@@ -76,8 +76,11 @@ No historical checksum will be invented or claimed to match.
   - preflight GitHub CLI, pushed commit, green exact-commit CI proof, asset
     presence/checksums, version/tag absence, and clean tree;
   - support a non-publishing dry run;
-  - call `gh release create` only with an explicit confirmation flag;
-  - fetch uploaded assets afterward and verify their names/sizes/checksums.
+  - create a private draft, upload each asset with bounded retry, verify all
+    remote bytes, then publish; failed drafts are deleted with their tag;
+  - call the mutating path only with an explicit confirmation flag;
+  - fetch uploaded assets again after publication and verify names, sizes, and
+    checksums.
 - `package.json`
   - add an explicit `publish:release` command; no automatic publication hook.
 
