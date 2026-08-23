@@ -189,6 +189,31 @@ Measured domain distribution of the 195 guard sites:
 | chat/composer | 17 | `ChatApp.tsx` — unblocks the composer refactor |
 | ui-components | 5 | `src/ui/components/*` |
 
+> [!warning] **Superseded on 2026-08-24 during Phase 2 — the table above is wrong.**
+> It was produced by a first-file-wins heuristic: each guard was filed under the
+> first source file it happened to read. Re-measuring with a balanced-brace scan
+> over the 205 level-1 blocks, and classifying a guard into a domain only when it
+> reads that domain's files **exclusively**, gives a very different picture.
+
+Corrected distribution, measured after Phase 2 landed (175 `✓` remaining in
+`smoke.test.cjs`, plus the 4 already moved to `test/smoke/styles.cjs`):
+
+| Category | `✓` | Splittable by domain? |
+|---|---:|---|
+| multi-file static | 88 | **No** — each reads 2+ domains' files in one block |
+| runtime/behavioural | 77 | No — needs the live `plugin`; belongs with the harness |
+| settings (exclusive) | 6 | Yes |
+| chat (exclusive) | 4 | Yes |
+| styles (exclusive) | 4 | Done — moved in Phase 2 |
+
+The honest conclusion: **only ~14 of 289 checks are cleanly domain-separable.**
+The guard population is dominated by cross-cutting blocks that assert a contract
+spanning `styles.css` + `settingsTab.ts` + `ChatApp.tsx` at once, which is a
+faithful reflection of how the features themselves are wired.
+
+This does not invalidate the enabler rationale, but it resizes the prize. See
+the revised Phase 3 below.
+
 ## Phases
 
 ### Phase 1 — extract the shared harness
@@ -219,8 +244,30 @@ lines reappear with byte-identical text.
 
 ### Phase 3 — move remaining domains incrementally
 
-Goal: repeat Phase 2 per domain, one commit each, until `smoke.test.cjs` is a
-thin orchestrator.
+**Revised 2026-08-24 after the Phase 2 measurement.** The original goal —
+"repeat per domain until `smoke.test.cjs` is a thin orchestrator" — is not
+reachable by relocation alone: 88 checks are multi-file and 77 are runtime-bound,
+so 165 of 175 remaining checks have no single domain to move to.
+
+Move only what is genuinely exclusive:
+
+- `test/smoke/settings.cjs` — 6 checks;
+- `test/smoke/chat.cjs` — 4 checks.
+
+That takes `smoke.test.cjs` to roughly 6.6k lines, not to a thin orchestrator.
+Anything beyond this needs an owner decision, because the options stop being
+free:
+
+| Pick | Approach | Tradeoff |
+|---|---|---|
+|  | Stop after the exclusive guards | Honest and cheap; the 7k file mostly remains |
+|  | Split multi-file blocks by *subject* rather than by file read | Genuinely shrinks the file; requires judgement per block, so it is no longer a verbatim move |
+|  | Group runtime guards into `test/smoke/runtime.cjs` behind a `plugin` parameter | Removes 77 checks from the orchestrator; touches how guards receive the plugin |
+
+Recommendation: take the exclusive guards now, then stop and re-decide. The
+enabler goal is already partly met — a future Settings or ChatApp refactor now
+has `test/smoke/settings.cjs` and `test/smoke/chat.cjs` to amend for the guards
+that are purely theirs, and a smaller haystack for the rest.
 
 Verification: after each commit, `npm test` green and the baseline diff empty.
 
