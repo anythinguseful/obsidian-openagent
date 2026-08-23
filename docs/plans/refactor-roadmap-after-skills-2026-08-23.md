@@ -69,8 +69,17 @@ already provided proof. The owner approved it, and it shipped.
 > while ChatApp pins stay spread across four modules (chat 27, preview 29,
 > settings 17, monolith 4).
 >
-> Settings section renderers and the composer controller remain deferred and
-> still require their own plans. No product refactor is implicitly authorized.
+> On **2026-08-24** the owner selected **Settings section renderers** as the
+> next target, in batch scope. Its plan is
+> [Settings section renderers](settings-section-renderers-2026-08-24.md).
+> It was chosen over `src/ui/ChatApp.tsx` on measured grounds: `settingsTab.ts`
+> has a ready seam (`renderSectionBody()` is one method per section) and twelve
+> renderers totalling 1,506 lines touch **zero** of the 34 class properties,
+> whereas `ChatApp()` is a single 4,892-line function with 35 `useState`,
+> 23 `useEffect` and 67 `useCallback` and no comparable boundary.
+>
+> The composer controller remains deferred and still requires its own plan. No
+> product refactor is implicitly authorized.
 
 ## Completed sequence
 
@@ -142,14 +151,21 @@ Current hotspots at v0.1.151:
 - `src/settingsTab.ts`: approximately 4.9k lines.
 
 The owner selected the smoke/harness split first because it is an enabler
-rather than an end in itself: the harness pins `src/settingsTab.ts` 46 times and
-`src/ui/ChatApp.tsx` 30 times as raw text, so either remaining candidate would
-otherwise have to amend those pins inside a 7k-line file. Its dedicated plan is
-[Smoke/harness split](smoke-harness-split-2026-08-24.md).
+rather than an end in itself: the harness pins both remaining candidates as raw
+text, so either would otherwise have to amend those pins inside a 7k-line file.
+Its plan, [Smoke/harness split](smoke-harness-split-2026-08-24.md), is **done**
+as of 2026-08-24: 7,012 → 1,296 lines, 289 `✓` preserved throughout.
 
-That plan is `draft` and carries three open questions (pin-conversion scope,
-pilot domain and domain list, entry-point shape). Ordering and scope were
-deferred by the owner, so implementation is **not** authorized yet.
+The pin counts quoted here originally (46 and 30) were wrong; the measured
+figures are **77** for `src/settingsTab.ts` and **78** for `src/ui/ChatApp.tsx`
+(same regex-survey origin as Lesson 183). The enabler argument survives the
+correction, and the split concentrated the settings pins: 57 of 77 now sit in
+`test/smoke/settings.cjs`.
+
+**Second target, selected 2026-08-24: Settings section renderers**, planned in
+[Settings section renderers](settings-section-renderers-2026-08-24.md) and
+authorized in batch scope. `src/ui/ChatApp.tsx` remains deferred — it is larger
+but has no comparable seam.
 
 A new refactor must receive its own plan and behavior witnesses; this roadmap
 does not authorize a broad rewrite.
@@ -194,6 +210,10 @@ Before a release, run the complete `npm run verify` and release pipeline.
 ## Open Questions
 
 - Which Stage 6 architecture candidate should receive the next dedicated plan?
-  **Answered 2026-08-24: the smoke/harness split**, now planned in
-  [Smoke/harness split](smoke-harness-split-2026-08-24.md). Its own ordering and
-  scope questions remain open there.
+  **Answered 2026-08-24: the smoke/harness split** — now `done`. The follow-up
+  target is [Settings section renderers](settings-section-renderers-2026-08-24.md),
+  selected by the owner the same day in batch scope.
+- Should `src/ui/ChatApp.tsx` be split at all, and along which seam? — open.
+  Unlike `settingsTab.ts` it has no per-section boundary: one 4,892-line
+  function holding 35 `useState`, 23 `useEffect` and 67 `useCallback`. It needs
+  a state-ownership answer before a file layout.

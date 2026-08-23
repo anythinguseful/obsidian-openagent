@@ -70,6 +70,7 @@ Feature plans and port designs, with their implementation status.
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
 | [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | done | Durable assets live in the [reconstructed, reverified v0.1.151 GitHub Release](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151). |
 | [Smoke/harness split](plans/smoke-harness-split-2026-08-24.md) | done | Stage 6 target, completed 2026-08-24: `test/smoke.test.cjs` split from 7,012 to 1,296 lines across eleven phases into a shared harness plus seven domain guard modules, with all 289 `✓` preserved at every step. |
+| [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | active | Stage 6 target #2: move the twelve self-contained section renderers (1,506 lines) out of the 4,938-line `src/settingsTab.ts` into `src/settings/sections/`, leaving the class owning data, persistence and every stateful renderer. |
 
 ## Studies (`studies/`)
 
