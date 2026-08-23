@@ -107,6 +107,8 @@ remain historical; add a dated amendment rather than rewriting history.
 
 ### Phase 1 — deterministic asset preparation
 
+**Status: done**
+
 Goal: extend the existing verified local release into a complete GitHub asset
 set without publishing anything.
 
@@ -127,6 +129,8 @@ npm run check:skills
 ```
 
 ### Phase 2 — fail-closed GitHub publisher
+
+**Status: done; live publication pending Phase 4**
 
 Goal: publish only an exact, pushed, green, non-existing release.
 
@@ -149,6 +153,8 @@ Preflight must reject:
 
 ### Phase 3 — documentation migration
 
+**Status: done**
+
 Goal: remove the dead machine-local retention contract and document GitHub as
 the durable source of release assets.
 
@@ -159,6 +165,8 @@ the durable source of release assets.
   current-contract path.
 
 ### Phase 4 — v0.1.151 publication
+
+**Status: pending exact-commit GitHub CI and publication**
 
 1. Push the release-tooling commit and open a PR.
 2. Obtain green GitHub CI for the exact release target, including PDF security.

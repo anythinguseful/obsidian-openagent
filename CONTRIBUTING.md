@@ -25,13 +25,30 @@ npm run verify
 
 This runs typecheck, production build, unit/smoke tests, the adversarial PDF browser matrix, documentation/metadata checks, and the development-skill integrity gate.
 
-To exercise real preview pages and produce a synchronized installable artifact as well:
+To exercise real preview pages and prepare a complete GitHub Release asset set:
 
 ```bash
 npm run release
 ```
 
-The release command writes an ignored, versioned ZIP under `release/`. Do not commit generated `main.js`, `vendor/`, preview output, browser downloads, dependency caches, or release ZIPs.
+The command writes the synchronized install ZIP, checksums, clean-source ZIP,
+source manifest, and final report under ignored `release/`. It does **not**
+publish automatically. Inspect the fail-closed publisher first:
+
+```bash
+npm run publish:release
+```
+
+After the dry run verifies the exact pushed commit, successful GitHub CI, asset
+checksums, and absent tag/release, publication requires explicit confirmation:
+
+```bash
+npm run publish:release -- --publish --confirm vN
+```
+
+GitHub Releases is the durable asset archive; `release/` is disposable local
+staging. Do not commit generated `main.js`, `vendor/`, preview output, browser
+downloads, dependency caches, or release assets.
 
 Clean generated output with:
 

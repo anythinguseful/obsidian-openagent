@@ -6,7 +6,7 @@
  * previously committed artifact.
  */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -54,6 +54,14 @@ mustInclude("docs/reference/workspace-security.md", "1,000 to 20,000 characters"
 mustInclude("package.json", '"check:docs"', "this gate remains registered");
 mustInclude("package.json", '"check:skills"', "development-skill gate remains registered");
 mustInclude("package.json", '"verify"', "complete source gate remains registered");
+mustInclude("package.json", '"publish:release"', "explicit GitHub Release publisher remains registered");
+mustInclude("scripts/release.mjs", "prepareReleaseAssets", "release pipeline prepares the complete GitHub asset set");
+mustInclude("scripts/publish-release.mjs", "verifyGithubCiProof", "publisher binds browser proof to the exact commit");
+mustInclude("scripts/publish-release.mjs", "GITHUB RELEASE PUBLISHED AND VERIFIED", "publisher verifies uploaded bytes before success");
+mustInclude("RELEASES.md", "github.com/anythinguseful/obsidian-openagent/releases", "GitHub Releases is the durable release archive");
+mustNotInclude("RELEASES.md", "releases/vN/openagent-vN-final-report.md", "dead machine-local release-report contract");
+mustInclude("agents/arena/workflows/release.md", "npm run publish:release", "Arena release workflow includes explicit publication");
+mustInclude("skills/internal/openagent-docs/SKILL.md", "GitHub Release assets", "documentation routing points to durable release proof");
 mustInclude("skills/internal/openagent-ui/SKILL.md", "preview/index.html", "preview workflow points to the maintained hub");
 mustNotInclude("skills/internal/openagent-ui/SKILL.md", "test/preview-final.html", "dead preview path");
 mustNotInclude("skills/internal/openagent-ui/SKILL.md", "test/preview.html", "dead preview path");
@@ -86,13 +94,46 @@ const docsMd = [];
 		else if (entry.name.endsWith(".md")) docsMd.push(abs);
 	}
 })(join(root, "docs"));
-const invalidDocs = docsMd
-	.filter((abs) => {
-		const match = readFileSync(abs, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
-		return !match || !match[1].includes("title:") || !match[1].includes("type:") || !match[1].includes("status:");
-	})
-	.map((abs) => abs.slice(root.length + 1));
-check(invalidDocs.length === 0, `docs: ${docsMd.length} Markdown files have title/type/status frontmatter`, `docs missing required frontmatter: ${invalidDocs.join(", ")}`);
+const REQUIRED_FRONTMATTER = ["title", "type", "status", "date", "tags"];
+const ALLOWED_STATUSES = new Set(["active", "done", "draft", "archived"]);
+const docMeta = new Map();
+const invalidDocs = [];
+for (const abs of docsMd) {
+	const rel = relative(root, abs).replaceAll("\\", "/");
+	const match = readFileSync(abs, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+	if (!match) { invalidDocs.push(`${rel} (missing frontmatter)`); continue; }
+	const fields = Object.fromEntries(
+		match[1]
+			.split(/\r?\n/)
+			.map((line) => line.match(/^([a-z]+):\s*(.*)$/i))
+			.filter(Boolean)
+			.map((row) => [row[1], row[2].trim()]),
+	);
+	const missing = REQUIRED_FRONTMATTER.filter((key) => !fields[key]);
+	if (missing.length) invalidDocs.push(`${rel} (missing ${missing.join(", ")})`);
+	else if (!ALLOWED_STATUSES.has(fields.status)) invalidDocs.push(`${rel} (invalid status ${fields.status})`);
+	else docMeta.set(rel, fields);
+}
+check(
+	invalidDocs.length === 0,
+	`docs: ${docsMd.length} Markdown files have complete frontmatter and an allowed status`,
+	`docs frontmatter failures: ${invalidDocs.join("; ")}`,
+);
+
+/* The hub is the durable inventory; material docs must be listed with the same status. */
+const hub = read("docs/README.md");
+const hubFailures = [];
+for (const dir of ["plans", "studies", "audits", "reference"]) {
+	for (const entry of readdirSync(join(root, "docs", dir), { withFileTypes: true })) {
+		if (!entry.isFile() || !entry.name.endsWith(".md") || entry.name === "_TEMPLATE.md") continue;
+		const target = `${dir}/${entry.name}`;
+		const rel = `docs/${target}`;
+		const status = docMeta.get(rel)?.status;
+		if (!hub.includes(`](${target})`)) hubFailures.push(`${rel} is not listed`);
+		else if (status && !hub.includes(`](${target}) | ${status} |`)) hubFailures.push(`${rel} hub status != ${status}`);
+	}
+}
+check(hubFailures.length === 0, "docs hub lists every material document with matching status", `docs hub drift: ${hubFailures.join("; ")}`);
 
 console.log(`\n${checks} source/docs checks, ${failures.length} failure(s)`);
 if (failures.length > 0) {

@@ -105,7 +105,9 @@ Diadopsi 2026-08-18 dari `designdocs/agents/DOCS_GUIDE.md` repo obsidian-copilot
 5. Plan baru mulai dari `docs/plans/_TEMPLATE.md`; status frontmatter harus
    jujur (`draft` → `done` saat ship, `archived` saat digantikan).
 6. `RELEASES.md` di root mencatat changelog ringkas per rilis untuk pengguna;
-   detail verifikasi tetap di `releases/vN/openagent-vN-final-report.md`.
+   ZIP, checksum, clean source, source manifest, dan final report disimpan
+   permanen sebagai asset GitHub Release. Folder lokal `release/` hanya staging
+   ter-ignore dan tidak boleh menjadi dependency lintas sesi.
 
 ## Tabel routing (kalau kerja X → baca Y)
 
@@ -1734,3 +1736,8 @@ isi ke sini).
 
 ### 123. (2026-08-19) GitHub rate-limit (429) di klon/raw — fakta parity harus bisa dibuktikan dari catatan verifikasi byte-level sesi sebelumnya, bukan re-fetch wajib
 - Saat diminta bandingkan dengan Hermes Desktop, klon & raw.githubusercontent sama-sama 429. Tapi perbandingan tetap bisa dilakukan jujur karena sesi ini SUDAH memverifikasi source Hermes byte-level (commit `aeabff6`/`6cf6ad4`) dan mencatatnya (studies + Lessons). Pelajaran: catat commit-sha + fakta kunci saat verifikasi, supaya saat network mati/rate-limit, klaim parity tetap berdasar bukti tersimpan, bukan re-fetch yang bisa gagal.
+
+### 178. (2026-08-23) Release archive yang hidup di root workspace tidak durable; GitHub Release menjadi pemilik asset, dan rekonstruksi wajib mengaku byte lama hilang
+- Audit v0.1.151 menemukan kontrak `releases/vN/` menunjuk folder yang dulu hidup di luar repository dan tidak ikut upload GitHub. Path machine-local bukan arsip lintas sesi. Keputusan owner: GitHub Releases memegang enam asset permanen (install ZIP+checksum, clean source+checksum, source manifest, final report); repo hanya menyimpan changelog/link, `release/` lokal hanya staging ter-ignore.
+- Publisher wajib fail-closed: exact pushed commit, CI browser hijau untuk SHA yang sama, checksum asset cocok, tag/release belum ada, dan konfirmasi versi eksplisit. `npm run release` tidak boleh publish otomatis.
+- Artefak historis yang hilang tidak boleh “dipulihkan” dengan checksum rekaan. v0.1.151 boleh diterbitkan sebagai reconstructed verification release setelah dibangun dan diuji ulang, dengan disclosure bahwa byte baru bukan byte ZIP lama yang hilang.

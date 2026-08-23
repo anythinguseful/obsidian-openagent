@@ -154,5 +154,6 @@ The `docs/` folder is an Obsidian-friendly vault:
   (Summary → Contract → Decisions → Impact → Phases → GWT → Risks → Open
   Questions).
 - **Release changelog** for users lives in [`RELEASES.md`](../RELEASES.md) at
-  the repository root; detailed verification stays per release in
-  `releases/vN/`.
+  the repository root; verified ZIPs, checksums, source manifest, and final
+  reports are retained as immutable GitHub Release assets. Local `release/` is
+  disposable staging and is never a documentation dependency.
