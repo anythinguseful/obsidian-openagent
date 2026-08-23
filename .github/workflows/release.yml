@@ -9,7 +9,7 @@ on:
       reconstructed:
         description: "Disclose that historical artifact bytes were rebuilt"
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
