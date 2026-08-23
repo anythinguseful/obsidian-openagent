@@ -206,10 +206,29 @@ Corrected distribution, measured after Phase 2 landed (175 `✓` remaining in
 | chat (exclusive) | 4 | Yes |
 | styles (exclusive) | 4 | Done — moved in Phase 2 |
 
-The honest conclusion: **only ~14 of 289 checks are cleanly domain-separable.**
-The guard population is dominated by cross-cutting blocks that assert a contract
-spanning `styles.css` + `settingsTab.ts` + `ChatApp.tsx` at once, which is a
-faithful reflection of how the features themselves are wired.
+> **Superseded 2026-08-24 (second measurement, before Phase 3b).** The table
+> above is wrong about *why* blocks are stuck, and its two big numbers should
+> not be quoted. It counts how many files a block reads; the real constraint is
+> which **shared top-level variables** a block closes over. The orchestrator
+> declares 42 of them outside every guard block, and 186 of 190 blocks use at
+> least one. Only 6 are runtime values (`s`, `prompt`, `names`, `checks`,
+> `iUrl`, `iDisc`); the other 32 are plain `read("…")` results that any module
+> can recreate in one line.
+>
+> | Constraint | Blocks | Lines | Movable? |
+> |---|---:|---:|---|
+> | depends only on file-content variables | 105 | 3,119 | Yes — mechanical, same recipe as Phase 2/3 |
+> | depends on a runtime variable | 85 | 2,708 | Not without changing the guard contract |
+>
+> So a domain split is *cheaper* than the first table implied (3b), and a
+> runtime split is *dearer* (3c: 85 blocks are runtime-bound, not the 12 that
+> touch `plugin` directly). Both original numbers stay on the page because the
+> Phase 3a decision was taken while they were believed.
+
+The conclusion that survives: **only ~14 of 289 checks are separable by the
+strict "reads one domain's files exclusively" rule.** But that rule was the
+wrong question — grouping by *subject* (option 3b) reaches 105 blocks, because
+a block may read `styles.css` and still be unambiguously about Settings.
 
 This does not invalidate the enabler rationale, but it resizes the prize. See
 the revised Phase 3 below.
@@ -246,8 +265,9 @@ lines reappear with byte-identical text.
 
 **Revised 2026-08-24 after the Phase 2 measurement.** The original goal —
 "repeat per domain until `smoke.test.cjs` is a thin orchestrator" — is not
-reachable by relocation alone: 88 checks are multi-file and 77 are runtime-bound,
-so 165 of 175 remaining checks have no single domain to move to.
+reachable by relocation alone. (The original figures here — 88 multi-file, 77
+runtime-bound — were superseded by the second measurement above: the binding
+constraint is shared top-level variables, 105 blocks movable / 85 not.)
 
 Move only what is genuinely exclusive:
 

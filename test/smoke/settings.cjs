@@ -189,7 +189,7 @@ module.exports = function settingsGuards() {
 		// whole tab (focus lost after char 1) and polluted favoriteModels with
 		// half-typed ids ("g", "gp", …).
 		const fs = require("fs");
-		const stab = fs.readFileSync(path.join(ROOT,"test", "../src/settingsTab.ts"), "utf8");
+		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
 		if (
 			stab.includes("commitCustomModel") &&
 			stab.includes('customModel.inputEl.addEventListener("keydown"') &&
@@ -209,8 +209,8 @@ module.exports = function settingsGuards() {
 		// returns after the first pass). The standalone "Add GitHub tap" row
 		// must stay gone.
 		const fs = require("fs");
-		const stab = fs.readFileSync(path.join(ROOT,"test", "../src/settingsTab.ts"), "utf8");
-		const css = fs.readFileSync(path.join(ROOT,"test", "../styles.css"), "utf8");
+		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
+		const css = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
 		if (
 			stab.includes("hubTapCandidate") &&
 			stab.includes('cls: "oa-hub-tap-hint-btn"') &&
@@ -230,7 +230,7 @@ module.exports = function settingsGuards() {
 		// kepano/obsidian-skills (skills/ subtree) ONLY — the five Hermes
 		// taps were removed. Stays single-tap; customs come via the search box.
 		const fs = require("fs");
-		const hub = fs.readFileSync(path.join(ROOT,"test", "../src/agent/hub.ts"), "utf8");
+		const hub = fs.readFileSync(path.join(ROOT, "src/agent/hub.ts"), "utf8");
 		if (
 			hub.includes('repo: "kepano/obsidian-skills/skills"') &&
 			!hub.includes('repo: "openai/skills"') &&
@@ -244,8 +244,8 @@ module.exports = function settingsGuards() {
 		}
 
 		// owner directive 2026-07-25: dead tap catalogs must be pruned (load × remove)
-		const mn = fs.readFileSync(path.join(ROOT,"test", "../src/main.ts"), "utf8");
-		const stab = fs.readFileSync(path.join(ROOT,"test", "../src/settingsTab.ts"), "utf8");
+		const mn = fs.readFileSync(path.join(ROOT, "src/main.ts"), "utf8");
+		const stab = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
 		if (
 			hub.includes("export function pruneHubCache") &&
 			hub.includes("export function allHubTaps") &&
@@ -267,7 +267,7 @@ module.exports = function settingsGuards() {
 		// Notifications v0.1.142: Workspace/Safety remain actionable,
 		// Notifications returns with real controls in the shared tab/search
 		// registry, while still-empty Appearance/About remain hidden.
-		const stab5 = fs.readFileSync(path.join(ROOT,"test", "../src/settingsTab.ts"), "utf8");
+		const stab5 = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
 		const memSection = stab5.slice(stab5.indexOf("private memory("), stab5.indexOf("private automations("));
 		const genSection = stab5.slice(stab5.indexOf("private general("), stab5.indexOf("private providers("));
 		const agentSection = stab5.slice(stab5.indexOf("private agent("), stab5.indexOf("private profiles("));
@@ -497,7 +497,7 @@ module.exports = function settingsGuards() {
 	// py + desktop model-settings.tsx parity): tolerant read / loud write,
 	// official seeds, recursion guard, settings draft editor, null-until-saved.
 	{
-		const read = (p) => fs.readFileSync(path.join(ROOT,"test", p), "utf8");
+		const read = (p) => fs.readFileSync(path.join(ROOT, "test", p), "utf8");
 		const moa = read("../src/agent/moa.ts");
 		const set12 = read("../src/settings.ts");
 		const st12 = read("../src/settingsTab.ts");
@@ -555,8 +555,8 @@ module.exports = function settingsGuards() {
 		}
 	}
 	{
-		const css20 = fs.readFileSync(path.join(ROOT,"test", "../styles.css"), "utf8");
-		const tab20 = fs.readFileSync(path.join(ROOT,"test", "../src/settingsTab.ts"), "utf8");
+		const css20 = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
+		const tab20 = fs.readFileSync(path.join(ROOT, "src/settingsTab.ts"), "utf8");
 		const ok =
 			css20.includes(".oa-quickask .oa-spin {") &&
 			css20.includes("animation: oa-calm-fade 1.2s ease-in-out infinite !important;") &&

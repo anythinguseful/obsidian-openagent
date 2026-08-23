@@ -137,6 +137,40 @@ for (const dir of ["plans", "studies", "audits", "reference"]) {
 }
 check(hubFailures.length === 0, "docs hub lists every material document with matching status", `docs hub drift: ${hubFailures.join("; ")}`);
 
+// Lesson 181: guards moved into test/smoke/ sit one directory deeper, so any
+// surviving __dirname silently repoints and the guard reads the wrong file (or
+// throws). Every literal path in the smoke modules must resolve, and only the
+// harness may anchor itself with __dirname.
+const smokeDir = join(root, "test", "smoke");
+const smokePathFailures = [];
+const smokeDirnameFailures = [];
+for (const entry of readdirSync(smokeDir, { withFileTypes: true })) {
+	if (!entry.isFile() || !entry.name.endsWith(".cjs")) continue;
+	const rel = `test/smoke/${entry.name}`;
+	const source = read(rel);
+	const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+	if (entry.name !== "harness.cjs" && /\b__dirname\b/.test(code)) {
+		smokeDirnameFailures.push(rel);
+	}
+	for (const match of code.matchAll(/path\.join\(\s*ROOT\s*,\s*([^)]+)\)/g)) {
+		const segments = [...match[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+		if (segments.length === 0 || /[^\s",]/.test(match[1].replace(/"[^"]*"/g, "").replace(/,/g, ""))) continue;
+		if (!existsSync(join(root, ...segments))) {
+			smokePathFailures.push(`${rel}: ROOT/${segments.join("/")}`);
+		}
+	}
+}
+check(
+	smokePathFailures.length === 0,
+	"smoke modules: every literal ROOT-anchored path resolves",
+	`smoke module path drift: ${smokePathFailures.join("; ")}`,
+);
+check(
+	smokeDirnameFailures.length === 0,
+	"smoke modules: only the harness anchors on __dirname",
+	`__dirname outside the smoke harness (breaks when guards move deeper): ${smokeDirnameFailures.join("; ")}`,
+);
+
 console.log(`\n${checks} source/docs checks, ${failures.length} failure(s)`);
 if (failures.length > 0) {
 	for (const failure of failures) console.error(`✗ ${failure}`);
