@@ -11,11 +11,14 @@
  * move, as check-docs guards 2 and 3 require. Every path here is
  * repo-relative, so "test/tools.test.cjs" keeps its test/ prefix.
  *
- * Not included: the v0.1.18 trashFile shim guard, which walks src/ with
- * fs.readdirSync and needs ROOT rather than a plain file read.
+ * The v0.1.18 trashFile shim guard walks src/ with fs.readdirSync to prove
+ * no direct fileManager.trashFile call escaped the shim, so this module also
+ * imports ROOT, fs and path. Its block-local read() helper was deleted in
+ * favour of the harness one (check-docs guard 3), and the walk root moved
+ * from __dirname/../src to path.join(ROOT, "src").
  */
 
-const { read } = require("./harness.cjs");
+const { ROOT, read, fs, path } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter, matching the other domain modules.
@@ -143,5 +146,27 @@ module.exports = function agentGuards() {
 		}
 	}
 
+	{
+		const walk = (d) =>
+			fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+				e.isDirectory() ? walk(path.join(d, e.name)) : /\.(ts|tsx)$/.test(e.name) ? [path.join(d, e.name)] : []
+			);
+		const shim = read("src/agent/vaultCompat.ts");
+		const direct = walk(path.join(ROOT, "src"))
+			.filter((f) => !f.endsWith("vaultCompat.ts"))
+			.some((f) => fs.readFileSync(f, "utf8").includes("fileManager.trashFile"));
+		const ok =
+			shim.includes('typeof trashFile === "function"') &&
+			shim.includes("app.vault.trash(file, true)") &&
+			read("src/main.ts").includes("trashRespectingPrefs(this.app, af)") &&
+			read("src/agent/skills.ts").includes("trashRespectingPrefs(this.app, f)") &&
+			!direct;
+		if (ok) {
+			console.log("✓ v0.1.18: trashFile compat shim (feature-detected; no direct calls outside the shim)");
+		} else {
+			console.error("✗ v0.1.18 API compat drifted (direct trashFile call reappeared or shim lost)");
+			failed++;
+		}
+	}
 	return failed;
 };

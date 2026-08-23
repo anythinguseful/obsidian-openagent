@@ -2382,29 +2382,6 @@ const agentGuards = require("./smoke/agent.cjs");
 	// honesty. FileManager#trashFile arrived after 1.5.7 (typing float made it
 	// compile silently) — trashing goes through the feature-detected shim and
 	// the direct call must never reappear outside it.
-	{
-		const read = (p) => fs.readFileSync(path.join(__dirname, p), "utf8");
-		const walk = (d) =>
-			fs.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-				e.isDirectory() ? walk(path.join(d, e.name)) : /\.(ts|tsx)$/.test(e.name) ? [path.join(d, e.name)] : []
-			);
-		const shim = read("../src/agent/vaultCompat.ts");
-		const direct = walk(path.join(__dirname, "../src"))
-			.filter((f) => !f.endsWith("vaultCompat.ts"))
-			.some((f) => fs.readFileSync(f, "utf8").includes("fileManager.trashFile"));
-		const ok =
-			shim.includes('typeof trashFile === "function"') &&
-			shim.includes("app.vault.trash(file, true)") &&
-			read("../src/main.ts").includes("trashRespectingPrefs(this.app, af)") &&
-			read("../src/agent/skills.ts").includes("trashRespectingPrefs(this.app, f)") &&
-			!direct;
-		if (ok) {
-			console.log("✓ v0.1.18: trashFile compat shim (feature-detected; no direct calls outside the shim)");
-		} else {
-			console.error("✗ v0.1.18 API compat drifted (direct trashFile call reappeared or shim lost)");
-			failed++;
-		}
-	}
 
 
 	// ---- v0.1.20 — slash quick batch (Hermes Desktop composer parity,
