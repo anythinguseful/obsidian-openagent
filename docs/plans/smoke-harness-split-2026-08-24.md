@@ -1,7 +1,7 @@
 ---
 title: "Smoke/harness split"
 type: plan
-status: draft
+status: done
 date: 2026-08-24
 tags: [openagent, plan, architecture, testing, refactor]
 ---

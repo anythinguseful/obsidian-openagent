@@ -16,8 +16,9 @@ small architecture improvements. The goal is not line-count reduction for its
 own sake: each step must create a clear ownership boundary while preserving
 user-visible behavior and existing proof.
 
-Stages 1–5 are complete in v0.1.151. The roadmap is now paused at Stage 6:
-reassess the remaining large owners before authorizing another refactor.
+Stages 1–5 are complete in v0.1.151. Stage 6's first target, the smoke/harness
+split, is **done** as of 2026-08-24. The roadmap is again paused: the next
+Stage 6 target needs its own plan before any implementation.
 
 ## Decision framework
 
@@ -50,20 +51,23 @@ already provided proof. The owner approved it, and it shipped.
 
 ## Current work label
 
-> [!todo] **CURRENT PRIORITY — smoke/harness split (planning)**
+> [!todo] **CURRENT PRIORITY — choosing the next Stage 6 target**
 >
 > Session Panel, Settings modal Phases 1–3, MCP credential isolation, the
 > security-sensitive MCP Catalog extraction, and release retention are all
 > complete and verified in `main`.
 >
-> On **2026-08-24** the owner selected the **smoke/harness split** as the Stage 6
-> target, chosen as an enabler: `test/smoke.test.cjs` string-pins the very files
-> the remaining candidates would move (`src/settingsTab.ts` ×46,
-> `src/ui/ChatApp.tsx` ×30), so splitting it first avoids paying the
-> pin-amendment cost twice. Its plan is
-> [Smoke/harness split](smoke-harness-split-2026-08-24.md), currently `draft`
-> with three open questions; the owner deferred ordering and scope
-> (“kita bahas nanti”), so **no implementation is authorized yet**.
+> The **smoke/harness split is done** (2026-08-24): `test/smoke.test.cjs` went
+> from 7,012 to 1,296 lines across eleven phases, with all 289 `✓` preserved at
+> every step. See [Smoke/harness split](smoke-harness-split-2026-08-24.md).
+>
+> Its enabler premise held, but the numbers in the earlier version of this label
+> were wrong. The real pin counts were **77** for `src/settingsTab.ts` and
+> **78** for `src/ui/ChatApp.tsx`, not 46 and 30 — the old figures came from the
+> same regex survey as Lesson 183. What the split changed is where those pins
+> live: settings pins are now concentrated (57 of 77 in `test/smoke/settings.cjs`),
+> while ChatApp pins stay spread across four modules (chat 27, preview 29,
+> settings 17, monolith 4).
 >
 > Settings section renderers and the composer controller remain deferred and
 > still require their own plans. No product refactor is implicitly authorized.
