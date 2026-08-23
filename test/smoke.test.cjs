@@ -11,6 +11,7 @@ const { ROOT, read, path, fs, plugin, OpenAgentPlugin, mod } = require("./smoke/
 const stylesGuards = require("./smoke/styles.cjs");
 const settingsGuards = require("./smoke/settings.cjs");
 const chatGuards = require("./smoke/chat.cjs");
+const agentGuards = require("./smoke/agent.cjs");
 
 (async () => {
 	await plugin.onload();
@@ -526,49 +527,11 @@ const chatGuards = require("./smoke/chat.cjs");
 	// providers guard: buffered completion must single-shot emit onReasoning/
 	// onToken — regression guard for "empty assistant bubbles when streaming is
 	// off or the stream dies before the first token".
-	{
-		const fs = require("fs");
-		const src = fs.readFileSync(path.join(__dirname, "..", "src", "agent", "providers.ts"), "utf8");
-		if (
-			src.includes("let emitted = false") &&
-			src.includes('cb.onReset?.("buffered-fallback")') &&
-			src.includes("bufferedCompletion(provider, settings, messages, tools, tracked, fallbackFrom)") &&
-			src.includes("if (cb && reasoning) cb.onReasoning?.(reasoning)") &&
-			src.includes("if (cb && content) cb.onToken?.(content)")
-		) {
-			console.log("✓ buffered completion resets partial attempt then emits complete token/reasoning once");
-		} else {
-			console.error("✗ providers.ts buffered-emission wiring drifted");
-			failed++;
-		}
-	}
 
 	// providers guard: real timeouts on every network path — regression guard
 	// for the dead `dispatchEvent("openagent-timeout")` no-op (nothing ever
 	// listened to that event, so streaming requests could hang forever; cron
 	// runs pass no signal at all, so a stalled provider froze the automation).
-	{
-		const fs = require("fs");
-		const src = fs.readFileSync(path.join(__dirname, "..", "src", "agent", "providers.ts"), "utf8");
-		const raced = src.split("requestUrlWithTimeout(").length - 1;
-		if (
-			src.includes("const ctl = new AbortController()") &&
-			src.includes("signal: ctl.signal") &&
-			src.includes("armTimer();") && // idle timer re-arms per streamed chunk
-			src.includes("err instanceof ProviderTimeoutError) throw err") &&
-			raced >= 4 && // helper def + listModels + listModelInfos + bufferedCompletion
-			src.includes("function friendlyTransportError(") &&
-			src.includes("ProviderTransportError") &&
-			src.includes("connection refused") &&
-			src.includes("friendlyTransportError(err, provider)") &&
-			src.includes("ollama serve")
-		) {
-			console.log("✓ provider network: timeouts wired + transport errors named per provider");
-		} else {
-			console.error("✗ providers.ts network wiring drifted");
-			failed++;
-		}
-	}
 
 	// data portability guard (docs/plans/data-portability-plan.md): normalize pipeline
 	// is the single source of truth, exports are versioned+redacted, reset is
@@ -1592,29 +1555,6 @@ const chatGuards = require("./smoke/chat.cjs");
 	// v0.1.147g (Hermes session_search parity): cross-session recall tool over
 	// the existing SessionStore.search, gated by the memory toolset, injected
 	// via a SessionSearchApi on the runner, blocked in delegated children.
-	{
-		const tools = read("src/agent/tools.ts");
-		const runner = read("src/agent/runner.ts");
-		const main = read("src/main.ts");
-		const sess = read("src/agent/sessions.ts");
-		const del = read("src/agent/delegate.ts");
-		const ok =
-			tools.includes('name: "session_search"') &&
-			tools.includes('toolset: "memory"') &&
-			tools.includes("interface SessionSearchApi") &&
-			tools.includes("sessions?: SessionSearchApi") &&
-			runner.includes("sessionsApi?: SessionSearchApi") &&
-			runner.includes("sessions: this.sessionsApi") &&
-			main.includes("this.runner.sessionsApi") &&
-			sess.includes("meta.title.toLowerCase().includes(q)") &&
-			del.includes('"session_search"');
-		if (ok) {
-			console.log("✓ v0.1.147g: session_search — cross-session recall (title+content), memory-gated, runner-injected, delegate-blocked");
-		} else {
-			console.error("✗ v0.1.147g session_search parity drifted");
-			failed++;
-		}
-	}
 
 	// v0.1.147h (MCP runtime): pure JSON-RPC client + lazy stdio transport +
 	// McpRuntime (consent-gated, config-cached) + first-use consent mirroring
@@ -1792,26 +1732,6 @@ const chatGuards = require("./smoke/chat.cjs");
 	// quote-wrapped arg under /d /s /c), refusal errors must name the setting
 	// to change, and the terminal tool schema must disclose the shell dialect
 	// so the model stops firing POSIX commands at cmd.exe.
-	{
-		const svc = read("src/agent/terminal/service.ts");
-		const typ = read("src/agent/terminal/types.ts");
-		const run = read("src/agent/runner.ts");
-		const ok =
-			svc.includes('args: ["/d", "/s", "/c", `"${command}"`]') &&
-			svc.includes("windowsVerbatimArguments: true") &&
-			svc.includes("Settings → Capabilities") &&
-			svc.includes("Settings → Safety") &&
-			svc.includes("describeShell(settings: OpenAgentSettings): string") &&
-			typ.includes("describeShell(settings: OpenAgentSettings): string;") &&
-			run.includes("enrichTerminalShell") &&
-			run.includes("Shell: ${hint}");
-		if (ok) {
-			console.log("✓ v0.1.173: Windows local shell — verbatim cmd /d /s /c quoting, actionable refusals, shell-dialect disclosure");
-		} else {
-			console.error("✗ v0.1.173 terminal Windows shell handling drifted");
-			failed++;
-		}
-	}
 
 	// v0.1.150 (Appearance): the tab returns with five self-owned chat-surface
 	// controls (tool cards / reasoning / session density / intro / reactions);
@@ -2035,23 +1955,6 @@ const chatGuards = require("./smoke/chat.cjs");
 	// its NATIVE /api/v1/models (loaded_instances[].config.context_length) —
 	// the OpenAI-compat /models omits it; (c) unknown-window fallback is 256K
 	// (Hermes CONTEXT_PROBE_TIERS[0]), not the stale 32K guess.
-	{
-		const prov = read("src/agent/providers.ts");
-		const cm = read("src/agent/contextManager.ts");
-		const ok =
-			prov.includes("fetchLmStudioContextLength") &&
-			prov.includes("/api/v1/models") &&
-			prov.includes("loaded_instances") &&
-			prov.includes("modelIdMatches") &&
-			prov.includes("lmStudioServerRoot") &&
-			cm.includes("DEFAULT_CONTEXT_WINDOW = 256000");
-		if (ok) {
-			console.log("✓ v0.1.174: LM Studio native context-length probe + 256K fallback (Hermes parity)");
-		} else {
-			console.error("✗ v0.1.174 LM Studio context-length probe drifted");
-			failed++;
-		}
-	}
 
 
 	// v0.1.176 (owner: memory & context engine ala Hindsight, tanpa Docker/MCP
@@ -5295,30 +5198,6 @@ const chatGuards = require("./smoke/chat.cjs");
 
 	// v0.1.132 (menuntaskan 🟡 §gap-doc): skills ⅔ → 3/3 — Hermes skill_view +
 	// skill_manage parity (studi raw: features/skills.md + tools-reference).
-	{
-		const sk = read("src/agent/skills.ts");
-		const tools = read("src/agent/tools.ts");
-		const tp = read("test/tools.test.cjs");
-		const ok =
-			tools.includes('name: "view_skill"') &&
-			tools.includes('name: "manage_skill"') &&
-			tools.includes('enum: ["update", "patch", "delete", "write_file", "remove_file"]') &&
-			tools.includes("\tviewSkill,\n\tmanageSkill,") && // urutan registrasi ALL_TOOLS
-			sk.includes("async resolveSkill(") &&
-			sk.includes("async patchSkill(") &&
-			sk.includes("async deleteSkillTree(") &&
-			sk.includes("canonicalVaultPath(rel") && sk.includes("pathContains(dir, abs)") && // shared canonical traversal guard
-			sk.includes("getAllLoadedFiles()") && // supporting files non-md ikut terlihat
-			tp.includes("manage_skill delete trashes the WHOLE skill folder") &&
-			tp.includes("view_skill file= refuses .. traversal") &&
-			read("manifest.json").includes('"version": "0.1.151"');
-		if (ok) {
-			console.log("✓ v0.1.132: skills ⅔→3/3 — view_skill + manage_skill (patch/update/delete/write_file/remove_file) · traversal-guarded · store asli diuji end-to-end");
-		} else {
-			console.error("✗ v0.1.132 Hermes skills parity regressed");
-			failed++;
-		}
-	}
 
 	// v0.1.133 (menuntaskan 🟡 §gap-doc #2): todo tool — 1:1 port Hermes
 	// tools/todo_tool.py (studi byte-level): single tool, omit=read, merge
@@ -5483,6 +5362,7 @@ const chatGuards = require("./smoke/chat.cjs");
 	failed += stylesGuards();
 	failed += settingsGuards();
 	failed += chatGuards();
+	failed += agentGuards();
 
 	plugin.onunload();	if (failed > 0) {
 		console.error(`\n${failed} smoke check(s) failed`);
