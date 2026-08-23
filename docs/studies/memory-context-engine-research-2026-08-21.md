@@ -273,34 +273,40 @@ summarization.
 
 ---
 
-## 6. Fase implementasi (yang saya usulkan)
+## 6. Implementation outcome
 
-| Fase | Isi | Ukuran |
-|---|---|---|
-| **1** | schema file + retain (LLM extract, typed add/update/delete) + recall (BM25+entity+temporal+LLM rerank) + injeksi + indicator + setting baru di Memory & Context | besar tapi inti |
-| **2** | reflect: facts→observations→mental models (background) + baca mental model gratis di boot | sedang |
-| **3** (opsional) | semantic recall via `/v1/embeddings` + `embedding-gemma-300m` | kecil |
+All three phases were approved and shipped:
 
-Setiap fase = ritual gate lengkap (smoke + unit + real-DOM harness + zip test).
-MEMORY.md/USER.md tetap jadi cermin yang bisa diedit user (write-through) —
-bukan diganti, supaya tidak ada data lama yang "hilang rasa".
+| Phase | Status | Shipped result |
+| --- | --- | --- |
+| **1** | done | JSONL fact store, typed retain operations, pure BM25/entity/temporal/trust fusion recall, injection guard, status indicator, and Memory & Context settings. |
+| **2** | done | Background reflect from facts to observations and bounded mental models; settled models are read without another LLM call. |
+| **3** | done | Optional semantic boost through OpenAI-compatible `/v1/embeddings`; keyword/fusion recall remains available when no embedding model is selected. |
 
-## 7. Risiko & divergensi jujur
+The owner selected `retain_every_n_turns = 1` as the default. Recall begins from
+deterministic facts/observations rather than requiring an LLM rerank; this keeps
+the read path usable without another model request. `MEMORY.md` and `USER.md`
+remain human-readable stores alongside `.engine/*.jsonl`.
 
-- Setiap retain/reflect = 1 panggilan LLM ekstra (token + latensi). Mitigasi:
-  aux-task pin (model kecil untuk ekstraksi) + retain async + skip turn trivial.
-- Recall sync menambah latensi per turn; default async (prefetch turn
-  sebelumnya), persis Hermes.
-- Kualitas di bawah Hindsight-ber-server (tanpa cross-encoder). Diterima
-  sadar — untuk vault ini memadai, dan Fase 3 menutup gap terbesar.
-- JSONL di vault = tanggung jawab workspace policy (folder memori sudah
-  di-scope ketat; file `.engine/*` ikut aturan yang sama).
+## 7. Risks and honest divergence
 
-## 8. Keputusan menunggu owner
+- Retain and reflect each add an LLM request when their cadence fires. They are
+  best-effort, skipped for trivial turns, and do not block a normal response.
+- Optional embeddings add one batched request per recall. With embeddings off,
+  pure fusion still works.
+- Quality remains below server-backed Hindsight with a dedicated cross-encoder
+  and graph database. Open Agent intentionally favors a plugin-native design
+  with no Docker or MCP requirement.
+- JSONL files remain subject to Workspace and managed-memory policy; they are
+  bounded for a personal vault, not designed for millions of facts.
 
-1. Mulai Fase 1 sekarang? (rekomendasi saya: YA — inti dari semuanya)
-2. `retain_every_n_turns` default: 1 (setiap turn, paling akurat, token
-   lebih boros) atau 3 (hemat)? Rekomendasi saya: **1**, karena user pakai
-   lokal (token gratis) dan akurasi lebih penting.
-3. Recall default: `recall` (fakta) vs `reflect` (sintesis)? Rekomendasi:
-   mulai `recall` (predictable), `reflect` menyusul di Fase 2.
+## 8. Final decisions
+
+1. Build the plugin-native engine: **approved and complete**.
+2. Retain cadence default: **every turn (`1`)**.
+3. Recall mode: **deterministic fact/observation fusion first**; reflect supplies
+   consolidated observations and mental models in the background.
+4. Embeddings: **optional**, selected from the active provider catalog; off
+   keeps keyword recall active.
+
+No implementation phase from this study remains pending.

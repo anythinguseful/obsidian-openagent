@@ -11,18 +11,17 @@ tags: [openagent, plan, architecture, refactor, skills]
 ## Summary
 
 After the repository gained `AGENTS.md`, internal/vendor skill separation,
-verified vendor snapshots, and `check:skills`, the owner asked to improve the
-plugin using the new development workflow. This plan records the architecture
-choices considered before refactoring, their trade-offs, and the approved
-small-step order.
+verified vendor snapshots, and `check:skills`, the owner approved a sequence of
+small architecture improvements. The goal is not line-count reduction for its
+own sake: each step must create a clear ownership boundary while preserving
+user-visible behavior and existing proof.
 
-The goal is not to reduce line counts for their own sake. Each refactor must
-create a clearer ownership boundary while preserving user-visible behavior and
-existing proof.
+Stages 1–5 are complete in v0.1.151. The roadmap is now paused at Stage 6:
+reassess the remaining large owners before authorizing another refactor.
 
 ## Decision framework
 
-Every candidate was judged against four questions:
+Every candidate is judged against four questions:
 
 1. Is there a clear domain boundary?
 2. Can the move preserve behavior through existing or small new witnesses?
@@ -32,49 +31,36 @@ Every candidate was judged against four questions:
 ## Original owner Q&A — first refactor choice
 
 The owner selected **Architecture** as the improvement focus. The exact question
-then presented was:
+presented was:
 
 > **Refactor pertama mana yang ingin kita rencanakan lalu implementasikan dengan
 > TDD dan real-DOM proof?**
 
 | Option offered | Original explanation | Current status |
-|---|---|---|
-| **Pisahkan session panel dari ChatApp** | Paling kecil dan aman: daftar/pencarian/rename/load sesi menjadi surface terpisah; ChatApp tetap pemilik agent loop. | **DONE** |
-| **Pisahkan section Settings** | Mulai dari satu section berisiko rendah, lalu buat pola renderer reusable untuk mengecilkan settingsTab tanpa mengubah UI. | Deferred |
-| **Pisahkan composer controller** | Ekstrak input, queue, slash, attachment, history, dan keyboard dari ChatApp; nilai tinggi tetapi blast radius lebih besar. | Deferred |
-| **Pecah smoke/harness test** | Kurangi hotspot test dahulu agar refactor plugin berikutnya lebih mudah dan diagnosis failure lebih jelas. | Deferred |
+| --- | --- | --- |
+| **Pisahkan session panel dari ChatApp** | Paling kecil dan aman: daftar/pencarian/rename/load sesi menjadi surface terpisah; ChatApp tetap pemilik agent loop. | **done** |
+| **Pisahkan section Settings** | Mulai dari satu section berisiko rendah, lalu buat pola renderer reusable untuk mengecilkan settingsTab tanpa mengubah UI. | awaiting a new decision/plan |
+| **Pisahkan composer controller** | Ekstrak input, queue, slash, attachment, history, dan keyboard dari ChatApp; nilai tinggi tetapi blast radius lebih besar. | deferred |
+| **Pecah smoke/harness test** | Kurangi hotspot test dahulu agar refactor plugin berikutnya lebih mudah dan diagnosis failure lebih jelas. | deferred |
 
-The owner then asked, **“mana yang anda sarankan kita kerjakan duluan?”**
-The recommendation was **Pisahkan session panel dari ChatApp** because its
-boundary was clearest, it left the agent loop and persistence in place, and the
-existing real-DOM panel/search/rename lane could serve as proof. The owner
-approved that recommendation, and it is now complete.
+The owner asked, **“mana yang anda sarankan kita kerjakan duluan?”** The
+recommendation was Session Panel because its boundary was clearest, it left the
+agent loop and persistence in place, and existing panel/search/rename lanes
+already provided proof. The owner approved it, and it shipped.
 
-## Current refactor label
+## Current work label
 
-> [!todo] **CURRENTLY WORKING — Settings modal layer (Phase 2 next)**
-> This was selected only **after** Session Panel completed. It is an
-> implementation strategy under the earlier “Pisahkan section Settings” option,
-> not one of the original four answers.
+> [!todo] **CURRENTLY WORKING — roadmap reassessment**
 >
-> **Phase 1 is done:** `JsonImportModal`, `ExportFileSuggestModal`,
-> `FolderSuggestModal`, `SkillSuggestModal`, and `ConfirmResetModal` now live
-> in `src/settings/modals/json-import.ts`. Every move used the tested
-> TypeScript-AST class inspector and passed typecheck, build, smoke, and
-> Settings real-DOM proof.
->
-> Next approved phase: rich domain modals, beginning with Profile delete/export
-> after a dedicated contract witness.
+> Session Panel, Settings modal Phases 1–3, MCP credential isolation, and the
+> security-sensitive MCP Catalog extraction are complete. No further product
+> refactor is implicitly authorized. The next owner decision is whether to:
+> extract Settings section renderers, split the smoke/harness hotspot first,
+> extract a composer controller, or prioritize a feature/bug instead.
 
-## Additional deferred candidate
+## Completed sequence
 
-| Candidate | Status | Why |
-|---|---|---|
-| MCP Catalog extraction | Deferred behind a security plan | It handles third-party installation, credentials, and installer feedback. |
-
-## Approved sequence
-
-### Stage 1 — Durable agent workflow
+### Stage 1 — durable agent workflow
 
 **Status: done**
 
@@ -97,41 +83,53 @@ approved that recommendation, and it is now complete.
 
 ### Stage 3 — Settings modal modularization
 
-**Status: active**
+**Status: done**
 
-- One class per stage, using brace-aware boundaries.
-- Completed: `JsonImportModal`, `ExportFileSuggestModal`.
-- Next: `FolderSuggestModal`, `SkillSuggestModal`, then `ConfirmResetModal`.
-- Detail and TODO: [Settings tab modularization](settings-tab-modularization-2026-08-23.md).
+- Simple picker/confirmation modals moved to `json-import.ts`.
+- Profile and snippet modals moved to their domain modules.
+- Hub, consent, blueprint, and guard-finding modals moved to capability modules.
+- Detail: [Settings tab modularization](settings-tab-modularization-2026-08-23.md).
 
-### Stage 4 — Rich domain modals
+### Stage 4 — rich domain modal verification
 
-**Status: deferred**
+**Status: done**
 
-Move only after dedicated contract witnesses are portable:
+Dedicated witnesses preserve:
 
 - profile delete/export;
-- snippet editor;
-- Hub preview;
+- snippet editor state;
+- Hub preview and Skills Guard confirmation;
 - Terminal/MCP consent;
-- Blueprint catalog;
-- Skills Guard findings.
+- Blueprint Catalog form behavior.
 
-### Stage 5 — Security-sensitive catalog UI
+These shipped with the v0.1.150 Settings modularization release.
 
-**Status: deferred**
+### Stage 5 — security-sensitive MCP Catalog
 
-`McpCatalogModal` receives its own plan. Its refactor must prove that
-credentials, install state, failure notices, and third-party execution consent
-remain unchanged.
+**Status: done**
 
-### Stage 6 — Reassess large owners
+- Option B private credential storage was approved and implemented.
+- Legacy n8n values migrate out of exportable server config.
+- Import/export/reset/runtime boundaries are covered by tests.
+- Real-DOM F48 proves password rendering, recoverable failure, no DOM secret
+  leak, and success.
+- `McpCatalogModal` now lives in `src/settings/modals/mcp-catalog.ts`.
+- Detail: [MCP credential storage decision](mcp-credential-storage-decision-2026-08-23.md)
+  and [MCP Catalog security refactor](mcp-catalog-modal-security-plan-2026-08-23.md).
 
-**Status: deferred**
+### Stage 6 — reassess large owners
 
-After the modal layer stabilizes, reassess whether `settingsTab.ts` needs
-section renderers and whether `ChatApp` needs a composer controller. No broad
-rewrite is authorized by this plan.
+**Status: active; no implementation selected**
+
+Current hotspots at v0.1.151:
+
+- `src/ui/ChatApp.tsx`: approximately 5.3k lines;
+- `src/settingsTab.ts`: approximately 4.9k lines;
+- `test/smoke.test.cjs`: approximately 7.0k lines.
+
+Candidate order remains a product/architecture decision. A new refactor must
+receive its own plan and behavior witnesses; this roadmap does not authorize a
+broad rewrite.
 
 ## Contract
 
@@ -140,10 +138,10 @@ rewrite is authorized by this plan.
   composer plan exists.
 - `OpenAgentSettingTab` remains the owner of settings data/persistence until a
   separate section-renderer plan exists.
-- Existing smoke assertions are amended from old file-location pins to behavior
-  plus new-module ownership; they are never simply removed.
-- A stage that causes unexpected failures is restored before another stage
-  begins.
+- Existing smoke assertions are amended from old location pins to behavior plus
+  new-module ownership; they are never simply removed.
+- A stage that causes unexpected failures is restored before another begins.
+- Completed work is marked `done` before another session chooses the next stage.
 
 ## Verification
 
@@ -153,21 +151,24 @@ For every stage:
 typecheck → build → smoke → relevant real-DOM preview → docs/skills checks
 ```
 
-Before a release, run the complete `npm run verify` and the release pipeline.
+Before a release, run the complete `npm run verify` and release pipeline.
 
 ## Risks
 
 > [!risk]
-> Modal source is interleaved with class methods and historical helper code.
-> Mitigation: extract one class via brace-aware boundaries; never use comments
-> or a generic closing-brace text pattern as a boundary.
+> Large source and harness files invite broad rewrites. Mitigation: approve one
+> ownership seam at a time and retain the old owner for lifecycle/persistence.
 
 > [!risk]
 > Test strings may describe old ownership. Mitigation: keep the behavior
-> assertion, add the new module assertion, and retain Settings wiring proof.
+> assertion, add the new module assertion, and retain call-site wiring proof.
+
+> [!risk]
+> A roadmap can itself become stale after work ships. Mitigation: the
+> documentation consistency audit now records v0.1.151 as the source baseline;
+> future completion must update this current-work label in the same change.
 
 ## Open Questions
 
-- When Stage 3 is complete, should remaining rich modals move individually or
-  be grouped by domain? Decide from the test/callback dependency map, not line
-  count alone.
+- Which Stage 6 candidate should receive the next dedicated plan? Waiting for
+  owner selection after documentation reconciliation.

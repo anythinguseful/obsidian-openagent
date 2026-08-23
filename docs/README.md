@@ -63,10 +63,11 @@ Feature plans and port designs, with their implementation status.
 | [MCP runtime plan](plans/mcp-runtime-plan.md) | done | MCP runtime client (stdio + Streamable HTTP): consent-gated, `mcp__<server>__<tool>` tools, lazy spawn, interactive-path-only, plus a curated install catalog. |
 | [Blueprint catalog plan](plans/blueprint-catalog-plan.md) | done | Curated cron blueprints with typed slots (schedule + prompt pre-filled). |
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
-| [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | active | Safe, staged extraction of modal UI from the Settings owner. |
-| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Approved architecture choices, sequencing, and deferred refactor boundaries after skill installation. |
-| [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | draft | Security contract and witnesses required before extracting the MCP installer modal. |
-| [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | draft | Storage, migration, export, and diagnostic contract required before MCP catalog work continues. |
+| [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
+| [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
+| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 are complete; Stage 6 awaits the next owner-selected architecture target. |
+| [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
+| [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
 
 ## Studies (`studies/`)
 
@@ -81,7 +82,8 @@ Upstream research and parity notes — always verified against raw sources.
 | [Empty-state parity](studies/empty-state-parity-2026-08-01.md) | done | Hermes Desktop Intro empty state (v0.1.35). |
 | [Clarify tool study](studies/hermes-clarify-tool.md) | done | Hermes `clarify` tool, verified from source. |
 | [Slash parity](studies/hermes-slash-parity-2026-07-31.md) | done | Composer slash commands vs Hermes Desktop. |
-| [Tools gap](studies/hermes-tools-gap-2026-08-09.md) | active | Hermes vs Open Agent tool map + roadmap (all 🟡 closed as of v0.1.135). |
+| [Tools gap](studies/hermes-tools-gap-2026-08-09.md) | done | Historical Hermes tool-gap roadmap; all recommended gaps closed and the current inventory is 25 tools in 10 toolsets. |
+| [Memory & Context engine research](studies/memory-context-engine-research-2026-08-21.md) | done | Hindsight-style plugin-native memory design; retain, recall, reflect, mental models, and optional embeddings shipped in three phases. |
 | [Model menu parity](studies/model-menu-parity-2026-08-01.md) | done | Composer model menu (v0.1.32). |
 | [Model settings parity](studies/model-settings-parity-2026-07-30.md) | done | Model settings page vs Hermes Desktop. |
 | [Prompt-kit audit](studies/promptkit-audit.md) | done | prompt-kit components audit against the upstream clone. |
@@ -105,6 +107,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | [Obsidian API audit](audits/obsidian-api-audit-2026-07-31.md) | done | API compatibility against Obsidian 1.13.4. |
 | [Settings tab audit](audits/settings-audit-2026-07-22.md) | done | Settings tab audit (v0.1.2 baseline). |
 | [Settings copy review](audits/settings-copy-review-2026-07-25.md) | done | UI copy review — fully approved, shipped as v0.1.11. |
+| [Settings descriptions audit 2026-08-22](audits/settings-descriptions-audit-2026-08-22.md) | done | Full Settings copy inventory; approved A–E changes and anti-regression voice/length guards shipped. |
 | [UI audit](audits/ui-audit.md) | done | UI audit using the vendored web-design-guidelines skill. |
 | [UI contract audit 2026-08-20](audits/ui-contract-audit-2026-08-20.md) | done | Bug-bounty pass of the openagent-ui contract: 14 rules verified, 3 warns, 1 contract clarification (var() fallback scoping). |
 

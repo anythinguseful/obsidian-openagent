@@ -178,9 +178,33 @@ Hal berikut konsisten dan tidak perlu diubah dalam sync pertama:
 5. Perkuat `check:docs` agar D1–D5 tidak berulang.
 6. Baru setelah docs hijau dan jujur, pilih refactor berikutnya.
 
+## Remediation follow-up — 2026-08-23
+
+The owner approved documentation reconciliation after reviewing this audit.
+The same-session follow-up completed:
+
+- D1: the four Settings/MCP plans and roadmap now match v0.1.151;
+- D2: the missing plan, study, and audit are listed in the hub with matching
+  status;
+- D5: the non-standard status, three machine-specific paths, and duplicate
+  Lesson 149 heading are corrected;
+- related drift found during reconciliation: the Hermes tools gap is now a
+  completed historical study with the current 25-tool inventory, and the
+  Memory & Context study records all three shipped phases.
+
+Still open by design:
+
+- D3: the uploaded repository still lacks the promised `releases/vN/` final
+  reports; no artifact hash was invented during a docs-only sync;
+- D4: strengthening `check:docs` changes project tooling and should be a
+  separate test-first change;
+- D6: Lessons 123–177 remain out of numeric order. No lesson is missing; a
+  large process-memory reorder is deferred to a dedicated reviewable cleanup.
+
 ## Outcome
 
-Audit selesai. **Tidak ada alasan melanjutkan MCP Catalog extraction atau
-credential migration; keduanya sudah shipped.** Pekerjaan berikutnya yang benar
-adalah documentation reconciliation, kemudian keputusan baru antara Settings
-section modularization, test-harness split, atau composer extraction.
+Audit and deterministic documentation reconciliation are complete. **There is
+no reason to continue MCP Catalog extraction or credential migration; both are
+shipped.** The roadmap now waits for a new owner decision between Settings
+section modularization, test-harness split, composer extraction, or product
+feature/bug work.

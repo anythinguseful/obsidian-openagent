@@ -1,7 +1,7 @@
 ---
 title: "MCP catalog modal security refactor"
 type: plan
-status: draft
+status: done
 date: 2026-08-23
 tags: [openagent, plan, mcp, security, settings, refactor]
 ---
@@ -10,70 +10,104 @@ tags: [openagent, plan, mcp, security, settings, refactor]
 
 ## Summary
 
-`McpCatalogModal` is intentionally excluded from ordinary Settings modal
-extraction because it manages third-party installation, API-key fields,
-reinstall state, installer failures, and refresh behavior. This plan defines
-the security contract required before moving it from `settingsTab.ts`.
+`McpCatalogModal` was excluded from the ordinary Settings extraction because it
+manages third-party installation, API-key fields, reinstall state, installer
+failures, and refresh behavior. The extraction shipped in v0.1.151 only after
+credential storage was separated from exportable settings and the dedicated
+browser/security witnesses passed.
 
-## Contract
+The class now lives in `src/settings/modals/mcp-catalog.ts` and is opened by the
+Capabilities section in `src/settingsTab.ts`.
 
-The extracted modal may render catalog entries and collect user-entered values,
-but it must not widen capability or persist credentials itself. It receives
-explicit callbacks for install/reinstall and refresh. The owning Settings/plugin
-layer remains responsible for validation, consent, persistence, and runtime
-reconciliation.
+## Final contract
 
-## Characterization (2026-08-23)
+- Secret catalog values never enter exported settings, profile exports,
+  diagnostics, notices, logs, or model-visible tool output.
+- Secret fields render as password inputs with autocomplete disabled.
+- The modal collects temporary form values but delegates installation and
+  persistence to `OpenAgentPlugin.installMcpCatalogEntry`.
+- The plugin boundary separates secret and non-secret values, writes secrets to
+  the plugin-private store, and keeps transport configuration inspectable.
+- Failed installs restore the button and report a non-secret error.
+- Successful installs render completion once and refresh Settings once.
+- Install and reinstall use the same consent and secret boundaries.
+- MCP tools remain limited to the owned interactive desktop chat path; they are
+  unavailable to delegation, cron/headless, Quick Ask, and mobile.
 
-The current modal is a direct owner of `OpenAgentPlugin` and therefore is not
-yet ready for a mechanical move:
+The final implementation retains `OpenAgentPlugin` as the modal facade rather
+than introducing a second narrow callback interface. This is deliberate for the
+completed mechanical extraction: security ownership remains in existing plugin
+methods, while the modal does not write the secret store directly. Narrowing the
+facade later would be a separate refactor, not unfinished v0.1.151 work.
 
-- Secret environment fields render as `type="password"` and set
-  `autocomplete="off"`; existing values are read from the installed server
-  configuration.
-- Install collects an `envValues` object and calls
-  `plugin.installMcpCatalogEntry(entry.name, envValues)` exactly once per click.
-- A failed result or rejected promise re-enables the button and names the
-  failure in a Notice; success renders a completion screen and calls the
-  Settings refresh callback.
-- List state distinguishes Install/Reinstall from an installed badge using the
-  current `mcpServers` settings map.
+## Decisions
 
-These facts are source-level observations. The next work is a dedicated
-real-DOM/security witness before a class move.
+- D1: Use the dedicated plugin-private secret store approved in
+  [MCP credential storage decision](mcp-credential-storage-decision-2026-08-23.md).
+- D2: Characterize password rendering, failure recovery, success refresh, and
+  reinstall state before moving the class.
+- D3: Extract exactly one class through `scripts/inspect-ts-class.mjs` and keep
+  the Settings call site intact.
+- D4: Preserve the plugin install method as the security/persistence choke
+  point; do not move credential persistence into the modal.
 
-## Required witnesses
+## Implementation result
 
-- Credentials are rendered only in password inputs where marked secret and are
-  not emitted into notices, diagnostics, logs, or preview text.
-- Cancel/back leaves plugin settings unchanged.
-- Failed install leaves the button recoverable and does not claim success.
-- Successful install refreshes catalog state exactly once.
-- Reinstall preserves the same security gates as install.
-- MCP consent remains required and MCP tools stay unavailable to delegation,
-  cron/headless, Quick Ask, and mobile paths.
-- AST extraction moves exactly one class and existing Settings real-DOM / MCP
-  tests remain green.
+1. `src/agent/mcp/secrets.ts` owns secret splitting, private persistence,
+   migration, import stripping, runtime resolution, and clear lifecycle.
+2. `src/settings/modals/mcp-catalog.ts` owns catalog list/form/done rendering.
+3. `src/settingsTab.ts` imports and opens the extracted class.
+4. `test/mcp-secrets.test.cjs` and `test/mcp-secret-migration.test.cjs` cover
+   private storage and legacy migration.
+5. Settings/export tests cover secret exclusion.
+6. Static smoke guards pin password-only secret fields, recoverable failure,
+   refresh-on-success, and reinstall state.
+7. Settings real-DOM F48 proves declared n8n fields, password/autocomplete-off,
+   failure recovery, no body-text secret leak, and successful completion.
 
-## Phases
+## GWT
 
-1. Characterize current catalog behavior and add/confirm witnesses.
-2. Extract class with `inspect-ts-class.mjs` only after the witness is green.
-3. Move static guards from old file location to modal ownership plus Settings
-   wiring.
-4. Run full verify and release as a new version.
+```text
+Given the n8n catalog entry declares N8N_API_KEY as secret
+When its install form opens
+Then that value is collected in a password input with autocomplete off and is
+absent from visible modal text.
 
-## Risks
+Given installation fails
+When the promise resolves or rejects
+Then Install becomes usable again, no success state appears, and no credential
+is included in the notice.
+
+Given installation succeeds
+When the plugin boundary returns success
+Then the modal shows Installed, refreshes Settings once, and stores the secret
+outside exportable server configuration.
+
+Given the class is extracted
+When source ownership is inspected
+Then mcp-catalog.ts owns the modal and settingsTab.ts retains only import,
+construction, and the refresh callback.
+```
+
+## Verification
+
+- Tracked real-DOM result: `F48mcpCatalogShape.fixed === true`.
+- Static catalog security and ownership guards pass in `test/smoke.test.cjs`.
+- Secret-store, migration, settings/export, and runtime-boundary tests are part
+  of `npm test`.
+- v0.1.151 release notes record the completed extraction and hardening.
+
+## Risks and outcome
 
 > [!risk]
-> A UI-only refactor can accidentally expose or retain secret values. Mitigate
-> with a dedicated DOM/log witness before extraction.
+> A UI refactor could expose or retain secret values. Outcome: secret storage is
+> separate by construction and browser proof checks the rendered boundary.
 
 > [!risk]
-> Installer failure can leave a stale enabled/installed visual state. Mitigate
-> with failure and reinstall witnesses.
+> Installer failure could leave a stale disabled or successful state. Outcome:
+> F48 performs a failed attempt before success and verifies recovery.
 
 ## Open Questions
 
-- Should catalog install logic remain on `OpenAgentPlugin` or move behind a
-  typed install callback interface? Answer after behavior characterization.
+- None for this plan. A narrower modal dependency interface may be considered
+  only as a future architecture refactor with no security or behavior change.

@@ -12,7 +12,7 @@ tags: [openagent, audit, security, workspace, historical]
 
 **Tanggal:** 2026-08-14 (Asia/Jakarta)  
 **Baseline:** closed release v0.1.144  
-**Baseline source:** `/home/user/releases/v0.1.144/obsidian-openagent-v0.1.144-clean-source`  
+**Baseline source:** verified clean-source snapshot for v0.1.144 (historical release workspace; supporting proof is linked above)
 **Status:** audit read-only; source dan artifact v0.1.144 tidak diubah
 
 ## 1. Ringkasan eksekutif

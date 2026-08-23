@@ -1,7 +1,7 @@
 ---
 title: "Settings tab modularization"
 type: plan
-status: active
+status: done
 date: 2026-08-23
 tags: [openagent, plan, architecture, settings, refactor]
 ---
@@ -10,118 +10,118 @@ tags: [openagent, plan, architecture, settings, refactor]
 
 ## Summary
 
-`src/settingsTab.ts` is a large imperative owner for Settings navigation,
-sections, forms, modal UI, and persistence callbacks. The goal is to reduce its
-size through **small, behavior-preserving extraction seams**, not a rewrite.
+`src/settingsTab.ts` originally owned Settings navigation, sections, forms,
+modal UI, and persistence callbacks in one file. This refactor extracted the
+modal layer through small, behavior-preserving seams rather than rewriting the
+Settings surface.
 
-The immediate pattern is simple: a modal owns rendering and temporary form
-state; `OpenAgentSettingTab` remains responsible for settings data, validation,
-persistence, and every business callback.
+The modal program is complete in v0.1.151. Eight modules under
+`src/settings/modals/` now own temporary modal state and rendering;
+`OpenAgentSettingTab` still owns section navigation and settings wiring, while
+plugin/domain callbacks remain responsible for persistence and security.
 
 ## Contract
 
-- No Settings row order, copy, UI behavior, persistence format, or security
-  consent behavior changes as part of this refactor.
-- A moved modal receives dependencies through constructor arguments. It must not
-  reach into global plugin state on its own.
-- Every extraction preserves existing selectors and test-visible behavior.
-- One class or one tightly coupled family is moved per stage.
-- Each stage must pass typecheck, build, smoke, and the relevant real-DOM
-  preview before another class is moved.
+- No Settings row order, copy, UI behavior, persistence format, or consent
+  behavior changes as part of the extraction.
+- A modal owns rendering and temporary form state, not unrelated Settings
+  sections.
+- Existing selectors and test-visible behavior remain stable.
+- Static guards verify ownership in the extracted module and wiring at the
+  call site; old assertions are amended, not deleted merely to pass.
+- Security-sensitive work receives dedicated migration and real-DOM witnesses
+  before it is declared complete.
 
-## Completed
+## Decisions
 
-| Stage | Status | Result |
-|---|---|---|
-| Session Panel extraction | done | `SessionPanel` left `ChatApp`; panel-local rename state is separate from SessionStore/agent lifecycle. See [Session panel extraction](session-panel-extraction-2026-08-23.md). |
+- D1: Extract one class or tightly coupled family at a time. Source: approved
+  refactor roadmap and the project regression discipline.
+- D2: Use `scripts/inspect-ts-class.mjs` for TypeScript-AST class boundaries;
+  never use a comment or generic closing brace as an extraction anchor.
+- D3: Keep section renderers in `OpenAgentSettingTab` during this plan. Moving
+  Settings sections requires a separate owner-approved plan.
+- D4: Defer `McpCatalogModal` until its credential lifecycle and browser
+  witness were explicit. That gate was completed in v0.1.151; see
+  [MCP credential storage decision](mcp-credential-storage-decision-2026-08-23.md)
+  and [MCP Catalog security refactor](mcp-catalog-modal-security-plan-2026-08-23.md).
 
-## Settings status
+## Implementation result
 
-> [!warning]
-> Settings modal extraction is **not yet landed**. A series of experimental
-> moves was reverted after an unsafe class-boundary extraction targeted the
-> wrong modal. `settingsTab.ts` is restored to the verified v0.1.149 baseline.
->
-> The plan remains active, but no `src/settings/modals/` implementation is
-> currently present.
+| Phase | Status | Module(s) | Result |
+| --- | --- | --- | --- |
+| 1 — simple picker/confirmation UI | done | `json-import.ts` | `JsonImportModal`, `ExportFileSuggestModal`, `FolderSuggestModal`, `SkillSuggestModal`, and `ConfirmResetModal`. |
+| 2 — focused domain modals | done | `profile.ts`, `snippet.ts` | Profile delete/export and snippet editing moved with their form-state guards. |
+| 3 — capability/automation surfaces | done | `hub.ts`, `consent.ts`, `blueprint-catalog.ts`, `guard-findings.ts` | Hub preview, Terminal/MCP consent, blueprint catalog, and Skills Guard findings moved without behavior changes. |
+| 4 — security-sensitive catalog | done | `mcp-catalog.ts` | MCP Catalog moved after private secret storage, migration/redaction tests, and real-DOM F48 passed. |
 
-## TODO — ordered by safety
+Current modal modules:
 
-### Phase 1 — simple picker/confirmation UI
+```text
+src/settings/modals/blueprint-catalog.ts
+src/settings/modals/consent.ts
+src/settings/modals/guard-findings.ts
+src/settings/modals/hub.ts
+src/settings/modals/json-import.ts
+src/settings/modals/mcp-catalog.ts
+src/settings/modals/profile.ts
+src/settings/modals/snippet.ts
+```
 
-**Status: done**
+## Extraction protocol used
 
-1. `JsonImportModal` ✅
-2. `ExportFileSuggestModal` ✅
-3. `FolderSuggestModal` ✅
-4. `SkillSuggestModal` ✅
-5. `ConfirmResetModal` ✅
+1. Read the target class and all call sites.
+2. Add or confirm the relevant behavior witness.
+3. Inspect the class range through the TypeScript AST.
+4. Move only the target class or approved family.
+5. Amend static guards to check new ownership plus old wiring.
+6. Run typecheck, build, smoke, and Settings real-DOM proof.
+7. Restore the isolated move if a failure is not an expected ownership-pin
+   amendment.
 
-All five now live in `src/settings/modals/json-import.ts`. Each was extracted
-with `scripts/inspect-ts-class.mjs`, which obtains its class range from the
-TypeScript AST. Typecheck, build, smoke, and Settings real-DOM preview passed
-after the final move.
+An early text-boundary experiment targeted the wrong class and was reverted
+before the safe AST protocol was adopted. No reverted implementation remains in
+the current source.
 
-### Phase 2 — focused Settings domain modal
+## GWT
 
-**Status: done**
+```text
+Given a Settings modal is opened from its existing row
+When the extraction is complete
+Then the same modal content, actions, persistence callback, and close behavior remain.
 
-4. `ConfirmProfileDeleteModal` ✅
-5. `ProfileExportModal` ✅
-6. `SnippetEditModal` ✅
+Given an installer credential is marked secret
+When MCP Catalog renders and runs install or reinstall
+Then the value appears only in a password input, never in DOM text or notices,
+and persistence crosses the plugin-owned secret boundary.
 
-Profile and snippet ownership now lives in `src/settings/modals/profile.ts` and
-`src/settings/modals/snippet.ts`; their richer form-state/static guards were
-moved to module ownership while Settings wiring remains asserted.
+Given the Settings source is inspected
+When modal ownership is enumerated
+Then each extracted class lives under src/settings/modals/ and settingsTab keeps
+only its import, construction, and owning section callbacks.
+```
 
-### Phase 3 — capability/automation surfaces
+## Verification
 
-**Status: done**
+- v0.1.150 completed Phases 1–3 with typecheck, build, smoke, Settings real-DOM,
+  docs, and skills checks.
+- v0.1.151 completed Phase 4 with secret-store/migration/export tests, MCP
+  runtime boundary checks, static catalog guards, and real-DOM F48.
+- `RELEASES.md` records both release outcomes.
 
-7. `HubSkillPreviewModal` ✅
-8. `TerminalConsentModal` + `McpConsentModal` ✅
-9. `BlueprintCatalogModal` ✅
-10. `GuardFindingsModal` ✅
-
-These now live in dedicated modal modules. Settings real-DOM preview, smoke,
-docs, and skills checks passed after the final move.
-
-### Phase 4 — defer until a dedicated security plan
-
-11. `McpCatalogModal`
-
-It handles third-party installation, credentials, and installer feedback. It
-must not move until a dedicated contract/test matrix exists.
-
-## Extraction protocol
-
-1. Read the target class and every call site.
-2. Create or amend the behavior witness before moving code.
-3. Extract using a **brace-aware class boundary**, never a comment/text anchor.
-4. Update imports and move only the target class.
-5. Amend static guards so they verify ownership in the new module and wiring in
-   `settingsTab.ts`.
-6. Run: typecheck → build → smoke → relevant real-DOM preview.
-7. If a stage fails outside the expected guard amendment, restore that class
-   alone before continuing.
-
-## Risks
-
-> [!risk]
-> Static test pins can describe an old file location instead of a behavior.
-> Mitigation: split assertions into modal contract and Settings wiring; never
-> delete an assertion merely to make the move pass.
+## Risks and outcome
 
 > [!risk]
-> Text-anchor extraction can consume a class boundary or neighboring helper.
-> Mitigation: count braces from the class declaration and move one class only.
+> Static tests can pin an old file location instead of behavior. Outcome: guards
+> now split module ownership from Settings call-site wiring.
 
 > [!risk]
-> MCP catalog has security-sensitive installer and credential state.
-> Mitigation: explicitly defer it to a dedicated plan.
+> Credential handling can be exposed by a UI-only move. Outcome: secret values
+> live outside exportable settings and the MCP browser witness checks password
+> rendering, failure recovery, success, and no DOM leak.
 
-## Open Questions
+## Follow-up
 
-- After Phase 3, decide whether remaining Settings sections should be rendered
-  through extracted section modules or whether modal extraction has provided
-  enough maintainability gain.
+This plan does **not** authorize extracting Settings section renderers. The
+remaining `settingsTab.ts` size is a separate architecture decision. The active
+[refactor roadmap](refactor-roadmap-after-skills-2026-08-23.md) now pauses at
+reassessment rather than silently starting another refactor.
