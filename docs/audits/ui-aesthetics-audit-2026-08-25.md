@@ -97,28 +97,23 @@ actions are separate reading regions.
 **Do not add:** a card around every Settings group, a border around every chat
 message, or a horizontal rule between every transcript turn.
 
-### F2 — Conversations panel has a row-action accessibility and affordance gap
+### F2 — Conversations panel had a row-action accessibility and affordance gap
 
-**Status: concrete defect; separate from a visual reskin.**
+**Status: resolved 2026-08-25.**
 
-`src/ui/components/session-panel.tsx` renders a selectable conversation as a
-`div` with `onClick`, with no keyboard handler. Its Rename and Delete buttons
-are `display: none` until `.oa-panel-row:hover` in `styles.css`.
+The original selectable conversation was a clickable `div`, while Rename and
+Delete were hidden until pointer hover. The completed
+[Conversations panel interaction](../plans/conversations-panel-interaction-2026-08-25.md)
+keeps an outer layout container but makes the title/meta region a real button
+and keeps Rename/Delete as sibling controls. `:focus-within` now reveals the
+actions alongside pointer hover, and the selection button has a visible focus
+ring.
 
-Consequences:
-
-- a keyboard user has no semantic control to open a conversation;
-- action buttons are visually and operationally unavailable without pointer
-  hover;
-- the row is visually presented as one interactive item but lacks a matching
-  focus state;
-- delete has no confirmation or undo affordance.
-
-The appropriate repair is structural, not decorative: keep an outer layout
-container, make the conversation-selection region a real button, keep Rename
-and Delete as sibling buttons, and reveal the action cluster on `:focus-within`
-as well as `:hover`. A later owner decision is needed for the destructive action:
-confirmation or a short-lived Undo path.
+The owner selected a short confirmation rather than Undo. `Delete chat` now
+opens an Obsidian-native modal; Cancel preserves the session and only the
+modal's destructive action calls the existing deletion callback. The browser
+witness proves keyboard focus, Enter selection, inline rename, cancel, and
+confirmed removal.
 
 ### F3 — Consecutive tool cards formed a visual wall
 

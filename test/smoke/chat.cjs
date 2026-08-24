@@ -356,6 +356,12 @@ module.exports = function chatGuards() {
 			chat.includes("scopedSessions.rename(id, next)") &&
 			chat.includes("sessionTitleRef.current = next") &&
 			chat.includes("onRename={renameSession}") &&
+			chat.includes("app={props.app}") &&
+			panel.includes("class ConfirmSessionDeleteModal extends Modal") &&
+			panel.includes('text: "Delete chat"') &&
+			panel.includes("new ConfirmSessionDeleteModal(app, session.title") &&
+			panel.includes('className="oa-panel-row-select"') &&
+			panel.includes('aria-label={`Open chat “${session.title}”`}') &&
 			panel.includes("const [renamingId, setRenamingId]") &&
 			panel.includes("const commitRename = useCallback") &&
 			panel.includes('aria-label="Rename chat"') &&
@@ -366,11 +372,13 @@ module.exports = function chatGuards() {
 			!/^import .*AgentLoop/m.test(panel) &&
 			css.includes(".oa-panel-row-rename-input {") &&
 			css.includes(".oa-panel-row-rename-input:focus") &&
-			css.includes(".oa-panel-row-rename:hover");
+			css.includes(".oa-panel-row:hover .oa-panel-row-del,") &&
+			css.includes(".oa-panel-row:focus-within .oa-panel-row-del,") &&
+			css.includes(".oa-panel-row-select:focus-visible {");
 		if (ok) {
-			console.log("✓ v0.1.158: inline session rename — isolated panel UI, durable ChatApp store callback, Enter/Escape");
+			console.log("✓ Conversations panel: semantic selection, focus-revealed actions, inline rename, and confirmed deletion");
 		} else {
-			console.error("✗ v0.1.158 inline session rename drifted");
+			console.error("✗ Conversations panel interaction drifted");
 			failed++;
 		}
 	}

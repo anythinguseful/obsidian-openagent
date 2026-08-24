@@ -239,7 +239,25 @@ export async function buildRealFrames({ shots = true } = {}) {
 				) {
 					throw new Error(`panel check failed: ${JSON.stringify(p)}`);
 				}
-				console.log("  [panel] sessions panel is a slash-menu-style popover (no backdrop, above composer, scrolling list, history glyph) ✓");
+				const select = page.locator(".oa-panel-row-select").first();
+				await select.focus();
+				const focusActions = await page.evaluate(() => {
+					const row = document.querySelector(".oa-panel-row");
+					const rename = row?.querySelector(".oa-panel-row-rename");
+					const del = row?.querySelector(".oa-panel-row-del");
+					return {
+						activeIsSelect: document.activeElement?.classList.contains("oa-panel-row-select") === true,
+						rename: rename ? getComputedStyle(rename).display : null,
+						delete: del ? getComputedStyle(del).display : null,
+					};
+				});
+				await select.press("Enter");
+				await page.waitForTimeout(80);
+				const selectedId = await page.evaluate(() => window.__oaLoadedSession ?? null);
+				if (!focusActions.activeIsSelect || focusActions.rename === "none" || focusActions.delete === "none" || selectedId !== "s-1") {
+					throw new Error(`panel semantic-row check failed: ${JSON.stringify({ focusActions, selectedId })}`);
+				}
+				console.log("  [panel] sessions panel is a semantic popover: keyboard focus reveals actions and Enter selects a session ✓");
 			}
 
 			frames[s] = await page.$eval("#root", (el) => el.innerHTML);
@@ -982,7 +1000,37 @@ export async function buildRealFrames({ shots = true } = {}) {
 			throw new Error(`rename cancel check failed: ${JSON.stringify(cancelled)}`);
 		}
 
-		console.log("  [slash] /title saved to disk ✓ · /version shows build ✓ · /q idle→drain ✓ · /sessions alias opens panel + prefill ✓ · SearchField pill ✓ · md keys ✓ · del-icon containment ✓ · profile strip rhythm ✓ · inline rename commit/cancel ✓");
+		/* Conversations delete is deliberate: Cancel must preserve the row;
+		   only the host modal's destructive confirmation reaches SessionStore. */
+		const deleteRow = page.locator('.oa-panel-row:has(.oa-panel-row-title:text-is("agent-loop design"))');
+		await deleteRow.hover();
+		await deleteRow.locator(".oa-panel-row-del").click();
+		const modal = page.locator(".oa-confirm-modal");
+		if (!(await modal.textContent())?.includes('Delete chat “agent-loop design”?')) {
+			throw new Error("session-delete confirmation did not open with the selected chat title");
+		}
+		await modal.getByRole("button", { name: "Cancel" }).evaluate((el) => el.click());
+		await page.waitForTimeout(80);
+		const cancelledDelete = await page.evaluate(() => ({
+			deleted: window.__oaDeletedSession ?? null,
+			stillThere: [...document.querySelectorAll(".oa-panel-row-title")].some((x) => x.textContent === "agent-loop design"),
+		}));
+		if (cancelledDelete.deleted !== null || !cancelledDelete.stillThere) {
+			throw new Error(`session-delete cancel failed: ${JSON.stringify(cancelledDelete)}`);
+		}
+		await deleteRow.hover();
+		await deleteRow.locator(".oa-panel-row-del").click();
+		await page.locator(".oa-confirm-modal").getByRole("button", { name: "Delete chat" }).evaluate((el) => el.click());
+		await page.waitForTimeout(220);
+		const confirmedDelete = await page.evaluate(() => ({
+			deleted: window.__oaDeletedSession ?? null,
+			stillThere: [...document.querySelectorAll(".oa-panel-row-title")].some((x) => x.textContent === "agent-loop design"),
+		}));
+		if (confirmedDelete.deleted !== "s-1" || confirmedDelete.stillThere) {
+			throw new Error(`session-delete confirmation failed: ${JSON.stringify(confirmedDelete)}`);
+		}
+
+		console.log("  [slash] /title saved to disk ✓ · /version shows build ✓ · /q idle→drain ✓ · /sessions alias opens panel + prefill ✓ · SearchField pill ✓ · md keys ✓ · semantic row focus/select ✓ · inline rename commit/cancel ✓ · delete confirm/cancel ✓");
 	}
 	/* Slash medium-batch honesty check (v0.1.21): the arg-stage popover
 	   offers the three approval modes, clicking one fills the composer and

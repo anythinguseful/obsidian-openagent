@@ -17,6 +17,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 - **No settings behavior changed.** Names, order, controls, data, search harvesting, and security behavior remain the same.
 - **Real-DOM proof added.** `F49settingsGroups` verifies the grouped structure and computed 1 px / 8 px card geometry for Capabilities and Automations.
 - **Consecutive tool calls now read as one activity.** A single outer card contains independently expandable tool rows separated by hairlines, so repeated tool calls no longer form a wall of nested cards.
+- **Conversations are safer and easier to use.** Session rows are keyboard-selectable, row actions appear on focus as well as hover, and deleting a saved chat now requires confirmation.
 
 ---
 

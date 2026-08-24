@@ -627,6 +627,7 @@ const meta = (id: string, title: string, hoursAgo: number, turnCount: number) =>
 });
 
 const savedSessions: Session[] = [];
+const removedSessionIds = new Set<string>();
 const sessionsMock = {
 	/* Workspace v0.1.145: ChatApp snapshots the plugin-private session
 	   partition around every asynchronous operation. The browser harness has
@@ -636,20 +637,27 @@ const sessionsMock = {
 		return this;
 	},
 	list: async () => [
-		...savedSessions.map((s) => ({
-			id: s.id,
-			title: s.title,
-			createdAt: s.createdAt,
-			updatedAt: s.updatedAt,
-			model: s.model,
-			turnCount: s.turnCount,
-		})),
-		meta("s-1", "agent-loop design", 1, 6),
-		meta("s-2", "weekly review prep", 5, 4),
-		meta("s-3", "hub skill ideas", 26, 8),
-		meta("s-4", "vault cleanup plan", 50, 3),
+		...savedSessions
+			.filter((s) => !removedSessionIds.has(s.id))
+			.map((s) => ({
+				id: s.id,
+				title: s.title,
+				createdAt: s.createdAt,
+				updatedAt: s.updatedAt,
+				model: s.model,
+				turnCount: s.turnCount,
+			})),
+		...[
+			meta("s-1", "agent-loop design", 1, 6),
+			meta("s-2", "weekly review prep", 5, 4),
+			meta("s-3", "hub skill ideas", 26, 8),
+			meta("s-4", "vault cleanup plan", 50, 3),
+		].filter((s) => !removedSessionIds.has(s.id)),
 	],
-	load: async () => null,
+	load: async (id: string) => {
+		window.__oaLoadedSession = id;
+		return null;
+	},
 	/* real-store parity (v0.1.20): the panel's debounced full-text search
 	   calls sessions.search — an honest "no content hits" keeps the panel
 	   on its title filter, exactly like a store with no matches */
@@ -681,7 +689,10 @@ const sessionsMock = {
 		window.__oaRenamed = { id, title };
 		return savedSessions[i];
 	},
-	remove: async () => {},
+	remove: async (id: string) => {
+		removedSessionIds.add(id);
+		window.__oaDeletedSession = id;
+	},
 	touch: async () => {},
 };
 

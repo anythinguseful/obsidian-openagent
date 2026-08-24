@@ -1020,7 +1020,7 @@ module.exports = function previewGuards() {
 		const ok =
 			!css26.includes(".oa-quickask :is(") &&
 			css26.includes("font-family: inherit;\n\tletter-spacing: inherit;\n\tcolor: inherit;") &&
-			!regionFrom(css26, "QUICK ASK FIELD RESET", { label: "quickask-reset" }).includes("font: inherit;") &&
+			!region(css26, "QUICK ASK FIELD RESET", "QUICK ASK RESIZE SEAM", { label: "quickask-reset" }).includes("font: inherit;") &&
 			lane26.includes("composer metrics not its own") &&
 			lane26.indexOf("composer metrics not its own") < lane26.indexOf("coarse-pointer (touch)");
 		if (ok) {

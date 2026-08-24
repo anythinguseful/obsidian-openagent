@@ -5048,6 +5048,7 @@ nudgeCounterRef.current = 0;
 					{/* ---------- sessions panel (slash-menu-style popover) ---------- */}
 					{panelOpen ? (
 						<SessionPanel
+							app={props.app}
 							panelRef={panelRef}
 							compact={settings.sessionListDensity === "compact"}
 							filter={panelFilter}

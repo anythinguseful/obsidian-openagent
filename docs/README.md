@@ -73,6 +73,7 @@ Feature plans and port designs, with their implementation status.
 | [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | done | Stage 6 target #2 completed: twelve self-contained renderer members moved into `src/settings/sections/`, while the class retains data, persistence, navigation, search indexing, and stateful renderers. |
 | [Settings grouping visual system](plans/settings-grouping-visual-system-2026-08-25.md) | done | Group shells now unify native rows with MCP-server and cron-task object cards; behavior is unchanged and the real-DOM witness passes. |
 | [Chat tool activity grouping](plans/chat-tool-activity-grouping-2026-08-25.md) | done | Consecutive tool calls now share one activity card with independently expandable rows, hairline separators, and a real-DOM witness. |
+| [Conversations panel interaction](plans/conversations-panel-interaction-2026-08-25.md) | done | Session rows are semantic and keyboard-discoverable; deletion now uses the owner-approved confirmation flow with real-DOM proof. |
 
 ## Studies (`studies/`)
 
