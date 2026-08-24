@@ -244,6 +244,53 @@ module.exports = function settingsGuards() {
 		}
 	}
 
+	// ---- v0.1.194 — renderer yang diekstrak harus TETAP TERPASANG
+	// (Phase 3, 2026-08-24). Red-proof R5 menemukan lubang nyata: menghapus
+	// baris pemanggil `terminalSection(...)` membuat seluruh section Terminal
+	// & Processes tidak pernah dirender, dan NOL guard protes — typecheck pun
+	// hijau karena fungsi modul memang masih dipakai importnya. Lubang ini
+	// SUDAH ADA sebelum ekstraksi (call site `this.terminalSettings(...)`
+	// juga tak pernah dipin), tapi ekstraksi menaikkan risikonya: pemanggil
+	// dan definisi kini di file berbeda, jadi orang bisa merapikan satu file
+	// tanpa melihat satunya.
+	//
+	// Guard ini mengunci RANTAI LENGKAP tiap modul: import → pemanggilan
+	// dengan sectionContext() → subheading pengantarnya (untuk terminal,
+	// yang dirender inline oleh capabilities(), bukan sebagai tab sendiri).
+	// Bukan sekadar "fungsinya ada".
+	{
+		const tab = read("src/settingsTab.ts");
+		const wired = [
+			{
+				what: "memory",
+				imp: 'import { memory as memorySection } from "./settings/sections/memory";',
+				call: "memorySection(this.sectionContext(), host);",
+			},
+			{
+				what: "terminal",
+				imp: 'import { terminalSettings as terminalSection } from "./settings/sections/terminal";',
+				call: "terminalSection(this.sectionContext(), containerEl);",
+			},
+		];
+		const ok =
+			wired.every((w) => tab.includes(w.imp) && tab.includes(w.call)) &&
+			/* method privat lamanya benar-benar hilang, bukan disisakan mati */
+			!tab.includes("private terminalSettings(") &&
+			!tab.includes("private memory(") &&
+			/* Terminal tetap hidup di dalam Capabilities, di bawah subheading-nya */
+			tab.indexOf('this.subheading(containerEl, "Terminal & Processes"') <
+				tab.indexOf("terminalSection(this.sectionContext(), containerEl);") &&
+			/* dan modulnya memang mengekspor fungsi yang diimpor itu */
+			read("src/settings/sections/terminal.ts").includes("export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement): void") &&
+			read("src/settings/sections/memory.ts").includes("export function memory(ctx: SectionContext, containerEl: HTMLElement): void");
+		if (ok) {
+			console.log("✓ v0.1.194: extracted section renderers stay wired (import + sectionContext call + subheading order)");
+		} else {
+			console.error("✗ v0.1.194 an extracted section renderer lost its call site (section would render empty)");
+			failed++;
+		}
+	}
+
 	// ---- v0.1.19 — base-URL description is per-provider (owner 2026-07-31:
 	// "kan itu deskripsi untuk settingan LM studio, kenapa ada yang lain
 	// juga?"). The LM Studio row must never again carry Ollama/OpenRouter.
@@ -1987,7 +2034,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts")).match(/markModified\(/g) || []).length === 63 && // 46 di settingsTab + 17 di modul memory (2026-08-24: blok duplikat Context & compression dihapus −4, stContextWindow lahir kembali di modul +1)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts")).match(/markModified\(/g) || []).length === 63 && // 42 di settingsTab + 17 di modul memory + 4 di modul terminal (2026-08-24 Phase 3: terminalSettings pindah modul, −4 di tab / +4 di modul — TOTALNYA tetap 63, itu buktinya ekstraksi tidak menghapus satu dot pun)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

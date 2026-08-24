@@ -37,6 +37,11 @@ const miscGuards = require("./smoke/misc.cjs");
 			const chat = read("src/ui/ChatApp.tsx");
 			const settingsSource = read("src/settings.ts");
 			const settingsTab = read("src/settingsTab.ts");
+			/* 2026-08-24 (Phase 3): the Terminal renderer moved to its own module.
+			   The consent gate is a security contract, so the guard follows the
+			   code instead of relaxing — it now pins the mint call in the module
+			   AND pins that settingsTab no longer carries a second copy. */
+			const terminalSection = read("src/settings/sections/terminal.ts");
 			const bundle = read("main.js");
 			const manifest = JSON.parse(read("manifest.json"));
 			return [
@@ -68,7 +73,12 @@ const miscGuards = require("./smoke/misc.cjs");
 						settingsSource.includes("delete (payload.terminal as Partial<TerminalSettings>).consentReceipt") &&
 						source.includes("this.readTerminalConsentLedger()") &&
 						source.includes("async grantTerminalConsent()") &&
-						settingsTab.includes("await this.plugin.grantTerminalConsent()"),
+						terminalSection.includes("await ctx.plugin.grantTerminalConsent()") &&
+						terminalSection.includes("new TerminalConsentModal(ctx.app,") &&
+						/* the modal must open from the toggle's own rejected gesture:
+						   the receipt is minted only after setValue(false) */
+						terminalSection.includes("toggle.setValue(false);") &&
+						!settingsTab.includes("grantTerminalConsent"),
 					"terminal first-use consent requires a non-portable per-vault receipt minted by the checked modal",
 				],
 			];

@@ -155,6 +155,40 @@ Each phase is one commit and must pass the full gate before the next begins.
   the class, never the code that applies it. A CSS-only pin cannot prove the
   markup still opts in. Added the missing arm.
 - **Phase 3** — `general`, `mcp`, `terminalSettings`.
+
+  `terminalSettings` **DONE** (2026-08-24). 103 lines out of `settingsTab.ts`
+  (4,551 → 4,448) into `src/settings/sections/terminal.ts`; call site inside
+  `capabilities()` became `terminalSection(this.sectionContext(), containerEl)`,
+  with the two subheadings deliberately left in `capabilities()`. The security
+  shape moved verbatim: desktop-only early return, the toggle that refuses
+  `toolsets.terminal = true` while `terminal.consentVersion !== 1`, and the
+  receipt minted only from the modal's own callback. `TerminalConsentModal`
+  dropped from the tab's import (it survived only in a comment — a bare
+  `grep -c` reported 2 and looked live).
+
+  Two guards broke, and **neither was in the file this plan predicted**. The
+  terminal consent guard lives in the root `test/smoke.test.cjs`, whose source
+  readers only open `src/main.ts`, `src/settings.ts`, `src/settingsTab.ts` — so
+  the moved string vanished from its view. It was amended by adding a reader for
+  the new module and tightening: the mint call, the modal construction, and the
+  `setValue(false)` rejected gesture are pinned in the module, plus a negative
+  pin (`!settingsTab.includes("grantTerminalConsent")`) so a second copy cannot
+  grow back in the tab. The `v0.1.94` cross-file `markModified(` count was fixed
+  by **adding the third file to the sum and keeping 63** (42 + 17 + 4), not by
+  lowering the number — that count is the proof no dot was lost. `resetButton(st`
+  === 20 was unaffected.
+
+  One finding, written up as Lesson 193: red-proofing past the arms I had just
+  written exposed a **pre-existing hole**. Deleting the call site outright —
+  the entire Terminal & Processes section never renders — left `tsc` green and
+  **zero** guards failing. The old `this.terminalSettings(containerEl)` had
+  never been pinned either; `memory` was covered only by accident, via the IA
+  guard that inspects tab contents. Closed by smoke `v0.1.194`, which locks the
+  full chain per extracted module (import → `sectionContext()` call → order
+  against its subheading → module `export` signature → no leftover
+  `private <name>(` in the tab). Six arms, all six red-proofed. **Rule for the
+  remaining extractions: the wiring guard ships in the same commit as the
+  move.**
 - **Phase 4** — `workspace` + `addWorkspaceExclusion`, `command` +
   `renderCommandRows`. Moved in pairs: each private helper has exactly one
   caller, both in the moving set.

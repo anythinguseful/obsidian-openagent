@@ -27,7 +27,7 @@ import type OpenAgentPlugin from "./main";
 import { ConfirmProfileDeleteModal, ProfileExportModal } from "./settings/modals/profile";
 import { SnippetEditModal } from "./settings/modals/snippet";
 import { HubSkillPreviewModal } from "./settings/modals/hub";
-import { McpConsentModal, TerminalConsentModal } from "./settings/modals/consent";
+import { McpConsentModal } from "./settings/modals/consent";
 import { BlueprintCatalogModal } from "./settings/modals/blueprint-catalog";
 import { GuardFindingsModal } from "./settings/modals/guard-findings";
 import { McpCatalogModal } from "./settings/modals/mcp-catalog";
@@ -36,6 +36,7 @@ import { createSegmented, createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
 import { copyText, exportStamp, stackedTextArea } from "./settings/sections/helpers";
 import { memory as memorySection } from "./settings/sections/memory";
+import { terminalSettings as terminalSection } from "./settings/sections/terminal";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
 import { getPath, isModified, markModified, setPath } from "./settingsModified";
@@ -2574,7 +2575,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		this.subheading(containerEl, "Tools", "One switch per toolset.");
 		this.toolsets(containerEl);
 		this.subheading(containerEl, "Terminal & Processes", "Desktop-only command execution with explicit consent and per-start approval.");
-		this.terminalSettings(containerEl);
+		terminalSection(this.sectionContext(), containerEl);
 		this.subheading(containerEl, "Web search", "Where the AI searches the web. DuckDuckGo is free and needs no setup; the other options need an API key or your own server.");
 		this.webSearchSettings(containerEl);
 		this.subheading(containerEl, "Skills", "SKILL.md files the agent reads and authors — the learning loop.");
@@ -3233,109 +3234,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 			}));
 		markModified(searxng, this.plugin.settings, "webSearch.searxngUrl");
-	}
-
-	private terminalSettings(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-		if (Platform?.isDesktopApp !== true) {
-			new Setting(containerEl)
-				.setName("Unavailable on mobile")
-				.setDesc("The plugin remains mobile-capable, but terminal/process schemas and the Node runtime are not registered on mobile.");
-			return;
-		}
-
-		const enabled = new Setting(containerEl)
-			.setName("Enable Terminal & Processes")
-			.setDesc("Off by default. Every command start shows a frozen command/backend/image/Workspace/cwd/timeout preview and only supports Allow once.")
-			.addToggle((toggle) => toggle.setValue(s.toolsets.terminal).onChange(async (value) => {
-				if (!value) {
-					s.toolsets.terminal = false;
-					await this.plugin.saveSettings();
-					return;
-				}
-				if (s.terminal.consentVersion !== 1) {
-					toggle.setValue(false);
-					new TerminalConsentModal(this.app, async () => {
-						/* Mint the per-vault receipt only from this checked user gesture;
-						   imports and hand-edited settings cannot call this path. */
-						await this.plugin.grantTerminalConsent();
-						this.display();
-					}).open();
-					return;
-				}
-				s.toolsets.terminal = true;
-				await this.plugin.saveSettings();
-			}));
-		markModified(enabled, this.plugin.settings, "toolsets.terminal");
-
-		const backend = new Setting(containerEl)
-			.setName("Execution backend")
-			.setDesc("Docker is recommended. Local is an unsandboxed expert path and never supports background processes.")
-			.addDropdown((dropdown) => dropdown
-				.addOption("docker", "Docker — disposable, network off")
-				.addOption("local", "Local — expert, foreground only")
-				.setValue(s.terminal.backend)
-				.onChange(async (value) => {
-					s.terminal.backend = value === "local" ? "local" : "docker";
-					await this.plugin.saveSettings();
-					this.display();
-				}));
-		markModified(backend, this.plugin.settings, "terminal.backend");
-
-		if (s.terminal.backend === "docker") {
-			const image = new Setting(containerEl)
-				.setName("Docker image")
-				.setDesc("Chosen by Settings, never by the agent. Commands run with no network, a read-only root, resource caps, closed stdin, and a masked Workspace.")
-				.addText((text) => text
-					.setPlaceholder("repository:tag or repository@digest")
-					.setValue(s.terminal.dockerImage)
-					.onChange(async (value) => {
-						const next = value.trim();
-						if (!next || next.length > 256 || /[\u0000-\u001f\u007f\s]/.test(next) || next.startsWith("-")) {
-							new Notice("Open Agent: enter a valid Docker image reference without whitespace or control characters.");
-							text.setValue(s.terminal.dockerImage);
-							return;
-						}
-						s.terminal.dockerImage = next;
-						await this.plugin.saveSettings();
-					}));
-			markModified(image, this.plugin.settings, "terminal.dockerImage");
-		} else {
-			const expert = new Setting(containerEl)
-				.setName("I understand Local is not sandboxed")
-				.setDesc("Required separately. Local is refused in YOLO and Strict Workspace, is foreground-only, and can reach anything Obsidian can.")
-				.addToggle((toggle) => toggle.setValue(s.terminal.localExpertEnabled).onChange(async (value) => {
-					s.terminal.localExpertEnabled = value;
-					await this.plugin.saveSettings();
-				}));
-			markModified(expert, this.plugin.settings, "terminal.localExpertEnabled");
-		}
-
-		new Setting(containerEl)
-			.setName("Backend health")
-			.setDesc("Checks Docker Engine availability or reports the host-shell runtime. It does not run an agent command.")
-			.addButton((button) => button.setButtonText("Check health").onClick(async () => {
-				button.setDisabled(true).setButtonText("Checking…");
-				try {
-					const result = await this.plugin.runner.terminalHealth(this.plugin.settings);
-					new Notice(`Open Agent: ${result.ok ? "ready" : "not ready"} — ${result.message}`, 8000);
-				} finally {
-					button.setDisabled(false).setButtonText("Check health");
-				}
-			}));
-
-		new Setting(containerEl)
-			.setName("Stop all owned processes")
-			.setDesc("Stops every command this plugin started. Also runs on unload and security-setting changes.")
-			.addButton((button) => button.setWarning().setButtonText("Stop all").onClick(async () => {
-				button.setDisabled(true);
-				try {
-					const stopped = await this.plugin.runner.stopAllTerminal();
-					new Notice(`Open Agent: stop requested for ${stopped} command${stopped === 1 ? "" : "s"}.`);
-				} finally {
-					button.setDisabled(false);
-				}
-			}));
 	}
 
 	private skills(containerEl: HTMLElement): void {
