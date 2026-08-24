@@ -183,6 +183,28 @@ check(
 	`block-local read() shadows the harness helper (same call, different anchor): ${smokeShadowFailures.join("; ")}`,
 );
 
+// v0.1.152 — the embedding picker lives in Settings → Model as a peer of the main
+// model picker, NOT in Memory & Context. Docs drifted once (settings-card-preview.html
+// kept rendering the old row after the code moved); these guards stop it recurring.
+{
+	const preview = read("docs/previews/settings-card-preview.html");
+	const memoryCard = preview.slice(
+		preview.indexOf("Structured memory"),
+		preview.indexOf("Compression") >= 0 ? preview.indexOf("Compression") : preview.length,
+	);
+	check(
+		!/<div class="oa-row-name">\s*Embedding model\s*</i.test(memoryCard),
+		"settings preview: no embedding-model row inside the Memory & Context card",
+		"docs/previews/settings-card-preview.html renders an 'Embedding model' row in Memory & Context; it moved to Settings → Model",
+	);
+	const readme = read("README.md");
+	check(
+		!/embedding model \(`embedding-gemma-300m`, one setting\)/.test(readme),
+		"README: embedding model is not described as a single Memory & Context setting",
+		"README still calls the embedding model 'one setting'; it is now a provider+model pair on the Model tab",
+	);
+}
+
 console.log(`\n${checks} source/docs checks, ${failures.length} failure(s)`);
 if (failures.length > 0) {
 	for (const failure of failures) console.error(`✗ ${failure}`);

@@ -2063,3 +2063,11 @@ Aturan:
 6. Saat owner melapor lambat tanpa gejala persis, ukur dulu setiap jalur
    pemblokir dengan server tiruan sebelum menawarkan perbaikan. "Lambat" harus
    terukur, bukan tebakan — sama seperti Lesson 121.
+
+## Lesson 212 — Memindahkan kontrol UI belum selesai sampai dokumen yang menggambarkan letaknya ikut pindah
+
+**Konteks.** `91f9177` memindahkan picker embedding dari Memory & Context ke tab Model. Kode, test, dan smoke guard semua ikut diperbarui — tapi `docs/previews/settings-card-preview.html` masih merender baris "Embedding model" di dalam kartu Memory & Context, dan `README.md` masih menyebutnya "one setting". Dua dokumen itu bertahan salah selama dua commit karena tidak ada satu pun guard yang membacanya.
+
+**Akar masalah.** Gate per-fase (typecheck → build → smoke → test → check:docs → red-proof) menangkap drift antara kode dan test, tapi mockup statis serta prosa README bukan input siapa pun. File yang tidak dibaca alat apa pun tidak akan pernah gagal; ia hanya jadi salah dalam diam.
+
+**Aturan.** Saat memindahkan kontrol antar tab/grup, perlakukan "di mana kontrol ini digambarkan" sebagai bagian dari blast radius, sejajar dengan call-site kode: grep nama label ke seluruh `*.md`/`*.html`/`*.json` (kecuali `docs/arsip`, yang memang arsip historis dan tidak boleh ditulis ulang). Kalau sebuah dokumen menyatakan lokasi atau bentuk sebuah setting, kunci pernyataan itu dengan check di `scripts/check-docs.mjs` sehingga dokumen tersebut punya pembaca otomatis. Mockup yang tidak punya kartu tujuan jangan dipaksa memuat barisnya — hapus dengan komentar penanda ke lokasi baru, supaya pembaca berikutnya tidak menyimpulkan barisnya sekadar hilang.
