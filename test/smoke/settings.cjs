@@ -60,12 +60,15 @@ module.exports = function settingsGuards() {
 		const tab = read("src/settingsTab.ts");
 		const ok =
 			tab.includes('this.subheading(containerEl, "Approvals"') &&
-			tab.includes('this.subheading(containerEl, "Scope"') &&
+			/* v0.1.199 (Phase 4): the Scope group label moved with workspace() */
+			read("src/settings/sections/workspace.ts").includes('ctx.subheading(containerEl, "Scope"') &&
+			!tab.includes('this.subheading(containerEl, "Scope"') &&
 			tab.includes('this.subheading(containerEl, "Chat surface"') &&
 			tab.includes('this.subheading(containerEl, "Limits"') &&
 			tab.includes('this.subheading(containerEl, "System prompt"') &&
 			tab.includes('this.subheading(containerEl, "Scheduled tasks"') &&
-			tab.includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") &&
+			read("src/settings/sections/workspace.ts").includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") && // moved 2026-08-24 (Phase 4)
+			!tab.includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") &&
 			read("src/settings/sections/memory.ts").includes("Pick a model to enable semantic recall"); // moved 2026-08-24
 		if (ok) {
 			console.log("✓ v0.1.181: settings layout — group labels on every tab + trimmed descriptions (real-DOM: rows back to 79px)");
@@ -423,7 +426,9 @@ module.exports = function settingsGuards() {
 		// subject via region(), which throws when a marker is missing.
 		const genSection = read("src/settings/sections/general.ts");
 		const agentSection = region(stab5, "private agent(", "private profiles(", { label: "agentSection" });
-		const workspaceSection = region(stab5, "private workspace(", "private safety(", { label: "workspaceSection" });
+		/* v0.1.199 (Phase 4): workspace() left the class for its own module, so the
+		   subject is the module — not a region of settingsTab.ts. */
+		const workspaceSection = read("src/settings/sections/workspace.ts");
 		const safetySection = region(stab5, "private safety(", "private providers(", { label: "safetySection" });
 		if (
 			/* the renderer left the class but the tab still owns wiring it up */
@@ -451,6 +456,9 @@ module.exports = function settingsGuards() {
 			safetySection.includes("Approval mode") &&
 			safetySection.includes("createSegmented") && // rail antd ikut pindah utuh
 			workspaceSection.includes("Workspace folder") &&
+			!stab5.includes("private workspace(") &&
+			stab5.includes("workspaceSection(this.sectionContext(), host)") &&
+			!stab5.includes("Workspace folder") &&
 			stab5.includes('key: "appearance", label: "Appearance"') &&
 			stab5.includes('key: "notifications", label: "Notifications"') &&
 			/* v0.1.190: About returns as an informational tab (was hidden-empty) */
@@ -639,8 +647,10 @@ module.exports = function settingsGuards() {
 			!mem187.includes("ctx.resetButton(stCompressionEnabled") && // subjek pindah
 			!tab.includes("this.resetButton(stApprovalMode") &&
 			!mem187.includes("ctx.resetButton(stMemoryEnabled") && // subjek pindah
-			/* v0.1.188: exclusions are a picked LIST — no ↺ (per-row trash instead) */
+			/* v0.1.188: exclusions are a picked LIST — no ↺ (per-row trash instead).
+			   v0.1.199 (Phase 4): subject moved to the workspace module. */
 			!tab.includes("this.resetButton(stExclusions") &&
+			!read("src/settings/sections/workspace.ts").includes("ctx.resetButton(stExclusions") &&
 			/* 2026-08-24: hitung CALL SITE nyata di kedua pemilik. Argumen pertama
 			   selalu variabel `st…`, jadi pola ini melewatkan baris delegasi di
 			   sectionContext() — kalau tidak jumlahnya 23 dan guard hijau karena
@@ -648,7 +658,9 @@ module.exports = function settingsGuards() {
 			   tab Model dihapus (−3: stContextWindow/Threshold/ProtectLastN) dan
 			   stContextWindow lahir kembali di modul (+1). 10 di settingsTab +
 			   10 di modul memory. */
-			((tab + mem187).match(/resetButton\(st/g) || []).length === 20;
+			/* v0.1.199 (Phase 4): workspace() took 2 call sites with it (8 tab +
+			   10 memory + 2 workspace). The total is unchanged — that is the point. */
+			((tab + mem187 + read("src/settings/sections/workspace.ts")).match(/resetButton\(st/g) || []).length === 20;
 		if (ok) {
 			console.log("✓ v0.1.187: ↺ reset-to-default on numeric/text fields (20 sites, toggles/enums/objects/lists excluded)");
 		} else {
@@ -662,9 +674,14 @@ module.exports = function settingsGuards() {
 	// reset would blank the whole list at once. markModified stays.
 	{
 		const tab = read("src/settingsTab.ts");
+		/* v0.1.199 (Phase 4): the exclusions control moved with workspace(); the
+		   dot-stays/no-reset contract is unchanged, only its home is. */
+		const ws188 = read("src/settings/sections/workspace.ts");
 		const ok =
-			tab.includes('markModified(stExclusions, this.plugin.settings, "workspaceExcludedFolders");') &&
-			!tab.includes("this.resetButton(stExclusions");
+			ws188.includes('markModified(stExclusions, ctx.plugin.settings, "workspaceExcludedFolders");') &&
+			!ws188.includes("ctx.resetButton(stExclusions") &&
+			!tab.includes("this.resetButton(stExclusions") &&
+			!tab.includes("markModified(stExclusions");
 		if (ok) {
 			console.log("✓ v0.1.188: exclusions keep the modified-dot but no ↺ reset (list, per-row trash)");
 		} else {
@@ -962,7 +979,11 @@ module.exports = function settingsGuards() {
 			/* v0.1.190: About returns — last tab, with its renderer method */
 			strip126.includes('key: "about", label: "About"') &&
 			idx126('key: "about"') > idx126('key: "advanced"') &&
-			stab126.includes("private workspace(") &&
+			/* v0.1.199 (Phase 4): workspace() renders from its own module now, but
+			   the tab must still own the wiring — prove both halves. */
+			!stab126.includes("private workspace(") &&
+			stab126.includes("workspaceSection(this.sectionContext(), host)") &&
+			read("src/settings/sections/workspace.ts").includes("export function workspace(") &&
 			stab126.includes("private safety(") &&
 			stab126.includes("private appearance(") &&
 			stab126.includes("private notifications(") &&
@@ -1773,8 +1794,13 @@ module.exports = function settingsGuards() {
 	{
 		const tab = read("src/settingsTab.ts");
 		const css = read("styles.css");
-		const cmd = region(tab, "private renderCommandRows", "private automations", { label: "renderCommandRows" });
+		/* v0.1.199 (Phase 4): renderCommandRows moved out with command() into its
+		   own module; the drag-reorder contract is unchanged, only its home is. */
+		const cmd = read("src/settings/sections/command.ts");
 		const ok =
+			!tab.includes("private renderCommandRows") &&
+			tab.includes("commandSection(this.sectionContext(), host)") &&
+			cmd.includes("function renderCommandRows(") &&
 			cmd.includes("grip.draggable = true") &&
 			cmd.includes('setIcon(grip, "grip-vertical")') &&
 			cmd.includes('row.addClass("is-dragging")') &&
@@ -2104,7 +2130,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts")).match(/markModified\(/g) || []).length === 63 && // 38 tab + 17 memory + 4 terminal + 3 general + 1 mcp (2026-08-24 Phase 3: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts")).match(/markModified\(/g) || []).length === 63 && // 29 tab + 17 memory + 5 command + 4 terminal + 4 workspace + 3 general + 1 mcp (2026-08-24 Phase 4: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

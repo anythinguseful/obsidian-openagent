@@ -112,7 +112,10 @@ module.exports = function previewGuards() {
 			chat.includes("extractAtRefs") &&
 			chat.includes("modelSupportsVision") &&
 			!chat.includes("SUGGESTIONS"); // home suggestions moved to settings snippets
-		const tabOk = tab.includes("Prompt snippets") && tab.includes("SnippetEditModal");
+		/* v0.1.199 (Phase 4): the snippet editor moved with command() — the tab
+		   still names the feature, the module owns the modal. */
+		const cmdMod = read("src/settings/sections/command.ts");
+		const tabOk = tab.includes("Prompt snippets") && cmdMod.includes("SnippetEditModal") && !tab.includes("SnippetEditModal");
 		const cssOk = css.includes(".oa-attach-menu") && css.includes(".oa-kbd");
 		const shimOk = ["file", "folder", "image", "message-square-text", "arrow-left", "at-sign"].every((n) =>
 			shim.includes(`${n}:`) || shim.includes(`"${n}":`)
@@ -723,7 +726,8 @@ module.exports = function previewGuards() {
 			mainTs.includes("registerEditorContextMenu(this);") &&
 			settings.includes("editorContextMenu: boolean") &&
 			settings.includes("editorContextMenu: true") &&
-			tab.includes('"Editor context menu"') &&
+			read("src/settings/sections/command.ts").includes('"Editor context menu"') && // moved 2026-08-24 (Phase 4)
+			!tab.includes('"Editor context menu"') &&
 			entry.includes("__oaChatApiSink") &&
 			entry.includes('scenarioParam() === "empty"') &&
 			build.includes("editor bridge lane");
@@ -743,6 +747,7 @@ module.exports = function previewGuards() {
 		const skills3 = read("src/agent/skills.ts");
 		const tab3 = read("src/settingsTab.ts");
 		const build3 = read("test/real-preview/build.mjs");
+		const cmd3 = read("src/settings/sections/command.ts");
 		const ok =
 			settings3.includes("editorContextMenuAdd: boolean") &&
 			settings3.includes("editorContextMenuAsk: boolean") &&
@@ -762,9 +767,12 @@ module.exports = function previewGuards() {
 			app3.includes("apiRunSnippetOnSelection = useCallback") &&
 			app3.includes("runSnippetOnSelection: apiRunSnippetOnSelection") &&
 			view2.includes("runSnippetOnSelectionFromEditor") &&
-			tab3.includes('"Context menu: Add selection to chat"') &&
-			tab3.includes('"Context menu: Ask about selection"') &&
-			tab3.includes('"Context menu: Run skill on selection"') &&
+			/* v0.1.199 (Phase 4): the three granular switches moved with command()
+			   into its module; the tab must not grow a second copy. */
+			cmd3.includes('"Context menu: Add selection to chat"') &&
+			cmd3.includes('"Context menu: Ask about selection"') &&
+			cmd3.includes('"Context menu: Run skill on selection"') &&
+			!tab3.includes('"Context menu: Add selection to chat"') &&
 			/* v0.1.77 relocation: the v0.1.76 row icon button graduated into
 			   the real In Menu toggle (Commands tab); v0.1.155 moved those
 			   toggles into the edit modal — the literal moves again, the
@@ -786,24 +794,32 @@ module.exports = function previewGuards() {
 		const entry4 = read("test/real-preview/chat-entry.tsx");
 		const build4 = read("test/real-preview/build.mjs");
 		const css4 = read("styles.css");
+		/* v0.1.199 (Phase 4): command() + renderCommandRows moved to their own
+		   module. The tab keeps the registry entry and the wiring; the module
+		   owns the rows. Both halves are pinned so neither can quietly vanish. */
+		const cmd4 = read("src/settings/sections/command.ts");
 		const ok =
 			tab4.includes('{ key: "command", label: "Commands", icon: "terminal-square" },') &&
 			tab4.includes('command: "Preset prompts and editor right-click actions') &&
-			tab4.includes("private command(") &&
-			tab4.includes("renderCommandRows") &&
-			tab4.includes('"Enable editor context menu"') &&
-			tab4.includes('"Context menu: Add selection to chat"') &&
+			!tab4.includes("private command(") &&
+			tab4.includes("commandSection(this.sectionContext(), host)") &&
+			cmd4.includes("export function command(") &&
+			cmd4.includes("renderCommandRows") &&
+			!tab4.includes("renderCommandRows") &&
+			cmd4.includes('"Enable editor context menu"') &&
+			cmd4.includes('"Context menu: Add selection to chat"') &&
 			read("src/settings/modals/snippet.ts").includes("const mkSurface =") &&
 			read("src/settings/modals/snippet.ts").includes('"Where this shows"') &&
 			read("src/settings/modals/snippet.ts").includes('"In Menu"') &&
-			tab4.includes('"Restore defaults"') &&
-			tab4.includes('"Add command"') &&
-			tab4.includes("copy-plus") &&
-			tab4.includes("Shows in:") &&
-			tab4.includes("Not shown anywhere") &&
+			cmd4.includes('"Restore defaults"') &&
+			cmd4.includes('"Add command"') &&
+			cmd4.includes("copy-plus") &&
+			cmd4.includes("Shows in:") &&
+			cmd4.includes("Not shown anywhere") &&
 			tab4.includes("live in the Commands tab now") &&
 			tab4.includes('agent: "Chat behaviour: personality and session storage."') && // v0.1.191 amended: "iteration cap" moved to Advanced; desc follows the rows
 			!tab4.includes("renderSnippetRows") &&
+			!cmd4.includes("renderSnippetRows") &&
 			settings4.includes("slash?: boolean") &&
 			settings4.includes("r.slash === true ? { slash: true }") &&
 			app4.includes('group: "Snippets"') &&
@@ -886,7 +902,8 @@ module.exports = function previewGuards() {
 			st6.includes("picker?: boolean") &&
 			st6.includes("r.picker === false ? { picker: false }") &&
 			read("src/settings/modals/snippet.ts").includes('mkSurface("Snippets (+ menu)"') &&
-			tab6.includes("snip.picker !== false") &&
+			read("src/settings/sections/command.ts").includes("snip.picker !== false") && // moved 2026-08-24 (Phase 4)
+			!tab6.includes("snip.picker !== false") &&
 			read("src/settings/modals/snippet.ts").includes("if (!this.pickerShown) out.picker = false") &&
 			tab6.includes("[+] picker") &&
 			app6.includes(".filter((sn) => sn.picker !== false)") &&

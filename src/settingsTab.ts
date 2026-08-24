@@ -25,17 +25,18 @@ import {
 } from "obsidian";
 import type OpenAgentPlugin from "./main";
 import { ConfirmProfileDeleteModal, ProfileExportModal } from "./settings/modals/profile";
-import { SnippetEditModal } from "./settings/modals/snippet";
 import { HubSkillPreviewModal } from "./settings/modals/hub";
 import { BlueprintCatalogModal } from "./settings/modals/blueprint-catalog";
 import { GuardFindingsModal } from "./settings/modals/guard-findings";
-import { ExportFileSuggestModal, FolderSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
+import { ExportFileSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
 import { createSegmented, createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
 import { stackedTextArea } from "./settings/sections/helpers";
 import { general as generalSection } from "./settings/sections/general";
 import { memory as memorySection } from "./settings/sections/memory";
 import { mcp as mcpSection } from "./settings/sections/mcp";
+import { workspace as workspaceSection } from "./settings/sections/workspace";
+import { command as commandSection } from "./settings/sections/command";
 import { terminalSettings as terminalSection } from "./settings/sections/terminal";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
 import { copyText } from "./ui/clipboard";
@@ -112,14 +113,10 @@ import {
 	ProfileExportSkill,
 	buildProfileExport,
 	DEFAULT_SETTINGS,
-	DEFAULT_PROMPT_SNIPPETS,
-	newSnippetId,
 } from "./settings";
 import { Skill, SkillsStore } from "./agent/skills";
 import {
 	canonicalVaultPath,
-	sanitizeWorkspaceExclusions,
-	type WorkspaceMode,
 } from "./agent/workspacePolicy";
 
 type SectionKey =
@@ -574,7 +571,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			this.appearance(host);
 			break;
 		case "command":
-			this.command(host);
+			commandSection(this.sectionContext(), host);
 			break;
 			case "profiles":
 				this.profiles(host);
@@ -595,7 +592,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.advanced(host);
 				break;
 			case "workspace":
-				this.workspace(host);
+				workspaceSection(this.sectionContext(), host);
 				break;
 			case "safety":
 				this.safety(host);
@@ -612,146 +609,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   Appearance/About remain absent while empty; Notifications now has its
 	   own actionable native-banner and completion-cue controls. */
 
-	private workspace(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group label for the four scope rows. */
-		this.subheading(containerEl, "Scope", "How much of the vault the agent can see and touch.");
-		const stWorkspaceMode = new Setting(containerEl)
-			.setName("Workspace mode")
-			.setDesc("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.")
-			.addDropdown((d) =>
-				d
-					.addOption("whole-vault", "Whole vault")
-					.addOption("preferred-folder", "Preferred folder")
-					.addOption("strict-folder", "Strict folder boundary")
-					.setValue(s.workspaceMode)
-					.onChange(async (v) => {
-						s.workspaceMode = v as WorkspaceMode;
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-						this.display();
-					})
-			);
-		markModified(stWorkspaceMode, this.plugin.settings, "workspaceMode");
-
-		const status = containerEl.createDiv({ cls: "oa-workspace-policy-status" });
-		const updateStatus = (): void => {
-			try {
-				const policy = this.plugin.runner.snapshotWorkspacePolicy();
-				status.setText(`Ready · ${policy.description()}`);
-				status.removeClass("is-error");
-				status.addClass("is-ready");
-			} catch (e) {
-				status.setText(`Not ready · ${e instanceof Error ? e.message : String(e)}`);
-				status.removeClass("is-ready");
-				status.addClass("is-error");
-			}
-		};
-
-		const stWorkspaceFolder = new Setting(containerEl)
-			.setName("Workspace folder")
-			.setDesc(
-				s.workspaceMode === "whole-vault"
-					? "Inactive in Whole vault mode — kept so switching back needs no retyping."
-					: s.workspaceMode === "strict-folder"
-						? "Existing vault-relative folder required; Strict never falls back."
-						: "Vault-relative base for path routing (not a boundary)."
-			)
-			.addText((t) => {
-				t.setPlaceholder("Projects/My project").setValue(s.workspaceFolder);
-				/* Commit on blur/change, not every keystroke: Strict workspace edits
-				   also switch managed memory/skills/session partitions. */
-				t.inputEl.addEventListener("change", () => {
-					s.workspaceFolder = t.getValue().trim().normalize("NFC");
-					void this.plugin.saveSettings().then(() => {
-						this.plugin.refreshViews();
-						updateStatus();
-					});
-				});
-			});
-		markModified(stWorkspaceFolder, this.plugin.settings, "workspaceFolder");
-		this.resetButton(stWorkspaceFolder, "workspaceFolder");
-
-		const stExclusions = new Setting(containerEl)
-			.setName("Excluded folders")
-			.setDesc("Vault folders the agent can never read, list, or write. Chosen with a picker — exclusions apply in all Workspace modes.");
-		stExclusions.addButton((b) =>
-			b
-				.setButtonText("Add folder")
-				.setCta()
-				.onClick(() => {
-					new FolderSuggestModal(this.app, (folder) => {
-						void this.addWorkspaceExclusion(folder);
-					}).open();
-				})
-		);
-		/* v0.1.188: no ↺ here — exclusions are a picked LIST with a per-row
-		   trash button, not a typed scalar; "reset to default" would be a
-		   single destructive action that blanks the whole list at once. */
-		markModified(stExclusions, this.plugin.settings, "workspaceExcludedFolders");
-
-		if (s.workspaceExcludedFolders.length === 0) {
-			this.emptyState(stExclusions.controlEl, { title: "Nothing excluded." });
-		}
-		for (const path of s.workspaceExcludedFolders) {
-			const row = new Setting(containerEl).setName(path);
-			row.settingEl.addClass("oa-workspace-exclusion-row");
-			row.nameEl.addClass("oa-workspace-exclusion-path");
-			row.addExtraButton((b) =>
-				b
-					.setIcon("trash-2")
-					.setTooltip(`Remove ${path}`)
-					.onClick(async () => {
-						s.workspaceExcludedFolders = s.workspaceExcludedFolders.filter((p) => p !== path);
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-						this.display();
-					})
-			);
-		}
-
-		const stReadLimit = new Setting(containerEl)
-			.setName("File-read limit")
-			.setDesc("Maximum characters returned from one vault file request (1,000–20,000). Large notes must be read in line-based pages.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "1000";
-				t.inputEl.max = "20000";
-				t.inputEl.step = "1000";
-				t.setValue(String(s.fileReadMaxChars)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.fileReadMaxChars = Math.min(20_000, Math.max(1_000, n));
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-					updateStatus();
-				});
-			});
-		markModified(stReadLimit, this.plugin.settings, "fileReadMaxChars");
-		this.resetButton(stReadLimit, "fileReadMaxChars");
-
-		containerEl.createDiv({
-			cls: "oa-workspace-boundary-warning",
-			text: "Strict is logical Obsidian path containment, not a physical filesystem sandbox. A symlink or junction located under the Strict root is treated as in scope and may point outside the vault on desktop platforms.",
-		});
-		updateStatus();
-	}
-
 	/** Add a picked folder to Workspace exclusions (validated + deduped). */
-	private async addWorkspaceExclusion(folder: TFolder): Promise<void> {
-		const s = this.plugin.settings;
-		const path = canonicalVaultPath(folder.path, { label: "Workspace exclusion" });
-		if (s.workspaceExcludedFolders.includes(path)) {
-			new Notice("Open Agent: that folder is already excluded.");
-			return;
-		}
-		s.workspaceExcludedFolders = sanitizeWorkspaceExclusions([...s.workspaceExcludedFolders, path]);
-		await this.plugin.saveSettings();
-		this.plugin.refreshViews();
-		this.display();
-	}
-
 	private safety(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		/* v0.1.181: group labels — Approvals up top, Guardrails below. */
@@ -1766,7 +1624,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		   private advanced() */
 
 		/* v0.1.126: baris folder kerja pindah ke tab Workspace (Hermes parity)
-		   — block verbatim-nya hidup di private workspace() */
+		   — block verbatim-nya kini hidup di src/settings/sections/workspace.ts */
 
 		/* global personality (= Hermes display.personality, a GLOBAL Chat
 		   setting — NOT per-profile). The session /personality overrides it
@@ -1883,263 +1741,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   ordering, edit/duplicate/delete — minus per-command model (ours stays
 	   global) and minus {variable} templating (studied, consciously not
 	   adopted: selections ride as explicit quotes/attachments instead). */
-
-	private command(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		this.subheading(
-			containerEl,
-			"Editor context menu",
-			"Right-clicking an editor selection offers these actions (read at menu-open time — flipping applies immediately). A skill hides from the Run-skill picker via contextMenu: false in its SKILL.md frontmatter."
-		);
-
-		const stEditorContextMenu = new Setting(containerEl)
-			.setName("Enable editor context menu")
-			.setDesc("Master switch — off removes the Open Agent entry from the editor right-click menu entirely.")
-			.addToggle((t) =>
-				t.setValue(s.editorContextMenu).onChange(async (v) => {
-					s.editorContextMenu = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stEditorContextMenu, this.plugin.settings, "editorContextMenu");
-		const stEditorContextMenuAdd = new Setting(containerEl).setName("Context menu: Add selection to chat").addToggle((t) =>
-			t.setValue(s.editorContextMenuAdd).onChange(async (v) => {
-				s.editorContextMenuAdd = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuAdd, this.plugin.settings, "editorContextMenuAdd");
-		const stEditorContextMenuAsk = new Setting(containerEl).setName("Context menu: Ask about selection").addToggle((t) =>
-			t.setValue(s.editorContextMenuAsk).onChange(async (v) => {
-				s.editorContextMenuAsk = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuAsk, this.plugin.settings, "editorContextMenuAsk");
-		const stEditorContextMenuSkill = new Setting(containerEl).setName("Context menu: Run skill on selection").addToggle((t) =>
-			t.setValue(s.editorContextMenuSkill).onChange(async (v) => {
-				s.editorContextMenuSkill = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuSkill, this.plugin.settings, "editorContextMenuSkill");
-		const stEditorContextMenuQuickAsk = new Setting(containerEl)
-			.setName("Context menu: Quick Ask (floating panel)")
-			.setDesc(
-				"Floating chat panel anchored to the selection (also a command). Works on a bare cursor too — Replace only appears with a selection."
-			)
-			.addToggle((t) =>
-				t.setValue(s.editorContextMenuQuickAsk).onChange(async (v) => {
-					s.editorContextMenuQuickAsk = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stEditorContextMenuQuickAsk, this.plugin.settings, "editorContextMenuQuickAsk");
-
-		this.subheading(
-			containerEl,
-			"Custom commands",
-			"Preset prompts you can fire three ways: right-click a selection in the editor (the prompt + the quoted selection land in the composer), type / in the composer (the full prompt stages into the input), or pick it from the composer “+” menu. In Menu = editor right-click · Slash = / in the composer · Snippets = the “+” picker (on by default — commands lived there before menus did)."
-		);
-
-		const head = new Setting(containerEl)
-			.setName("Prompt commands")
-			.setDesc("New commands start visible on all three surfaces (Copilot parity); untick a column to hide one.");
-		let restoreArmed = false;
-		head.addButton((b) =>
-			b.setButtonText("Restore defaults").onClick(async () => {
-				/* armed two-click (danger-zone convention): a stray tap must
-				   never append seed commands */
-				if (!restoreArmed) {
-					restoreArmed = true;
-					b.setButtonText("Click again to restore");
-					window.setTimeout(() => {
-						restoreArmed = false;
-						b.setButtonText("Restore defaults");
-					}, 2500);
-					return;
-				}
-				const existing = new Set(s.promptSnippets.map((x) => x.text));
-				let added = 0;
-				for (const seed of DEFAULT_PROMPT_SNIPPETS) {
-					if (existing.has(seed.text)) continue;
-					s.promptSnippets.push({ ...seed, id: newSnippetId() });
-					added++;
-				}
-				new Notice(added > 0 ? `Open Agent: restored ${added} default command(s).` : "Open Agent: defaults are all present already.");
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			})
-		);
-		head.addButton((b) =>
-			b
-				.setButtonText("Add command")
-				.setCta()
-				.onClick(() => {
-					new SnippetEditModal(this.app, null, async (snip) => {
-						/* the modal owns the surface flags now (v0.1.155) */
-						s.promptSnippets.push(snip);
-						await this.plugin.saveSettings();
-						this.renderCommandRows(list);
-					}).open();
-				})
-		);
-
-		const list = containerEl.createDiv({ cls: "oa-snippet-list" });
-		this.renderCommandRows(list);
-	}
-
-	private renderCommandRows(list: HTMLElement): void {
-		const s = this.plugin.settings;
-		list.empty();
-		if (s.promptSnippets.length === 0) {
-			this.emptyState(list, {
-				title: "No commands yet",
-				description: "“Add command” writes one — the composer “+” menu and / menu stay empty until then.",
-			});
-			return;
-		}
-		let draggingIdx: number | null = null;
-		const clearDropTargets = (): void => {
-			for (const el of Array.from(list.querySelectorAll<HTMLElement>(".oa-snippet-row"))) {
-				el.removeClass("is-drop-before");
-				el.removeClass("is-drop-after");
-			}
-		};
-
-		s.promptSnippets.forEach((snip, idx) => {
-			const row = list.createDiv({ cls: "oa-snippet-row" });
-
-			/* v0.1.154: drag-reorder via native HTML5 DnD — no dependency,
-			   same spirit as v0.1.77's "minus the dnd dependency" decision.
-			   The grip is the drag handle; the arrows stay as the keyboard /
-			   mobile / accessibility path. */
-			const grip = row.createDiv({ cls: "oa-cmd-grip", attr: { "aria-hidden": "true" } });
-			grip.draggable = true;
-			setIcon(grip, "grip-vertical");
-			grip.addEventListener("dragstart", (e) => {
-				draggingIdx = idx;
-				row.addClass("is-dragging");
-				if (e.dataTransfer) {
-					e.dataTransfer.effectAllowed = "move";
-					e.dataTransfer.setData("text/plain", String(idx));
-				}
-			});
-			grip.addEventListener("dragend", () => {
-				draggingIdx = null;
-				clearDropTargets();
-				row.removeClass("is-dragging");
-			});
-			row.addEventListener("dragover", (e) => {
-				if (draggingIdx === null || draggingIdx === idx) return;
-				e.preventDefault();
-				if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-				clearDropTargets();
-				const rect = row.getBoundingClientRect();
-				row.addClass(e.clientY < rect.top + rect.height / 2 ? "is-drop-before" : "is-drop-after");
-			});
-			row.addEventListener("drop", async (e) => {
-				e.preventDefault();
-				if (draggingIdx === null || draggingIdx === idx) return;
-				const rect = row.getBoundingClientRect();
-				const target = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1;
-				const [moved] = s.promptSnippets.splice(draggingIdx, 1);
-				s.promptSnippets.splice(target, 0, moved);
-				draggingIdx = null;
-				clearDropTargets();
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			});
-
-			/* manual order = menu order (Copilot drag-sort parity, minus the
-			   dnd dependency — arrows are the honest lightweight stand-in) */
-			const order = row.createDiv({ cls: "oa-cmd-order" });
-			const mkArrow = (dir: "up" | "down", target: number) => {
-				const btn = order.createEl("button", {
-					cls: "oa-icon-btn",
-					attr: { "aria-label": `Move “${snip.title}” ${dir}`, title: `Move ${dir}` },
-				});
-				setIcon(btn, dir === "up" ? "chevron-up" : "chevron-down");
-				if (target < 0 || target > s.promptSnippets.length - 1) btn.disabled = true;
-				btn.onclick = async () => {
-					const [moved] = s.promptSnippets.splice(idx, 1);
-					s.promptSnippets.splice(target, 0, moved);
-					await this.plugin.saveSettings();
-					this.renderCommandRows(list);
-				};
-			};
-			mkArrow("up", idx - 1);
-			mkArrow("down", idx + 1);
-
-			const main = row.createDiv({ cls: "oa-snippet-main" });
-			main.createDiv({ cls: "oa-snippet-title", text: snip.title });
-			main.createDiv({ cls: "oa-snippet-text", text: snip.text });
-			/* v0.1.155: the surface toggles live in the edit modal now (the
-			   inline column was squeezing the title to 0px); the row keeps a
-			   compact read-only summary instead. */
-			const surfaces: string[] = [];
-			if (snip.ctxMenu === true) surfaces.push("menu");
-			if (snip.slash === true) surfaces.push("slash");
-			if (snip.picker !== false) surfaces.push("+");
-			if (snip.quickAsk === true) surfaces.push("quick ask");
-			main.createDiv({
-				cls: "oa-snippet-surfaces",
-				text: surfaces.length ? `Shows in: ${surfaces.join(" · ")}` : "Not shown anywhere",
-			});
-
-			const actions = row.createDiv({ cls: "oa-snippet-actions" });
-
-			const edit = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Edit command “${snip.title}”`, title: "Edit" },
-			});
-			setIcon(edit, "pencil");
-			edit.onclick = () =>
-				new SnippetEditModal(this.app, snip, async (updated) => {
-					/* replace wholesale — a surface turned OFF is absent from
-					   `updated`, so Object.assign can't delete the old flag */
-					const i = s.promptSnippets.findIndex((x) => x.id === snip.id);
-					if (i >= 0) s.promptSnippets[i] = updated;
-					await this.plugin.saveSettings();
-					this.renderCommandRows(list);
-				}).open();
-
-			const dupe = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Duplicate command “${snip.title}”`, title: "Duplicate" },
-			});
-			setIcon(dupe, "copy-plus");
-			dupe.onclick = async () => {
-				s.promptSnippets.splice(idx + 1, 0, { ...snip, id: newSnippetId(), title: `${snip.title} copy` });
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			};
-
-			const del = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Delete command “${snip.title}”`, title: "Delete" },
-			});
-			setIcon(del, "trash-2");
-			let armed = false;
-			del.onclick = async () => {
-				if (!armed) {
-					armed = true;
-					del.addClass("is-armed");
-					del.setAttribute("title", "Click again to delete");
-					window.setTimeout(() => {
-						armed = false;
-						del.removeClass("is-armed");
-						del.setAttribute("title", "Delete");
-					}, 2500);
-					return;
-				}
-				s.promptSnippets = s.promptSnippets.filter((x) => x.id !== snip.id);
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			};
-		});
-	}
 
 	/* ---------------- profiles ---------------- */
 

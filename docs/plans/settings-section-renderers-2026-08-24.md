@@ -257,6 +257,33 @@ Each phase is one commit and must pass the full gate before the next begins.
 - **Phase 4** — `workspace` + `addWorkspaceExclusion`, `command` +
   `renderCommandRows`. Moved in pairs: each private helper has exactly one
   caller, both in the moving set.
+  **DONE** (2026-08-24). 403 lines out of `settingsTab.ts` (4,085 → 3,682);
+  `workspace.ts` 161 lines, `command.ts` 278 lines. Six imports went orphan in
+  the tab and were pruned (`DEFAULT_PROMPT_SNIPPETS`, `newSnippetId`,
+  `SnippetEditModal`, `FolderSuggestModal`, `sanitizeWorkspaceExclusions`,
+  `WorkspaceMode`); `TFolder` and `canonicalVaultPath` stayed — other callers
+  remain. Byte-exact roundtrip passed on all four blocks yet the code still
+  failed typecheck on five unimported symbols: a roundtrip proves the *move*,
+  never the *imports*. Enumerate free identifiers (types included) up front.
+  11 guards broke across three files — `settings.cjs` (settings IA, v0.1.154,
+  v0.1.181, v0.1.187, v0.1.188, v0.1.126, v0.1.94), `preview.cjs` (attach,
+  v0.1.75, v0.1.76, v0.1.77, v0.1.79) and `quickask.cjs` (v0.1.81) — again
+  confirming that a moved string's guard is usually not in the file you expect.
+  Only 6 of the 11 were named in the 22-guard prediction. All were amended, not
+  weakened: each keeps its behaviour assertion (repointed at the new module),
+  gains a negative pin so the row cannot regrow in the tab, and pins the
+  `sectionContext()` call proving the section is still wired in.
+  `markModified(` totals **63**, unchanged (29 tab + 17 memory + 5 command +
+  4 terminal + 4 workspace + 3 general + 1 mcp) and `resetButton(st` totals
+  **20** (8 + 10 + 2) — the invariants that prove no control was lost in
+  transit. Gate: tsc 0 · build 0 · smoke 296 ✓ / 0 ✗ (sorted diff vs baseline
+  clean apart from v0.1.197's scanned-file count 124 → 126, which is the two new
+  modules being picked up) · `npm test` 1858 ✓ / 0 ✗ · check:docs 38/0 ·
+  red-proof 16/16. Four of the first sixteen mutations came back green because
+  the *mutation* was faulty — appending a suffix leaves the original substring
+  intact for an `includes()` pin, and a `/*x*/` prefix does not change a count.
+  A green mutation indicts the probe before it indicts the guard: mutations must
+  destroy the substring, and the harness now asserts the pattern is really gone.
 - **Phase 5** — `notifications`, `advanced`, `appearance`, `safety`.
 
 Phase order is by risk, not by size: the renderer with the fewest dependencies

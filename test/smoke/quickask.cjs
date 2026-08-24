@@ -72,7 +72,9 @@ module.exports = function quickaskGuards() {
 			em8.includes("Quick Ask (floating panel)") &&
 			st8.includes("editorContextMenuQuickAsk: boolean;") &&
 			st8.includes("editorContextMenuQuickAsk: true,") &&
-			tab8.includes("Context menu: Quick Ask (floating panel)") &&
+			/* v0.1.199 (Phase 4): the toggle moved with command() into its module. */
+			read("src/settings/sections/command.ts").includes("Context menu: Quick Ask (floating panel)") &&
+			!tab8.includes("Context menu: Quick Ask (floating panel)") &&
 			css8.includes(".oa-quickask-panel") &&
 			entry8.includes('s === "qask"') &&
 			entry8.includes("__oaQaskCheck") &&
