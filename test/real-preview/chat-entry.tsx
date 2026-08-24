@@ -22,7 +22,8 @@ import { Notice, TFile, MarkdownView as ShimMarkdownView, Component as ShimCompo
 import { ChatApp, ChatAppProps } from "../../src/ui/ChatApp";
 import { newChatApiSink } from "../../src/ui/chatApi";
 import { AgentRunner } from "../../src/agent/runner";
-import { workspacePolicyFor } from "../../src/agent/workspacePolicy";
+import { AgentLoop, type AgentLoopEvents } from "../../src/agent/agentLoop";
+import { workspacePolicyFor, type WorkspacePolicy } from "../../src/agent/workspacePolicy";
 import { buildSystemPrompt } from "../../src/agent/systemPrompt";
 import { ALL_TOOLS } from "../../src/agent/tools";
 import { SessionStore, type Session } from "../../src/agent/sessions";
@@ -39,6 +40,9 @@ import type { QuickAskMenuState } from "../../src/quickask/overlay";
 import { displayModelName } from "../../src/agent/modelMenu";
 import { attemptWithResilience, setBackoffScale } from "../../src/agent/resilience";
 import { ProviderHttpError } from "../../src/agent/providers";
+import type { TodoApi } from "../../src/agent/todo";
+import type { MoaTurnEngine } from "../../src/agent/moaLoop";
+import type { TerminalExecutionIdentity } from "../../src/agent/terminal/types";
 import type { ChatMessage } from "../../src/types";
 
 /* ------------------------------- settings -------------------------------- */
@@ -757,6 +761,26 @@ const runnerMock = {
 	   webe/clfy/preview of their tools). */
 	getToolsWithMcp: async function () {
 		return this.getTools();
+	},
+	/* Keep the mock contract-complete: production ChatApp asks the runner for
+	   the narrow interactive handle rather than constructing AgentLoop itself. */
+	createInteractiveRun: async function (options: {
+		settings: OpenAgentSettings;
+		workspacePolicy: WorkspacePolicy;
+		execution: TerminalExecutionIdentity;
+		todo: TodoApi;
+		moa?: MoaTurnEngine | null;
+	}) {
+		const { settings, workspacePolicy, execution, todo, moa } = options;
+		const tools = await this.getToolsWithMcp(settings, { interactiveTerminal: true });
+		const ctx = this.makeContext(workspacePolicy, settings, execution);
+		ctx.todo = todo;
+		const loop = new AgentLoop(settings, tools, ctx, moa ?? null);
+		return {
+			tools,
+			run: (messages: ChatMessage[], events: AgentLoopEvents) => loop.run(messages, events),
+			steer: (text: string) => loop.steer(text),
+		};
 	},
 	/* Terminal v1 lifecycle is part of the ChatApp contract even though this
 	   browser fixture intentionally exposes no terminal schemas/runtime. */

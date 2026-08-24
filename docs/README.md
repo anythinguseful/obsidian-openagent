@@ -74,6 +74,7 @@ Feature plans and port designs, with their implementation status.
 | [Settings grouping visual system](plans/settings-grouping-visual-system-2026-08-25.md) | done | Group shells now unify native rows with MCP-server and cron-task object cards; behavior is unchanged and the real-DOM witness passes. |
 | [Chat tool activity grouping](plans/chat-tool-activity-grouping-2026-08-25.md) | done | Consecutive tool calls now share one activity card with independently expandable rows, hairline separators, and a real-DOM witness. |
 | [Conversations panel interaction](plans/conversations-panel-interaction-2026-08-25.md) | done | Session rows are semantic and keyboard-discoverable; deletion now uses the owner-approved confirmation flow with real-DOM proof. |
+| [Interactive chat controller — Phase 1](plans/interactive-chat-controller-phase-1-2026-08-25.md) | done | Interactive AgentLoop/context construction now lives behind AgentRunner's narrow run handle; ChatApp retains UI-owned presentation and callbacks. |
 
 ## Studies (`studies/`)
 

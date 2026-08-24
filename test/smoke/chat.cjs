@@ -257,6 +257,30 @@ module.exports = function chatGuards() {
 			failed++;
 		}
 	}
+	// Interactive run construction belongs to AgentRunner. ChatApp retains UI
+	// callbacks and only holds the narrow steer handle, never a raw AgentLoop.
+	{
+		const runner = read("src/agent/runner.ts");
+		const chat = read("src/ui/ChatApp.tsx");
+		const ok =
+			runner.includes("export interface InteractiveRunHandle") &&
+			runner.includes("async createInteractiveRun(options: CreateInteractiveRunOptions)") &&
+			runner.includes("this.getToolsWithMcp(options.settings, { interactiveTerminal: true })") &&
+			runner.includes("new AgentLoop(options.settings, tools, ctx, options.moa ?? null)") &&
+			chat.includes("runner.createInteractiveRun({") &&
+			chat.includes("const interactiveTools = interactiveRun.tools") &&
+			chat.includes("interactiveRun.run(runMessages(), events)") &&
+			chat.includes("useRef<Pick<InteractiveRunHandle, \"steer\"> | null>") &&
+			!chat.includes("new AgentLoop(") &&
+			!chat.includes("runner.makeContext(workspacePolicy, runSettings") &&
+			!chat.includes("runner.getToolsWithMcp(runSettings");
+		if (ok) {
+			console.log("✓ interactive chat boundary: AgentRunner owns loop/context construction; ChatApp owns event presentation");
+		} else {
+			console.error("✗ interactive chat boundary drifted");
+			failed++;
+		}
+	}
 	{
 		const pi = read("src/ui/components/prompt-input.tsx");
 		const fu = read("src/ui/components/file-upload.tsx");
@@ -696,7 +720,7 @@ module.exports = function chatGuards() {
 			loop9.includes("pendingSteer: aborted") &&
 			loop9.includes("onSteerApplied") &&
 			app9.includes('case "/steer"') &&
-			app9.includes("loopRef.current = loop") &&
+			app9.includes("loopRef.current = interactiveRun") &&
 			app9.includes("applySteerMarker") &&
 			app9.includes("/^\\/steer(?:\\s|$)/i") &&
 			app9.includes("result.pendingSteer") &&

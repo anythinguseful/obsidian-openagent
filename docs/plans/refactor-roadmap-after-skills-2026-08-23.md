@@ -75,9 +75,9 @@ already provided proof. The owner approved it, and it shipped.
 > The original selection rationale remains useful: `renderSectionBody()` offered
 > a ready ownership seam, while `ChatApp()` has no comparable seam. The
 > [Hermes Desktop architecture parity audit](../audits/hermes-desktop-architecture-parity-2026-08-25.md)
-> confirms that a broad rewrite is not justified; its only candidate is a
-> separate interactive-run controller study. That study is not selected or
-> authorized. No future product refactor is implicitly authorized.
+> confirmed that a broad rewrite was not justified. Its first narrow controller
+> seam is now complete in [Interactive chat controller — Phase 1](interactive-chat-controller-phase-1-2026-08-25.md).
+> No further controller phase or product refactor is implicitly authorized.
 
 ## Completed sequence
 

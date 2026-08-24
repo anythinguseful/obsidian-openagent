@@ -61,8 +61,10 @@ const miscGuards = require("./smoke/misc.cjs");
 				],
 				[
 					runner.includes("options.interactiveTerminal === true") &&
-						chat.includes("runner.getToolsWithMcp(runSettings, { interactiveTerminal: true })") &&
-						chat.includes("new AgentLoop(runSettings, interactiveTools, runCtx, moaEngine)") &&
+						runner.includes("async createInteractiveRun(options: CreateInteractiveRunOptions)") &&
+						runner.includes("this.getToolsWithMcp(options.settings, { interactiveTerminal: true })") &&
+						chat.includes("runner.createInteractiveRun({") &&
+						!chat.includes("new AgentLoop(") &&
 						runner.includes("headlessTools(this.getTools(settings))") &&
 						runner.includes("childTools(this.getTools(settings))"),
 					"terminal schemas require explicit owned-chat opt-in; generic/headless/delegated loops fail closed",

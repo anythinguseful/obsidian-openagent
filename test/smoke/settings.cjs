@@ -1648,7 +1648,8 @@ module.exports = function settingsGuards() {
 			/* 2026-08-24: pemanggil modal pindah dari tab ke sections/mcp.ts */
 			read("src/settings/sections/mcp.ts").includes("new McpConsentModal") &&
 			consent.includes("class McpConsentModal") &&
-			chat.includes("getToolsWithMcp");
+			runner.includes("this.getToolsWithMcp(options.settings, { interactiveTerminal: true })") &&
+			chat.includes("runner.createInteractiveRun({");
 		if (ok) {
 			console.log("✓ v0.1.147h: MCP runtime — pure client + lazy stdio + consent-gated runtime + first-use consent, interactive-path-only injection");
 		} else {

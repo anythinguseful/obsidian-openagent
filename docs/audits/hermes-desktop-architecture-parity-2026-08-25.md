@@ -104,33 +104,26 @@ or persist into a newly selected context.
 
 ## Findings
 
-### H1 — `ChatApp` crosses the renderer/domain boundary too often
+### H1 — `ChatApp` crossed the renderer/domain boundary too often
 
-**Priority: medium architecture debt; no user-facing regression established.**
+**Status: Phase 1 resolved 2026-08-25; further extraction deferred.**
 
-`src/ui/ChatApp.tsx` is 5,395 lines. It imports `AgentLoop` directly and creates
-it in the component. It also owns `runAgent`, prompt assembly sequencing,
-compression/title/memory side jobs, approval wiring, session persistence,
-branch/load logic, queue draining, and many slash-command behaviors.
+`ChatApp` previously imported and constructed `AgentLoop` directly. The completed
+[Interactive chat controller — Phase 1](../plans/interactive-chat-controller-phase-1-2026-08-25.md)
+introduces `AgentRunner.createInteractiveRun()`: the runner now owns interactive
+tool discovery, scoped context, run-owned todo, terminal identity, MoA injection,
+and loop construction. The UI receives only the prepared tools and a narrow
+`run`/`steer` handle.
 
-Hermes Desktop's renderer rule is stricter: the renderer owns presentation and
-ephemeral interaction, while agent work stays behind the gateway. Open Agent
-cannot use that gateway topology without duplicating the host, but it can still
-honor the **seam**: Chat UI should request an interactive run through a
-controller/runner API, and receive events plus a stable run handle.
+This removes the direct renderer-to-loop construction seam while preserving
+React-owned event callbacks, presentation, session persistence, queue, and
+prompt-side UI work. Browser lanes prove normal streaming, tool activity, and
+mid-run steer still behave unchanged.
 
-**Do not refactor immediately.** A prior roadmap correctly found no safe seam
-inside the current `ChatApp` function. Any extraction must first establish a
-state-ownership contract for:
-
-- durable session snapshot and persistence destination;
-- queue/abort/steer lifecycle;
-- prompt-side effects (compression, title, memory, goals);
-- event stream consumed by the UI;
-- stale-context guards.
-
-The next valid step is a dedicated study/plan for an `InteractiveChatController`
-or equivalent boundary, not a JSX file split.
+The remaining `ChatApp` size is not a reason for another broad refactor. A later
+phase must first establish ownership contracts for durable session persistence,
+queue/abort lifecycle, compression/title/memory/goals, and the event stream.
+No such phase is authorized by this audit.
 
 ### H2 — Settings remains a secondary large owner, but its boundary is healthier
 
@@ -172,9 +165,10 @@ Re-run a focused architecture parity audit when one of these changes:
 The architectural core is **correctly adapted**, not a partial clone of Hermes
 Desktop. No broad rewrite is justified.
 
-The only material follow-up is H1: reduce the interactive-chat boundary debt
-through a dedicated architecture study. It should be selected only if the owner
-wants to invest in maintainability; it is not required to fix current behavior.
+H1's first material follow-up is complete: interactive loop/context construction
+now belongs to `AgentRunner`. Further controller extraction should be selected
+only if the owner wants to invest in maintainability; it is not required to fix
+current behavior.
 
 Before any future feature work that touches execution state, use this order:
 

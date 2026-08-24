@@ -12,8 +12,9 @@ import { MemoryStore } from "./memory";
 import { EngineMemoryStore } from "./memoryEngine";
 import { Skill, SkillsStore } from "./skills";
 import { buildSystemPrompt } from "./systemPrompt";
-import { AgentLoop, AgentLoopEvents } from "./agentLoop";
-import { ephemeralTodoApi } from "./todo";
+import { AgentLoop, AgentLoopEvents, AgentRunResult } from "./agentLoop";
+import { TodoApi, ephemeralTodoApi } from "./todo";
+import type { MoaTurnEngine } from "./moaLoop";
 import {
 	capSummary,
 	childSystemPrompt,
@@ -28,6 +29,22 @@ import { resolveAuxTask } from "./contextManager";
 import { ChatMessage } from "../types";
 import { WorkspacePolicy, workspacePolicyFor } from "./workspacePolicy";
 import type { TerminalApi, TerminalExecutionIdentity, TerminalHealth } from "./terminal/types";
+
+/** Narrow interactive-run boundary consumed by the chat renderer. The runner
+ * owns loop/context construction; the UI owns its event callbacks and state. */
+export interface InteractiveRunHandle {
+	tools: AgentTool[];
+	run(messages: ChatMessage[], events: AgentLoopEvents): Promise<AgentRunResult>;
+	steer(text: string): boolean;
+}
+
+export interface CreateInteractiveRunOptions {
+	settings: OpenAgentSettings;
+	workspacePolicy: WorkspacePolicy;
+	execution: TerminalExecutionIdentity;
+	todo: TodoApi;
+	moa?: MoaTurnEngine | null;
+}
 
 export class AgentRunner {
 	/** automations backend for the cronjob tool (set by the plugin) */
@@ -355,6 +372,21 @@ export class AgentRunner {
 		const ceiling = Math.min(maxChars, policy.fileReadMaxChars);
 		const content = (await this.app.vault.read(f)).slice(0, ceiling);
 		return { path: f.path, content };
+	}
+
+	/** Build the owned interactive loop. This is intentionally distinct from
+	 * makeLoop()/runHeadless(): only this path may discover MCP and terminal
+	 * schemas, and the caller must supply the run-scoped todo and identity. */
+	async createInteractiveRun(options: CreateInteractiveRunOptions): Promise<InteractiveRunHandle> {
+		const tools = await this.getToolsWithMcp(options.settings, { interactiveTerminal: true });
+		const ctx = this.makeContext(options.workspacePolicy, options.settings, options.execution);
+		ctx.todo = options.todo;
+		const loop = new AgentLoop(options.settings, tools, ctx, options.moa ?? null);
+		return {
+			tools,
+			run: (messages, events) => loop.run(messages, events),
+			steer: (text) => loop.steer(text),
+		};
 	}
 
 	makeLoop(events?: AgentLoopEvents["requestApproval"]): AgentLoop {

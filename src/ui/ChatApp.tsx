@@ -8,7 +8,7 @@
 import { App, Component, MarkdownView, Notice, TFile, normalizePath } from "obsidian";
 import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { AgentLoop, AgentLoopEvents, ApprovalDecision, ApprovalRequest } from "../agent/agentLoop";
+import { AgentLoopEvents, ApprovalDecision, ApprovalRequest } from "../agent/agentLoop";
 import type { ClarifyAnswer, ClarifyRequest } from "../agent/tools";
 import {
 	ProviderHttpError,
@@ -35,7 +35,7 @@ import {
 	validCompressionCache,
 	type CompressionCache,
 } from "../agent/contextManager";
-import { AgentRunner } from "../agent/runner";
+import { AgentRunner, type InteractiveRunHandle } from "../agent/runner";
 import { buildRecallBlock, isTrivialPrompt } from "../agent/memoryEngine";
 import { embedTexts } from "../agent/providers";
 import { ComposerHistoryBrowse, deriveUserHistory } from "./composer/history";
@@ -717,7 +717,7 @@ export function ChatApp(props: ChatAppProps) {
 		const headlessCommandAbortRef = useRef<AbortController | null>(null);
 		/* the live AgentLoop — /steer reaches its thread-safe stash through this
 		   while a run is in flight (run_agent.py busy-path parity) */
-		const loopRef = useRef<AgentLoop | null>(null);
+		const loopRef = useRef<Pick<InteractiveRunHandle, "steer"> | null>(null);
 		/* Closing the view must release provider/tool work and interactive
 		   promises without scheduling React state from an unmount cleanup. */
 		useEffect(() => () => {
@@ -2578,9 +2578,33 @@ nudgeCounterRef.current = 0;
 				const prevAssistant = [...turnsRef.current].reverse().find((t) => t.role === "assistant" && t.id !== assistantTurnRef.current);
 				const feedbackDue = prevAssistant ? feedbackOf(prevAssistant.reaction) === "down" : false;
 
-				/* Terminal schemas are opt-in at this one owned interactive path;
-				   all generic/headless/delegated runner paths stay terminal-free. */
-				const interactiveTools = await runner.getToolsWithMcp(runSettings, { interactiveTerminal: true });
+				/* MoA facade (v0.1.30, Hermes moa_loop MoAClient parity): an
+				   active preset routes every iteration through the advisor fan-out +
+				   guidance attach; the preset's aggregator acts. The feed buffer resets
+				   per run before the runner constructs the owned loop. */
+				let moaEngine: MoaTurnEngine | null = null;
+				const moaRunCfg = runSettings.moa ? normalizeMoaConfig(runSettings.moa) : null;
+				if (moaRunCfg?.active_preset && moaRunCfg.presets[moaRunCfg.active_preset]) {
+					moaFeedRef.current = "";
+					moaEngine = new MoaTurnEngine({
+						presetName: moaRunCfg.active_preset,
+						preset: moaRunCfg.presets[moaRunCfg.active_preset],
+						settings: runSettings,
+						signal: abort.signal,
+						emit: (e) => {
+							if (!abort.signal.aborted) moaEmit(assistantTurn.id, e);
+						},
+					});
+				}
+				const interactiveRun = await runner.createInteractiveRun({
+					settings: runSettings,
+					workspacePolicy,
+					execution: { kind: "interactive-chat", sessionId: runSessionId, runId: assistantTurn.id },
+					todo: runTodoApi,
+					moa: moaEngine,
+				});
+				loopRef.current = interactiveRun;
+				const interactiveTools = interactiveRun.tools;
 				/* v0.1.176 structured-memory recall: pure-fusion (BM25 + entity +
 				   temporal + trust), zero latency — no LLM in this phase. Never
 				   breaks the run. */
@@ -2632,34 +2656,6 @@ nudgeCounterRef.current = 0;
 					if (abort.signal.aborted) throw new Error("Run interrupted.");
 						runSessionMessages = messagesRef.current;
 						runCompression = compressionRef.current;
-				/* MoA facade (v0.1.30, Hermes moa_loop MoAClient parity): an
-				   active preset routes every iteration through the advisor
-				   fan-out + guidance attach; the preset's aggregator acts. The
-				   feed buffer resets per run — events only fire on the
-				   iteration that actually fans out. */
-				let moaEngine: MoaTurnEngine | null = null;
-				const moaRunCfg = runSettings.moa ? normalizeMoaConfig(runSettings.moa) : null;
-				if (moaRunCfg?.active_preset && moaRunCfg.presets[moaRunCfg.active_preset]) {
-					moaFeedRef.current = "";
-					moaEngine = new MoaTurnEngine({
-						presetName: moaRunCfg.active_preset,
-						preset: moaRunCfg.presets[moaRunCfg.active_preset],
-						settings: runSettings,
-						signal: abort.signal,
-						emit: (e) => {
-							if (!abort.signal.aborted) moaEmit(assistantTurn.id, e);
-						},
-					});
-				}
-				const runCtx = runner.makeContext(workspacePolicy, runSettings, {
-					kind: "interactive-chat",
-					sessionId: runSessionId,
-					runId: assistantTurn.id,
-				});
-				runCtx.todo = runTodoApi; // run-owned: late tool callbacks cannot mutate a replacement chat
-				const loop = new AgentLoop(runSettings, interactiveTools, runCtx, moaEngine);
-				loopRef.current = loop;
-
 				const aid = assistantTurn.id;
 				const captureOwnedTurns = (): void => {
 					if (!abort.signal.aborted) runOwnedTurns = turnsRef.current;
@@ -2820,7 +2816,7 @@ nudgeCounterRef.current = 0;
 
 				let result;
 				try {
-					result = await loop.run(runMessages(), events);
+					result = await interactiveRun.run(runMessages(), events);
 				} catch (err) {
 					if (abort.signal.aborted) throw err;
 					/* heuristic said vision but the model disagrees (HTTP 400) →
@@ -2835,7 +2831,7 @@ nudgeCounterRef.current = 0;
 						new Notice("Open Agent: model rejected image input — resending it as a path reference.", 6000);
 						const last = messagesRef.current[messagesRef.current.length - 1];
 						if (last?.role === "user") last.content = fallbackPrompt;
-						result = await loop.run(runMessages(), events);
+						result = await interactiveRun.run(runMessages(), events);
 					} else {
 						throw err;
 					}
