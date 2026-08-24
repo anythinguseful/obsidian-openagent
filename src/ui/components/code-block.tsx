@@ -11,7 +11,8 @@
  * themes keep ownership of the palette.
  */
 
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { copyText } from "../clipboard";
 import { highlightCode } from "../highlight";
 import { CheckIcon, CopyIcon } from "../icons";
 
@@ -75,13 +76,30 @@ export function CodeBlock({ code, language = "" }: { code: string; language?: st
 
 function CopyButton({ code }: { code: string }) {
 	const [copied, setCopied] = useState(false);
+	/* the 1500ms reset must not fire setState on an unmounted button */
+	const mounted = useRef(true);
+	const timer = useRef<number | null>(null);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+			if (timer.current !== null) window.clearTimeout(timer.current);
+		};
+	}, []);
 	return (
 		<button
 			className="oa-code-copy"
 			onClick={() => {
-				navigator.clipboard.writeText(code).then(() => {
+				/* copyText never rejects; a false result means the host blocked
+				   every path, so the label must not claim success */
+				void copyText(code).then((ok) => {
+					if (!ok || !mounted.current) return;
 					setCopied(true);
-					window.setTimeout(() => setCopied(false), 1500);
+					if (timer.current !== null) window.clearTimeout(timer.current);
+					timer.current = window.setTimeout(() => {
+						timer.current = null;
+						if (mounted.current) setCopied(false);
+					}, 1500);
 				});
 			}}
 		>

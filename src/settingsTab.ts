@@ -25,18 +25,27 @@ import {
 } from "obsidian";
 import type OpenAgentPlugin from "./main";
 import { ConfirmProfileDeleteModal, ProfileExportModal } from "./settings/modals/profile";
-import { SnippetEditModal } from "./settings/modals/snippet";
 import { HubSkillPreviewModal } from "./settings/modals/hub";
-import { McpConsentModal, TerminalConsentModal } from "./settings/modals/consent";
 import { BlueprintCatalogModal } from "./settings/modals/blueprint-catalog";
 import { GuardFindingsModal } from "./settings/modals/guard-findings";
-import { McpCatalogModal } from "./settings/modals/mcp-catalog";
-import { ConfirmResetModal, ExportFileSuggestModal, FolderSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
-import { createSegmented, createSliderInput } from "./ui/settings-controls";
+import { ExportFileSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
+import { createSliderInput } from "./ui/settings-controls";
+import type { SectionContext } from "./settings/sections/context";
+import { stackedTextArea } from "./settings/sections/helpers";
+import { general as generalSection } from "./settings/sections/general";
+import { memory as memorySection } from "./settings/sections/memory";
+import { mcp as mcpSection } from "./settings/sections/mcp";
+import { workspace as workspaceSection } from "./settings/sections/workspace";
+import { command as commandSection } from "./settings/sections/command";
+import { terminalSettings as terminalSection } from "./settings/sections/terminal";
+import { safety as safetySection } from "./settings/sections/safety";
+import { appearance as appearanceSection } from "./settings/sections/appearance";
+import { advanced as advancedSection } from "./settings/sections/advanced";
+import { notifications as notificationsSection } from "./settings/sections/notifications";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
+import { copyText } from "./ui/clipboard";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
 import { getPath, isModified, markModified, setPath } from "./settingsModified";
-import { COMPLETION_SOUND_VARIANTS } from "./completionSound";
 import {
 	CRON_PRESETS,
 	cronExprForDaily,
@@ -95,7 +104,6 @@ import {
 } from "./agent/modelCatalog";
 import {
 	AgentProfile,
-	ApprovalMode,
 	CronTask,
 	OpenAgentSettings,
 	PERSONALITY_OVERLAYS,
@@ -106,19 +114,12 @@ import {
 	ReasoningEffort,
 	ProfileExportSkill,
 	buildProfileExport,
-	buildSettingsExport,
 	DEFAULT_SETTINGS,
-	kvToLines,
-	linesToKv,
-	DEFAULT_PROMPT_SNIPPETS,
-	newSnippetId,
-	parseMcpServersDoc,
+	sanitizeCustomHeaders,
 } from "./settings";
 import { Skill, SkillsStore } from "./agent/skills";
 import {
 	canonicalVaultPath,
-	sanitizeWorkspaceExclusions,
-	type WorkspaceMode,
 } from "./agent/workspacePolicy";
 
 type SectionKey =
@@ -558,7 +559,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	private renderSectionBody(section: SectionKey, host: HTMLElement): void {
 		switch (section) {
 			case "general":
-				this.general(host);
+				generalSection(this.sectionContext(), host);
 				break;
 			case "providers":
 				this.providers(host);
@@ -570,10 +571,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			this.agent(host);
 			break;
 		case "appearance":
-			this.appearance(host);
+			appearanceSection(this.sectionContext(), host);
 			break;
 		case "command":
-			this.command(host);
+			commandSection(this.sectionContext(), host);
 			break;
 			case "profiles":
 				this.profiles(host);
@@ -582,22 +583,22 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.capabilities(host);
 				break;
 			case "memory":
-				this.memory(host);
+				memorySection(this.sectionContext(), host);
 				break;
 			case "notifications":
-				this.notifications(host);
+				notificationsSection(this.sectionContext(), host);
 				break;
 			case "automations":
 				this.automations(host);
 				break;
 			case "advanced":
-				this.advanced(host);
+				advancedSection(this.sectionContext(), host);
 				break;
 			case "workspace":
-				this.workspace(host);
+				workspaceSection(this.sectionContext(), host);
 				break;
 			case "safety":
-				this.safety(host);
+				safetySection(this.sectionContext(), host);
 				break;
 			case "about":
 				this.about(host);
@@ -611,406 +612,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   Appearance/About remain absent while empty; Notifications now has its
 	   own actionable native-banner and completion-cue controls. */
 
-	private workspace(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group label for the four scope rows. */
-		this.subheading(containerEl, "Scope", "How much of the vault the agent can see and touch.");
-		const stWorkspaceMode = new Setting(containerEl)
-			.setName("Workspace mode")
-			.setDesc("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.")
-			.addDropdown((d) =>
-				d
-					.addOption("whole-vault", "Whole vault")
-					.addOption("preferred-folder", "Preferred folder")
-					.addOption("strict-folder", "Strict folder boundary")
-					.setValue(s.workspaceMode)
-					.onChange(async (v) => {
-						s.workspaceMode = v as WorkspaceMode;
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-						this.display();
-					})
-			);
-		markModified(stWorkspaceMode, this.plugin.settings, "workspaceMode");
-
-		const status = containerEl.createDiv({ cls: "oa-workspace-policy-status" });
-		const updateStatus = (): void => {
-			try {
-				const policy = this.plugin.runner.snapshotWorkspacePolicy();
-				status.setText(`Ready · ${policy.description()}`);
-				status.removeClass("is-error");
-				status.addClass("is-ready");
-			} catch (e) {
-				status.setText(`Not ready · ${e instanceof Error ? e.message : String(e)}`);
-				status.removeClass("is-ready");
-				status.addClass("is-error");
-			}
-		};
-
-		const stWorkspaceFolder = new Setting(containerEl)
-			.setName("Workspace folder")
-			.setDesc(
-				s.workspaceMode === "whole-vault"
-					? "Inactive in Whole vault mode — kept so switching back needs no retyping."
-					: s.workspaceMode === "strict-folder"
-						? "Existing vault-relative folder required; Strict never falls back."
-						: "Vault-relative base for path routing (not a boundary)."
-			)
-			.addText((t) => {
-				t.setPlaceholder("Projects/My project").setValue(s.workspaceFolder);
-				/* Commit on blur/change, not every keystroke: Strict workspace edits
-				   also switch managed memory/skills/session partitions. */
-				t.inputEl.addEventListener("change", () => {
-					s.workspaceFolder = t.getValue().trim().normalize("NFC");
-					void this.plugin.saveSettings().then(() => {
-						this.plugin.refreshViews();
-						updateStatus();
-					});
-				});
-			});
-		markModified(stWorkspaceFolder, this.plugin.settings, "workspaceFolder");
-		this.resetButton(stWorkspaceFolder, "workspaceFolder");
-
-		const stExclusions = new Setting(containerEl)
-			.setName("Excluded folders")
-			.setDesc("Vault folders the agent can never read, list, or write. Chosen with a picker — exclusions apply in all Workspace modes.");
-		stExclusions.addButton((b) =>
-			b
-				.setButtonText("Add folder")
-				.setCta()
-				.onClick(() => {
-					new FolderSuggestModal(this.app, (folder) => {
-						void this.addWorkspaceExclusion(folder);
-					}).open();
-				})
-		);
-		/* v0.1.188: no ↺ here — exclusions are a picked LIST with a per-row
-		   trash button, not a typed scalar; "reset to default" would be a
-		   single destructive action that blanks the whole list at once. */
-		markModified(stExclusions, this.plugin.settings, "workspaceExcludedFolders");
-
-		if (s.workspaceExcludedFolders.length === 0) {
-			this.emptyState(stExclusions.controlEl, { title: "Nothing excluded." });
-		}
-		for (const path of s.workspaceExcludedFolders) {
-			const row = new Setting(containerEl).setName(path);
-			row.settingEl.addClass("oa-workspace-exclusion-row");
-			row.nameEl.addClass("oa-workspace-exclusion-path");
-			row.addExtraButton((b) =>
-				b
-					.setIcon("trash-2")
-					.setTooltip(`Remove ${path}`)
-					.onClick(async () => {
-						s.workspaceExcludedFolders = s.workspaceExcludedFolders.filter((p) => p !== path);
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-						this.display();
-					})
-			);
-		}
-
-		const stReadLimit = new Setting(containerEl)
-			.setName("File-read limit")
-			.setDesc("Maximum characters returned from one vault file request (1,000–20,000). Large notes must be read in line-based pages.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "1000";
-				t.inputEl.max = "20000";
-				t.inputEl.step = "1000";
-				t.setValue(String(s.fileReadMaxChars)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.fileReadMaxChars = Math.min(20_000, Math.max(1_000, n));
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-					updateStatus();
-				});
-			});
-		markModified(stReadLimit, this.plugin.settings, "fileReadMaxChars");
-		this.resetButton(stReadLimit, "fileReadMaxChars");
-
-		containerEl.createDiv({
-			cls: "oa-workspace-boundary-warning",
-			text: "Strict is logical Obsidian path containment, not a physical filesystem sandbox. A symlink or junction located under the Strict root is treated as in scope and may point outside the vault on desktop platforms.",
-		});
-		updateStatus();
-	}
-
 	/** Add a picked folder to Workspace exclusions (validated + deduped). */
-	private async addWorkspaceExclusion(folder: TFolder): Promise<void> {
-		const s = this.plugin.settings;
-		const path = canonicalVaultPath(folder.path, { label: "Workspace exclusion" });
-		if (s.workspaceExcludedFolders.includes(path)) {
-			new Notice("Open Agent: that folder is already excluded.");
-			return;
-		}
-		s.workspaceExcludedFolders = sanitizeWorkspaceExclusions([...s.workspaceExcludedFolders, path]);
-		await this.plugin.saveSettings();
-		this.plugin.refreshViews();
-		this.display();
-	}
-
-	private safety(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-		/* v0.1.181: group labels — Approvals up top, Guardrails below. */
-		this.subheading(containerEl, "Approvals", "When the agent must ask before acting.");
-		/* dipindah verbatim dari agent() (v0.1.126) — Hermes safety ⊇
-		   approvals.mode ≡ Approval mode kita (segmented lobe.antd v0.1.108) */
-		const stApprovalMode = new Setting(containerEl)
-			.setName("Approval mode")
-			.setDesc("Manual: approve everything · Cautious: risky actions ask · YOLO: never ask.");
-		stApprovalMode.controlEl.appendChild(
-			createSegmented({
-				ariaLabel: "Approval mode",
-				options: [
-					{ value: "manual", label: "Manual", title: "Approve every tool call" },
-					{ value: "cautious", label: "Cautious", title: "Persistent, destructive, and scheduling actions ask" },
-					{ value: "yolo", label: "YOLO", title: "Never ask (Hermes --yolo)" },
-				],
-				value: s.approvalMode,
-				onPick: (v) => {
-					s.approvalMode = v as ApprovalMode;
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stApprovalMode, this.plugin.settings, "approvalMode");
-
-		/* v0.1.147 (Hermes approvals.timeout): auto-deny a missed approval. */
-		const stApprovalTimeout = new Setting(containerEl)
-			.setName("Approval timeout")
-			.setDesc("Auto-deny an unanswered approval prompt after this many seconds. 0 = wait forever.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "0";
-				t.inputEl.max = "600";
-				t.inputEl.step = "10";
-				t.setValue(String(s.approvalTimeoutSec)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.approvalTimeoutSec = Math.min(600, Math.max(0, n));
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stApprovalTimeout, this.plugin.settings, "approvalTimeoutSec");
-		this.resetButton(stApprovalTimeout, "approvalTimeoutSec");
-
-		this.subheading(containerEl, "Guardrails", "Extra protections for the content the agent sees and the files it changes.");
-
-		const stRedact = new Setting(containerEl)
-			.setName("Redact secrets")
-			.setDesc("Mask detected API keys, tokens, and private keys in web pages and tool results before the model sees them. On by default.")
-			.addToggle((t) =>
-				t.setValue(s.redactSecrets).onChange(async (v) => {
-					s.redactSecrets = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stRedact, this.plugin.settings, "redactSecrets");
-
-		const stCheckpoints = new Setting(containerEl)
-			.setName("Checkpoints")
-			.setDesc("Keep a rollback copy of every note the agent changes. On by default.")
-			.addToggle((t) =>
-				t.setValue(s.checkpointsEnabled).onChange(async (v) => {
-					s.checkpointsEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stCheckpoints, this.plugin.settings, "checkpointsEnabled");
-	}
-
-	private general(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		const stEnterToSend = new Setting(containerEl)
-			.setName("Enter sends message")
-			.setDesc(
-				"Default (off): Shift+Enter sends, Enter inserts a newline. On: Enter sends, Shift+Enter inserts a newline. Ctrl/Cmd+Enter always sends."
-			)
-			.addToggle((t) =>
-				t.setValue(s.enterToSend).onChange(async (v) => {
-					s.enterToSend = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stEnterToSend, this.plugin.settings, "enterToSend");
-
-		const stShowTimestamps = new Setting(containerEl).setName("Show message timestamps").addToggle((t) =>
-			t.setValue(s.showTimestamps).onChange(async (v) => {
-				s.showTimestamps = v;
-				await this.plugin.saveSettings();
-				this.plugin.refreshViews();
-			})
-		);
-		markModified(stShowTimestamps, this.plugin.settings, "showTimestamps");
-
-		const stChatLeafLocation = new Setting(containerEl)
-			.setName("Chat panel location")
-			.setDesc("Where the chat panel opens. Changing this moves an open panel there right away.")
-			.addDropdown((d) =>
-				d
-					.addOption("left", "Left sidebar")
-					.addOption("main", "Main workspace (tab)")
-					.addOption("right", "Right sidebar")
-					.setValue(s.chatLeafLocation)
-					.onChange(async (v) => {
-						s.chatLeafLocation = v === "left" || v === "main" ? v : "right";
-						await this.plugin.saveSettings();
-						/* v0.1.163: relocate an already-open chat immediately —
-						   no ribbon click needed. */
-						await this.plugin.moveChatViewToConfiguredLocation();
-					})
-			);
-		markModified(stChatLeafLocation, this.plugin.settings, "chatLeafLocation");
-
-		/* ---------- backup & restore + danger zone (docs/plans/data-portability-plan.md) ----------
-		   v0.1.50 (owner directive 2026-08-02): the former combined data block
-		   splits into two named groups — the safe moves first, the escape
-		   hatches separated under a hazard-tinted heading. */
-		this.subheading(
-			containerEl,
-			"Backup & Restore",
-			"Back up or move your whole configuration — export a snapshot, import one back (validated and migrated)."
-		);
-
-		/* ephemeral by design — never persisted, so a keys-included export can't
-		   surprise you weeks later (back to redacted every time this tab opens) */
-		let includeKeys = false;
-		const resultEl = containerEl.createDiv({ cls: "oa-data-result" });
-
-		new Setting(containerEl)
-			.setName("Include API keys in exports")
-			.setDesc(
-				"Off: keys and auth headers are stripped — safe to share. On: full private backup. Resets to Off each time you open this tab."
-			)
-			.addToggle((t) =>
-				t.setValue(false).onChange((v) => {
-					includeKeys = v;
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Export settings")
-			.setDesc("JSON snapshot of all settings — providers, profiles, snippets, automations. Cache excluded.")
-			.addButton((b) =>
-				b.setButtonText("Save to vault").onClick(async () => {
-					const doc = buildSettingsExport(this.plugin.settings, includeKeys, this.plugin.manifest.version);
-					const path = await this.plugin.writeExportFile(
-						`openagent-settings-${exportStamp()}.json`,
-						JSON.stringify(doc, null, 2)
-					);
-					resultEl.setText(`Saved → ${path}${includeKeys ? "" : " (keys redacted)"}`);
-					new Notice(`Open Agent: settings exported → ${path}`);
-				})
-			)
-			.addButton((b) =>
-				b.setButtonText("Copy").onClick(async () => {
-					const doc = buildSettingsExport(this.plugin.settings, includeKeys, this.plugin.manifest.version);
-					await copyText(JSON.stringify(doc, null, 2));
-					resultEl.setText(includeKeys ? "Settings JSON copied (keys included)." : "Settings JSON copied (keys redacted).");
-				})
-			);
-
-		new Setting(containerEl)
-			.setName("Import settings")
-			.setDesc("Replace all settings with a validated export — nothing is written on failure.")
-			.addButton((b) =>
-				b.setButtonText("Paste JSON…").onClick(() => {
-					new JsonImportModal(this.app, {
-						title: "Import settings",
-						placeholder: '{"openagentExport": "settings", …}',
-						confirmLabel: "Import settings",
-						onSubmit: async (text) => {
-							const res = await this.plugin.importSettingsFromText(text);
-							if (!res.ok) return res.error ?? "Import failed.";
-							this.display();
-							return null;
-						},
-					}).open();
-				})
-			)
-			.addButton((b) =>
-				b.setButtonText("From vault file…").onClick(() => {
-					new ExportFileSuggestModal(this.app, async (file) => {
-						const res = await this.plugin.importSettingsFromText(await this.app.vault.read(file));
-						if (!res.ok) new Notice(`Open Agent import failed: ${res.error}`);
-						else this.display();
-					}).open();
-				})
-			);
-
-		this.subheading(
-			containerEl,
-			"Danger Zone",
-			"Escape hatches when things go wrong — destructive paths, each behind a confirmation dialog."
-		).addClass("oa-danger-zone");
-
-		new Setting(containerEl)
-			.setName("Reset settings")
-			.setDesc("All settings back to defaults — providers & keys, profiles, snippets, automations. Agent data (memory, skills, sessions) stays.")
-			.addButton((b) =>
-				b
-					.setWarning()
-					.setButtonText("Reset settings")
-					.onClick(() => {
-						new ConfirmResetModal(
-							this.app,
-							{
-								title: "Reset settings?",
-								lines: [
-									"Providers & API keys — cleared",
-									"Profiles (names, souls, pins) — back to a single Default",
-									"Model, snippets, automations, all toggles — defaults",
-									"Keeps: memory / skills / sessions folders on disk",
-									"Tip: export your settings first (above).",
-								],
-								confirmLabel: "Reset settings",
-							},
-							async () => {
-								await this.plugin.resetSettingsToDefaults();
-								this.display();
-							}
-						).open();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Reset everything")
-			.setDesc("Also moves ALL agent-data folders to the SYSTEM TRASH (recoverable via the OS — nothing is permanently deleted).")
-			.addButton((b) =>
-				b
-					.setWarning()
-					.setButtonText("Reset everything")
-					.onClick(() => {
-						new ConfirmResetModal(
-							this.app,
-							{
-								title: "Reset everything?",
-								lines: [
-									"These folders are moved to the system trash:",
-									...this.plugin.agentDataFolders().map((f) => `· ${f}`),
-									"Restore from the OS trash anytime; settings are reset to defaults as well.",
-								],
-								requireText: "RESET",
-								confirmLabel: "Reset everything",
-							},
-							async () => {
-								const moved = await this.plugin.resetEverything();
-								new Notice(
-									moved.length
-										? `Open Agent: reset complete — ${moved.length} folder${moved.length === 1 ? "" : "s"} moved to trash.`
-										: "Open Agent: reset complete — settings back to defaults."
-								);
-								this.display();
-							}
-						).open();
-					})
-			);
-	}
-
 	private otherProvidersOpen = false;
 	/* Which provider is being VIEWED/edited (UI-only state; null → the global
 	   default provider). Row clicks only move this — never chat routing
@@ -1022,6 +624,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   current live value; provider changes clear the model draft */
 	private modelPickProviderId: string | null = null;
 	private modelPickModel: string | null = null;
+	/* v0.1.152 (owner 2026-08-24: "ada main model dan embedding model"): the
+	   embedding pair gets its own draft, identical in shape to the main one. */
+	private embedPickProviderId: string | null = null;
+	private embedPickModel: string | null = null;
 	/* auxiliary-model slot editor (Hermes Desktop parity 2026-07-31): which row
 	   is open + its draft — "Change" reveals inline provider/model selects */
 	private auxEditingKey: AuxSlotKey | null = null;
@@ -1173,7 +779,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(viewed.baseUrl)
 					.onChange(async (v) => {
 						viewed.baseUrl = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					})
 			);
 
@@ -1188,7 +794,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(viewed.apiKey)
 					.onChange(async (v) => {
 						viewed.apiKey = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					});
 			})
 			.addExtraButton((b) => {
@@ -1206,7 +812,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setTooltip("Clear key")
 					.onClick(async () => {
 						viewed.apiKey = "";
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -1234,7 +840,15 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						.setValue(Object.keys(viewed.customHeaders).length ? JSON.stringify(viewed.customHeaders) : "")
 						.onChange(async (v) => {
 							try {
-								viewed.customHeaders = v.trim() ? JSON.parse(v) : {};
+								if (!v.trim()) {
+									viewed.customHeaders = {};
+								} else {
+									/* a header map is an object of strings — `null`, a number,
+									   a string or an array are valid JSON but not headers */
+									const parsed = sanitizeCustomHeaders(JSON.parse(v));
+									if (!parsed) return; // keep typing; don't store a non-map
+									viewed.customHeaders = parsed;
+								}
 								await this.plugin.saveSettings();
 							} catch {
 								/* keep typing */
@@ -1393,7 +1007,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				s.model = model; // …the explicit choice is authoritative (custom/off-catalog ids allowed)
 				this.modelPickProviderId = null;
 				this.modelPickModel = null;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.plugin.refreshViews();
 				this.display();
 			});
@@ -1446,7 +1060,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				for (const e of efforts) d.addOption(e, e);
 				d.setValue(s.reasoningEffort).onChange(async (v) => {
 					s.reasoningEffort = v as ReasoningEffort;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				});
 			});
 		markModified(stReasoningEffort, this.plugin.settings, "reasoningEffort");
@@ -1465,7 +1079,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				value: s.temperature,
 				commit: (v) => {
 					s.temperature = v;
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -1486,7 +1100,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				value: s.maxTokens,
 				commit: (v) => {
 					s.maxTokens = Math.round(v);
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -1499,76 +1113,91 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.streaming).onChange(async (v) => {
 					s.streaming = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stStreaming, this.plugin.settings, "streaming");
 
-		/* ── Context & compression (v0.1.17, Hermes Desktop parity): the wire
-		   is reshaped near the window; the saved conversation stays whole ── */
+		/* ── Embedding model (owner 2026-08-24: "ada main model dan embedding
+		   model, biar lebih rapi. cara settingnya sama seperti model utama").
+		   Moved here from Memory & Context, where it was the last model PICK
+		   still living among behaviour knobs — the same rule that already sent
+		   the compression model slot to this tab.
+
+		   Two deliberate differences from an aux slot: the default is OFF, not
+		   "auto (use main)", because a chat model answering /v1/embeddings just
+		   fails; and it carries its own provider, because the embedding server
+		   is usually a separate local one. */
 		this.subheading(
 			containerEl,
-			"Context & compression",
-			"Near the context window, the earliest messages fold into a rolling summary. Your saved history stays whole — only what the model sees is reshaped."
+			"Embedding model",
+			"Powers semantic recall — finding memories whose wording differs from your question. Off means keyword recall only."
 		);
 
-		const stContextWindow = new Setting(containerEl)
-			.setName("Context window")
-			.setDesc("Tokens the model can see at once. 0 = auto-detect (falls back to 256000).")
-			.addText((t) => {
-				t.setPlaceholder("0 = auto")
-					.setValue(s.modelContextLength > 0 ? String(s.modelContextLength) : "")
-					.onChange(async (v) => {
-						s.modelContextLength = Math.max(0, Math.floor(Number(v.trim()) || 0));
-						await this.plugin.saveSettings();
-					});
-				t.inputEl.setAttribute("aria-label", "Context window");
+		const embedSaved = s.memoryEngineEmbedModel.trim();
+		const embedSavedProvider = s.providers.find((p) => p.id === s.memoryEngineEmbedProviderId) ?? null;
+		const embedStatus = embedSaved
+			? `${embedSavedProvider ? embedSavedProvider.name : "chat provider"} · ${embedSaved}`
+			: "off (keyword recall only)";
+
+		const embedPickProvider = s.providers.some((p) => p.id === this.embedPickProviderId)
+			? (this.embedPickProviderId as string)
+			: s.memoryEngineEmbedProviderId || s.activeProviderId;
+		const embedPickModel = this.embedPickModel ?? embedSaved;
+
+		const embedSetting = new Setting(containerEl)
+			.setName("Embedding model")
+			.setDesc(`Pick a model to enable semantic recall — currently ${embedStatus}. Providers are set up in the Providers tab.`);
+		const embedCtl = stackedControl(embedSetting, { row: true });
+
+		const usableEmbedProviders = s.providers.filter((p) => providerUsable(p));
+		const embedProvDd = new DropdownComponent(embedCtl);
+		if (usableEmbedProviders.length === 0) embedProvDd.addOption("", "(configure a provider first)");
+		for (const p of usableEmbedProviders) embedProvDd.addOption(p.id, p.name);
+		if (embedPickProvider && !usableEmbedProviders.some((p) => p.id === embedPickProvider)) {
+			embedProvDd.addOption(embedPickProvider, embedPickProvider);
+		}
+		embedProvDd.selectEl.setAttribute("aria-label", "Embedding provider");
+		embedProvDd.setValue(embedPickProvider).onChange((v) => {
+			this.embedPickProviderId = v;
+			this.embedPickModel = ""; // same slot semantics as the main pair: a provider change clears the model draft
+			this.display();
+		});
+
+		/* the saved id stays visible even when it is off-catalog, so a working
+		   configuration is never silently dropped from the list (Lesson 163) */
+		const embedCatalog = withCurrentModel(catalogOf(s.providers.find((p) => p.id === embedPickProvider)), embedPickModel);
+		const embedModelDd = new DropdownComponent(embedCtl);
+		embedModelDd.addOption("", "off (keyword recall only)");
+		for (const m of embedCatalog) {
+			if (m) embedModelDd.addOption(m, m);
+		}
+		embedModelDd.selectEl.setAttribute("aria-label", "Embedding model");
+		embedModelDd.setValue(embedPickModel);
+
+		const applyEmbed = new ButtonComponent(embedCtl);
+		applyEmbed
+			.setButtonText("Apply")
+			.setCta()
+			.onClick(async () => {
+				/* read the LIVE draft, never the render-time snapshot above —
+				   that closure hazard is what probe F14 caught on the main pair */
+				const prov = s.providers.some((p) => p.id === this.embedPickProviderId)
+					? (this.embedPickProviderId as string)
+					: embedPickProvider;
+				const model = (this.embedPickModel ?? embedPickModel).trim();
+				s.memoryEngineEmbedModel = model;
+				s.memoryEngineEmbedProviderId = model ? prov : ""; // off clears the pin too — no orphan provider
+				this.embedPickProviderId = null;
+				this.embedPickModel = null;
+				this.plugin.saveSettingsSafe();
+				this.plugin.refreshViews();
+				this.display();
 			});
-		markModified(stContextWindow, this.plugin.settings, "modelContextLength");
-		this.resetButton(stContextWindow, "modelContextLength");
-
-		const stCompressionEnabled = new Setting(containerEl)
-			.setName("Enable compression")
-			.setDesc("Fold old messages into a rolling summary as the conversation nears the limit. Off = very long chats can hit provider context errors.")
-			.addToggle((t) =>
-				t.setValue(s.compressionEnabled).onChange(async (v) => {
-					s.compressionEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stCompressionEnabled, this.plugin.settings, "compressionEnabled");
-
-		const stCompressionThreshold = new Setting(containerEl)
-			.setName("Compression threshold")
-			.setDesc("Share of the window that triggers compaction — 0.80 folds the oldest messages once the conversation is 80% full.")
-			.addSlider((sl) =>
-				sl
-					.setLimits(0.5, 0.95, 0.05)
-					.setValue(s.compressionThreshold)
-					.setDynamicTooltip()
-					.onChange(async (v) => {
-						s.compressionThreshold = v;
-						await this.plugin.saveSettings();
-					})
-			);
-		markModified(stCompressionThreshold, this.plugin.settings, "compressionThreshold");
-		this.resetButton(stCompressionThreshold, "compressionThreshold");
-
-		const stCompressionProtectLastN = new Setting(containerEl)
-			.setName("Protected tail messages")
-			.setDesc("Kept verbatim through compression; the boundary snaps to a user message so tool exchanges never split.")
-			.addSlider((sl) =>
-				sl
-					.setLimits(0, 12, 1)
-					.setValue(s.compressionProtectLastN)
-					.setDynamicTooltip()
-					.onChange(async (v) => {
-						s.compressionProtectLastN = Math.round(v);
-						await this.plugin.saveSettings();
-					})
-			);
-		markModified(stCompressionProtectLastN, this.plugin.settings, "compressionProtectLastN");
-		this.resetButton(stCompressionProtectLastN, "compressionProtectLastN");
+		embedModelDd.onChange((v) => {
+			this.embedPickModel = v;
+		});
+		markModified(embedSetting, this.plugin.settings, "memoryEngineEmbedModel");
 
 		/* ── Auxiliary models (Hermes Desktop: small side-tasks on a different
 		   model; "auto (use main)" when un-pinned) ── */
@@ -1583,7 +1212,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.titleGenerationEnabled).onChange(async (v) => {
 					s.titleGenerationEnabled = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stTitleGen, this.plugin.settings, "titleGenerationEnabled");
@@ -1607,7 +1236,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setTooltip("Remove fallback")
 					.onClick(async () => {
 						s.fallbackProviders.splice(idx, 1);
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -1622,7 +1251,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				.onChange(async (v) => {
 					entry.providerId = v;
 					entry.model = ""; // Hermes Desktop: changing a row's provider resets its model
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display(); // model options follow the chosen provider
 				});
 			/* per-provider catalog (Hermes Desktop fallback field): each row's
@@ -1636,7 +1265,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				fbModelDd.selectEl.setAttribute("aria-label", `Fallback ${idx + 1} model`);
 				fbModelDd.setValue(entry.model).onChange(async (v) => {
 					entry.model = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				});
 			} else {
 				const fbModelText = new TextComponent(rowCtl)
@@ -1644,7 +1273,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(entry.model)
 					.onChange(async (v) => {
 						entry.model = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					});
 				fbModelText.inputEl.setAttribute("aria-label", `Fallback ${idx + 1} model id`);
 			}
@@ -1658,7 +1287,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		new Setting(containerEl).addButton((b) =>
 			b.setButtonText("Add fallback").onClick(async () => {
 				s.fallbackProviders.push({ providerId: usable[0]?.id ?? "", model: "" });
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.display();
 			})
 		);
@@ -1722,9 +1351,11 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.moaSave("explicit");
 			})
 		);
-		let delBtn: ButtonComponent | null = null;
 		ctl.addButton((b) => {
-			delBtn = b;
+			/* Disable inline: addButton runs its callback synchronously, so the
+			   button is configured in one place instead of via an outer handle
+			   that control-flow analysis cannot narrow. */
+			b.setDisabled(names.length <= 1);
 			b.setButtonText("Delete").onClick(() => {
 				if (names.length <= 1) return;
 				delete draft.presets[selected];
@@ -1735,7 +1366,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.moaSave("explicit");
 			});
 		});
-		delBtn?.setDisabled(names.length <= 1);
 		/* v0.1.111 owner: input nama + tombol Add preset dibungkus satu sub-baris
 		   (.oa-moa-ctl-new) supaya saat kontrol wrap mereka pindah sebagai satu
 		   paket — tombol tak pernah yatim di baris sendiri, dan di lebar wajar
@@ -1884,7 +1514,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		if (problems.length === 0 && moaConfigComplete(draft)) {
 			this.moaProblems = [];
 			this.plugin.settings.moa = normalizeMoaConfig(draft);
-			void this.plugin.saveSettings();
+			this.plugin.saveSettingsSafe();
 		} else if (mode === "explicit") {
 			this.moaProblems = problems.length > 0 ? problems : ["Every reference and the aggregator need a provider and a model."];
 		}
@@ -1911,7 +1541,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						s.auxModels[key] = null;
 						this.auxEditingKey = null;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.plugin.refreshViews();
 						this.display();
 					})
@@ -1970,7 +1600,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.auxEditingKey = null;
 				this.auxDraftProviderId = null;
 				this.auxDraftModel = null;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.plugin.refreshViews();
 				this.display();
 			});
@@ -1988,7 +1618,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		const stSaveSessions = new Setting(containerEl).setName("Save sessions").addToggle((t) =>
 			t.setValue(s.saveSessions).onChange(async (v) => {
 				s.saveSessions = v;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			})
 		);
 		markModified(stSaveSessions, this.plugin.settings, "saveSessions");
@@ -2006,7 +1636,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				commit: (v) => {
 					s.maxSessions = v;
 					this.plugin.sessionStore.setMaxSessions(v);
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -2014,13 +1644,13 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		this.resetButton(stMaxSessions, "maxSessions");
 
 		/* v0.1.126: row persetujuan pindah ke tab Safety (Hermes parity) —
-		   block verbatim-nya hidup di private safety() */
+		   block verbatim-nya kini hidup di src/settings/sections/safety.ts */
 		/* v0.1.151: the iteration cap row (= Hermes agent.max_turns) moved to
-		   the Advanced tab (Hermes parity) — its verbatim block lives in
-		   private advanced() */
+		   the Advanced tab (Hermes parity) — its verbatim block now lives in
+		   src/settings/sections/advanced.ts */
 
 		/* v0.1.126: baris folder kerja pindah ke tab Workspace (Hermes parity)
-		   — block verbatim-nya hidup di private workspace() */
+		   — block verbatim-nya kini hidup di src/settings/sections/workspace.ts */
 
 		/* global personality (= Hermes display.personality, a GLOBAL Chat
 		   setting — NOT per-profile). The session /personality overrides it
@@ -2035,7 +1665,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				for (const key of Object.keys(PERSONALITY_OVERLAYS)) d.addOption(key, key);
 				d.setValue(isOverlayKey(s.personality) ? s.personality : "none").onChange(async (v) => {
 					s.personality = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.plugin.refreshViews();
 				});
 			});
@@ -2056,344 +1686,12 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   belongs to Obsidian's own theme, which our CSS follows via var(--*)
 	   and never overrides. */
 
-	private appearance(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group label for the chat-surface rows. */
-		this.subheading(containerEl, "Chat surface", "How the chat panel looks and behaves.");
-		const stToolView = new Setting(containerEl)
-			.setName("Tool calls")
-			.setDesc("How tool-call cards render in chat. Hidden still keeps source lists.")
-			.addDropdown((d) =>
-				d
-					.addOption("collapsed", "Collapsed (headers only)")
-					.addOption("expanded", "Expanded (open by default)")
-					.addOption("hidden", "Hidden")
-					.setValue(s.toolViewMode)
-					.onChange(async (v) => {
-						s.toolViewMode = v as OpenAgentSettings["toolViewMode"];
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-					})
-			);
-		markModified(stToolView, this.plugin.settings, "toolViewMode");
-
-		const stReasoning = new Setting(containerEl)
-			.setName("Reasoning")
-			.setDesc("Collapse thinking blocks by default.")
-			.addToggle((t) =>
-				t.setValue(s.reasoningCollapsedByDefault).onChange(async (v) => {
-					s.reasoningCollapsedByDefault = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stReasoning, this.plugin.settings, "reasoningCollapsedByDefault");
-
-		const stDensity = new Setting(containerEl)
-			.setName("Session list density")
-			.setDesc("Row spacing in the conversations panel.")
-			.addDropdown((d) =>
-				d
-					.addOption("comfortable", "Comfortable")
-					.addOption("compact", "Compact")
-					.setValue(s.sessionListDensity)
-					.onChange(async (v) => {
-						s.sessionListDensity = v as OpenAgentSettings["sessionListDensity"];
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-					})
-			);
-		markModified(stDensity, this.plugin.settings, "sessionListDensity");
-
-		const stIntro = new Setting(containerEl)
-			.setName("Intro screen")
-			.setDesc("Show the welcome wordmark when a chat is empty.")
-			.addToggle((t) =>
-				t.setValue(s.showIntroScreen).onChange(async (v) => {
-					s.showIntroScreen = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stIntro, this.plugin.settings, "showIntroScreen");
-
-		const stReactions = new Setting(containerEl)
-			.setName("Reaction buttons")
-			.setDesc("Show the helpful / not-helpful buttons under assistant answers.")
-			.addToggle((t) =>
-				t.setValue(s.showReactions).onChange(async (v) => {
-					s.showReactions = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stReactions, this.plugin.settings, "showReactions");
-	}
-
 	/* ---------------- commands (v0.1.77, Copilot CommandSettings parity) ----
 	   Owner 2026-08-04: mirror Copilot's Commands-settings EXPERIENCE —
 	   per-command surface checkboxes (editor menu vs composer slash), row
 	   ordering, edit/duplicate/delete — minus per-command model (ours stays
 	   global) and minus {variable} templating (studied, consciously not
 	   adopted: selections ride as explicit quotes/attachments instead). */
-
-	private command(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		this.subheading(
-			containerEl,
-			"Editor context menu",
-			"Right-clicking an editor selection offers these actions (read at menu-open time — flipping applies immediately). A skill hides from the Run-skill picker via contextMenu: false in its SKILL.md frontmatter."
-		);
-
-		const stEditorContextMenu = new Setting(containerEl)
-			.setName("Enable editor context menu")
-			.setDesc("Master switch — off removes the Open Agent entry from the editor right-click menu entirely.")
-			.addToggle((t) =>
-				t.setValue(s.editorContextMenu).onChange(async (v) => {
-					s.editorContextMenu = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stEditorContextMenu, this.plugin.settings, "editorContextMenu");
-		const stEditorContextMenuAdd = new Setting(containerEl).setName("Context menu: Add selection to chat").addToggle((t) =>
-			t.setValue(s.editorContextMenuAdd).onChange(async (v) => {
-				s.editorContextMenuAdd = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuAdd, this.plugin.settings, "editorContextMenuAdd");
-		const stEditorContextMenuAsk = new Setting(containerEl).setName("Context menu: Ask about selection").addToggle((t) =>
-			t.setValue(s.editorContextMenuAsk).onChange(async (v) => {
-				s.editorContextMenuAsk = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuAsk, this.plugin.settings, "editorContextMenuAsk");
-		const stEditorContextMenuSkill = new Setting(containerEl).setName("Context menu: Run skill on selection").addToggle((t) =>
-			t.setValue(s.editorContextMenuSkill).onChange(async (v) => {
-				s.editorContextMenuSkill = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stEditorContextMenuSkill, this.plugin.settings, "editorContextMenuSkill");
-		const stEditorContextMenuQuickAsk = new Setting(containerEl)
-			.setName("Context menu: Quick Ask (floating panel)")
-			.setDesc(
-				"Floating chat panel anchored to the selection (also a command). Works on a bare cursor too — Replace only appears with a selection."
-			)
-			.addToggle((t) =>
-				t.setValue(s.editorContextMenuQuickAsk).onChange(async (v) => {
-					s.editorContextMenuQuickAsk = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stEditorContextMenuQuickAsk, this.plugin.settings, "editorContextMenuQuickAsk");
-
-		this.subheading(
-			containerEl,
-			"Custom commands",
-			"Preset prompts you can fire three ways: right-click a selection in the editor (the prompt + the quoted selection land in the composer), type / in the composer (the full prompt stages into the input), or pick it from the composer “+” menu. In Menu = editor right-click · Slash = / in the composer · Snippets = the “+” picker (on by default — commands lived there before menus did)."
-		);
-
-		const head = new Setting(containerEl)
-			.setName("Prompt commands")
-			.setDesc("New commands start visible on all three surfaces (Copilot parity); untick a column to hide one.");
-		let restoreArmed = false;
-		head.addButton((b) =>
-			b.setButtonText("Restore defaults").onClick(async () => {
-				/* armed two-click (danger-zone convention): a stray tap must
-				   never append seed commands */
-				if (!restoreArmed) {
-					restoreArmed = true;
-					b.setButtonText("Click again to restore");
-					window.setTimeout(() => {
-						restoreArmed = false;
-						b.setButtonText("Restore defaults");
-					}, 2500);
-					return;
-				}
-				const existing = new Set(s.promptSnippets.map((x) => x.text));
-				let added = 0;
-				for (const seed of DEFAULT_PROMPT_SNIPPETS) {
-					if (existing.has(seed.text)) continue;
-					s.promptSnippets.push({ ...seed, id: newSnippetId() });
-					added++;
-				}
-				new Notice(added > 0 ? `Open Agent: restored ${added} default command(s).` : "Open Agent: defaults are all present already.");
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			})
-		);
-		head.addButton((b) =>
-			b
-				.setButtonText("Add command")
-				.setCta()
-				.onClick(() => {
-					new SnippetEditModal(this.app, null, async (snip) => {
-						/* the modal owns the surface flags now (v0.1.155) */
-						s.promptSnippets.push(snip);
-						await this.plugin.saveSettings();
-						this.renderCommandRows(list);
-					}).open();
-				})
-		);
-
-		const list = containerEl.createDiv({ cls: "oa-snippet-list" });
-		this.renderCommandRows(list);
-	}
-
-	private renderCommandRows(list: HTMLElement): void {
-		const s = this.plugin.settings;
-		list.empty();
-		if (s.promptSnippets.length === 0) {
-			this.emptyState(list, {
-				title: "No commands yet",
-				description: "“Add command” writes one — the composer “+” menu and / menu stay empty until then.",
-			});
-			return;
-		}
-		let draggingIdx: number | null = null;
-		const clearDropTargets = (): void => {
-			for (const el of Array.from(list.querySelectorAll<HTMLElement>(".oa-snippet-row"))) {
-				el.removeClass("is-drop-before");
-				el.removeClass("is-drop-after");
-			}
-		};
-
-		s.promptSnippets.forEach((snip, idx) => {
-			const row = list.createDiv({ cls: "oa-snippet-row" });
-
-			/* v0.1.154: drag-reorder via native HTML5 DnD — no dependency,
-			   same spirit as v0.1.77's "minus the dnd dependency" decision.
-			   The grip is the drag handle; the arrows stay as the keyboard /
-			   mobile / accessibility path. */
-			const grip = row.createDiv({ cls: "oa-cmd-grip", attr: { "aria-hidden": "true" } });
-			grip.draggable = true;
-			setIcon(grip, "grip-vertical");
-			grip.addEventListener("dragstart", (e) => {
-				draggingIdx = idx;
-				row.addClass("is-dragging");
-				if (e.dataTransfer) {
-					e.dataTransfer.effectAllowed = "move";
-					e.dataTransfer.setData("text/plain", String(idx));
-				}
-			});
-			grip.addEventListener("dragend", () => {
-				draggingIdx = null;
-				clearDropTargets();
-				row.removeClass("is-dragging");
-			});
-			row.addEventListener("dragover", (e) => {
-				if (draggingIdx === null || draggingIdx === idx) return;
-				e.preventDefault();
-				if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-				clearDropTargets();
-				const rect = row.getBoundingClientRect();
-				row.addClass(e.clientY < rect.top + rect.height / 2 ? "is-drop-before" : "is-drop-after");
-			});
-			row.addEventListener("drop", async (e) => {
-				e.preventDefault();
-				if (draggingIdx === null || draggingIdx === idx) return;
-				const rect = row.getBoundingClientRect();
-				const target = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1;
-				const [moved] = s.promptSnippets.splice(draggingIdx, 1);
-				s.promptSnippets.splice(target, 0, moved);
-				draggingIdx = null;
-				clearDropTargets();
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			});
-
-			/* manual order = menu order (Copilot drag-sort parity, minus the
-			   dnd dependency — arrows are the honest lightweight stand-in) */
-			const order = row.createDiv({ cls: "oa-cmd-order" });
-			const mkArrow = (dir: "up" | "down", target: number) => {
-				const btn = order.createEl("button", {
-					cls: "oa-icon-btn",
-					attr: { "aria-label": `Move “${snip.title}” ${dir}`, title: `Move ${dir}` },
-				});
-				setIcon(btn, dir === "up" ? "chevron-up" : "chevron-down");
-				if (target < 0 || target > s.promptSnippets.length - 1) btn.disabled = true;
-				btn.onclick = async () => {
-					const [moved] = s.promptSnippets.splice(idx, 1);
-					s.promptSnippets.splice(target, 0, moved);
-					await this.plugin.saveSettings();
-					this.renderCommandRows(list);
-				};
-			};
-			mkArrow("up", idx - 1);
-			mkArrow("down", idx + 1);
-
-			const main = row.createDiv({ cls: "oa-snippet-main" });
-			main.createDiv({ cls: "oa-snippet-title", text: snip.title });
-			main.createDiv({ cls: "oa-snippet-text", text: snip.text });
-			/* v0.1.155: the surface toggles live in the edit modal now (the
-			   inline column was squeezing the title to 0px); the row keeps a
-			   compact read-only summary instead. */
-			const surfaces: string[] = [];
-			if (snip.ctxMenu === true) surfaces.push("menu");
-			if (snip.slash === true) surfaces.push("slash");
-			if (snip.picker !== false) surfaces.push("+");
-			if (snip.quickAsk === true) surfaces.push("quick ask");
-			main.createDiv({
-				cls: "oa-snippet-surfaces",
-				text: surfaces.length ? `Shows in: ${surfaces.join(" · ")}` : "Not shown anywhere",
-			});
-
-			const actions = row.createDiv({ cls: "oa-snippet-actions" });
-
-			const edit = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Edit command “${snip.title}”`, title: "Edit" },
-			});
-			setIcon(edit, "pencil");
-			edit.onclick = () =>
-				new SnippetEditModal(this.app, snip, async (updated) => {
-					/* replace wholesale — a surface turned OFF is absent from
-					   `updated`, so Object.assign can't delete the old flag */
-					const i = s.promptSnippets.findIndex((x) => x.id === snip.id);
-					if (i >= 0) s.promptSnippets[i] = updated;
-					await this.plugin.saveSettings();
-					this.renderCommandRows(list);
-				}).open();
-
-			const dupe = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Duplicate command “${snip.title}”`, title: "Duplicate" },
-			});
-			setIcon(dupe, "copy-plus");
-			dupe.onclick = async () => {
-				s.promptSnippets.splice(idx + 1, 0, { ...snip, id: newSnippetId(), title: `${snip.title} copy` });
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			};
-
-			const del = actions.createEl("button", {
-				cls: "oa-icon-btn",
-				attr: { "aria-label": `Delete command “${snip.title}”`, title: "Delete" },
-			});
-			setIcon(del, "trash-2");
-			let armed = false;
-			del.onclick = async () => {
-				if (!armed) {
-					armed = true;
-					del.addClass("is-armed");
-					del.setAttribute("title", "Click again to delete");
-					window.setTimeout(() => {
-						armed = false;
-						del.removeClass("is-armed");
-						del.setAttribute("title", "Delete");
-					}, 2500);
-					return;
-				}
-				s.promptSnippets = s.promptSnippets.filter((x) => x.id !== snip.id);
-				await this.plugin.saveSettings();
-				this.renderCommandRows(list);
-			};
-		});
-	}
 
 	/* ---------------- profiles ---------------- */
 
@@ -2494,7 +1792,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText("Create blank").onClick(async () => {
 					await store.create(nameInput || "Profile");
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 			);
@@ -2637,14 +1935,14 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		this.subheading(containerEl, "Tools", "One switch per toolset.");
 		this.toolsets(containerEl);
 		this.subheading(containerEl, "Terminal & Processes", "Desktop-only command execution with explicit consent and per-start approval.");
-		this.terminalSettings(containerEl);
+		terminalSection(this.sectionContext(), containerEl);
 		this.subheading(containerEl, "Web search", "Where the AI searches the web. DuckDuckGo is free and needs no setup; the other options need an API key or your own server.");
 		this.webSearchSettings(containerEl);
 		this.subheading(containerEl, "Skills", "SKILL.md files the agent reads and authors — the learning loop.");
 		this.skills(containerEl);
 		this.skillsBrowser(containerEl);
 		this.subheading(containerEl, "MCP servers", "External tool servers over the Model Context Protocol — stdio (a command) or HTTP (a URL).");
-		this.mcp(containerEl);
+		mcpSection(this.sectionContext(), containerEl);
 		this.subheading(
 			containerEl,
 			"Browse Hub",
@@ -3070,6 +2368,19 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		}).open();
 	}
 
+	/** The explicit form of what `this` used to give the section renderers.
+	 * Rebuilt per call: it holds no state, only bound access to the tab. */
+	private sectionContext(): SectionContext {
+		return {
+			app: this.app,
+			plugin: this.plugin,
+			subheading: (el, text, desc) => this.subheading(el, text, desc),
+			resetButton: (setting, path) => this.resetButton(setting, path),
+			emptyState: (el, opts) => this.emptyState(el, opts),
+			display: () => this.display(),
+		};
+	}
+
 	private subheading(containerEl: HTMLElement, text: string, desc: string): HTMLElement {
 		const el = containerEl.createDiv({ cls: "oa-subsection" });
 		el.createEl("h3", { cls: "oa-subsection-title", text });
@@ -3091,7 +2402,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				.setTooltip("Reset to default")
 				.onClick(async () => {
 					setPath(s as unknown as Record<string, unknown>, path, JSON.parse(JSON.stringify(getPath(DEFAULT_SETTINGS, path))));
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.plugin.refreshViews();
 					new Notice(`Open Agent: “${setting.nameEl.textContent?.trim() ?? path}” reset to default.`);
 					this.display();
@@ -3192,20 +2503,15 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			`Providers with keys ${withKeys.length ? withKeys.join(", ") : "none"}`,
 			`User agent ${navigator.userAgent}`,
 		].join("\n");
-		try {
-			await navigator.clipboard.writeText(text);
-		} catch {
-			/* fallback for hosts without the async Clipboard API */
-			const ta = document.createElement("textarea");
-			ta.value = text;
-			ta.style.position = "fixed";
-			ta.style.opacity = "0";
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand("copy");
-			ta.remove();
-		}
-		new Notice("Open Agent: diagnostics copied to the clipboard.");
+		/* copyText carries the execCommand fallback for hosts without the async
+		   Clipboard API; it never throws, it reports. Do not announce a copy
+		   that did not happen (sweep finding T1). */
+		const ok = await copyText(text);
+		new Notice(
+			ok
+				? "Open Agent: diagnostics copied to the clipboard."
+				: "Open Agent: could not reach the clipboard — copy blocked by the host."
+		);
 	}
 
 	private toolsets(containerEl: HTMLElement): void {
@@ -3225,7 +2531,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			const stToolsetsX = new Setting(containerEl).setName(set.label).setDesc(set.desc).addToggle((t) =>
 				t.setValue(s.toolsets[set.key]).onChange(async (v) => {
 					s.toolsets[set.key] = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 			markModified(stToolsetsX, this.plugin.settings, `toolsets.${set.key}`);
@@ -3250,7 +2556,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(s.webSearch.backend)
 					.onChange(async (v) => {
 						s.webSearch.backend = v as "ddgs" | "brave" | "tavily" | "searxng";
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -3261,7 +2567,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.setDesc("Free tier at brave.com/search/api/. Stored in settings and redacted from exports.")
 			.addText((t) => t.setPlaceholder("BSA…").setValue(s.webSearch.braveKey).onChange(async (v) => {
 				s.webSearch.braveKey = v.trim();
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(brave, this.plugin.settings, "webSearch.braveKey");
 
@@ -3270,7 +2576,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.setDesc("tavily.com. Stored in settings and redacted from exports.")
 			.addText((t) => t.setPlaceholder("tvly-…").setValue(s.webSearch.tavilyKey).onChange(async (v) => {
 				s.webSearch.tavilyKey = v.trim();
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(tavily, this.plugin.settings, "webSearch.tavilyKey");
 
@@ -3280,112 +2586,9 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addText((t) => t.setPlaceholder("http://localhost:8080").setValue(s.webSearch.searxngUrl).onChange(async (v) => {
 				const raw = v.trim();
 				s.webSearch.searxngUrl = /^https?:\/\//i.test(raw) ? raw : "";
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(searxng, this.plugin.settings, "webSearch.searxngUrl");
-	}
-
-	private terminalSettings(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-		if (Platform?.isDesktopApp !== true) {
-			new Setting(containerEl)
-				.setName("Unavailable on mobile")
-				.setDesc("The plugin remains mobile-capable, but terminal/process schemas and the Node runtime are not registered on mobile.");
-			return;
-		}
-
-		const enabled = new Setting(containerEl)
-			.setName("Enable Terminal & Processes")
-			.setDesc("Off by default. Every command start shows a frozen command/backend/image/Workspace/cwd/timeout preview and only supports Allow once.")
-			.addToggle((toggle) => toggle.setValue(s.toolsets.terminal).onChange(async (value) => {
-				if (!value) {
-					s.toolsets.terminal = false;
-					await this.plugin.saveSettings();
-					return;
-				}
-				if (s.terminal.consentVersion !== 1) {
-					toggle.setValue(false);
-					new TerminalConsentModal(this.app, async () => {
-						/* Mint the per-vault receipt only from this checked user gesture;
-						   imports and hand-edited settings cannot call this path. */
-						await this.plugin.grantTerminalConsent();
-						this.display();
-					}).open();
-					return;
-				}
-				s.toolsets.terminal = true;
-				await this.plugin.saveSettings();
-			}));
-		markModified(enabled, this.plugin.settings, "toolsets.terminal");
-
-		const backend = new Setting(containerEl)
-			.setName("Execution backend")
-			.setDesc("Docker is recommended. Local is an unsandboxed expert path and never supports background processes.")
-			.addDropdown((dropdown) => dropdown
-				.addOption("docker", "Docker — disposable, network off")
-				.addOption("local", "Local — expert, foreground only")
-				.setValue(s.terminal.backend)
-				.onChange(async (value) => {
-					s.terminal.backend = value === "local" ? "local" : "docker";
-					await this.plugin.saveSettings();
-					this.display();
-				}));
-		markModified(backend, this.plugin.settings, "terminal.backend");
-
-		if (s.terminal.backend === "docker") {
-			const image = new Setting(containerEl)
-				.setName("Docker image")
-				.setDesc("Chosen by Settings, never by the agent. Commands run with no network, a read-only root, resource caps, closed stdin, and a masked Workspace.")
-				.addText((text) => text
-					.setPlaceholder("repository:tag or repository@digest")
-					.setValue(s.terminal.dockerImage)
-					.onChange(async (value) => {
-						const next = value.trim();
-						if (!next || next.length > 256 || /[\u0000-\u001f\u007f\s]/.test(next) || next.startsWith("-")) {
-							new Notice("Open Agent: enter a valid Docker image reference without whitespace or control characters.");
-							text.setValue(s.terminal.dockerImage);
-							return;
-						}
-						s.terminal.dockerImage = next;
-						await this.plugin.saveSettings();
-					}));
-			markModified(image, this.plugin.settings, "terminal.dockerImage");
-		} else {
-			const expert = new Setting(containerEl)
-				.setName("I understand Local is not sandboxed")
-				.setDesc("Required separately. Local is refused in YOLO and Strict Workspace, is foreground-only, and can reach anything Obsidian can.")
-				.addToggle((toggle) => toggle.setValue(s.terminal.localExpertEnabled).onChange(async (value) => {
-					s.terminal.localExpertEnabled = value;
-					await this.plugin.saveSettings();
-				}));
-			markModified(expert, this.plugin.settings, "terminal.localExpertEnabled");
-		}
-
-		new Setting(containerEl)
-			.setName("Backend health")
-			.setDesc("Checks Docker Engine availability or reports the host-shell runtime. It does not run an agent command.")
-			.addButton((button) => button.setButtonText("Check health").onClick(async () => {
-				button.setDisabled(true).setButtonText("Checking…");
-				try {
-					const result = await this.plugin.runner.terminalHealth(this.plugin.settings);
-					new Notice(`Open Agent: ${result.ok ? "ready" : "not ready"} — ${result.message}`, 8000);
-				} finally {
-					button.setDisabled(false).setButtonText("Check health");
-				}
-			}));
-
-		new Setting(containerEl)
-			.setName("Stop all owned processes")
-			.setDesc("Stops every command this plugin started. Also runs on unload and security-setting changes.")
-			.addButton((button) => button.setWarning().setButtonText("Stop all").onClick(async () => {
-				button.setDisabled(true);
-				try {
-					const stopped = await this.plugin.runner.stopAllTerminal();
-					new Notice(`Open Agent: stop requested for ${stopped} command${stopped === 1 ? "" : "s"}.`);
-				} finally {
-					button.setDisabled(false);
-				}
-			}));
 	}
 
 	private skills(containerEl: HTMLElement): void {
@@ -3394,7 +2597,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		const stSkillsEnabled = new Setting(containerEl).setName("Enable skills").addToggle((t) =>
 			t.setValue(s.skillsEnabled).onChange(async (v) => {
 				s.skillsEnabled = v;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			})
 		);
 		markModified(stSkillsEnabled, this.plugin.settings, "skillsEnabled");
@@ -3421,7 +2624,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.autoCreateSkills).onChange(async (v) => {
 					s.autoCreateSkills = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stAutoCreateSkills, this.plugin.settings, "autoCreateSkills");
@@ -3572,465 +2775,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	}
 
 	/** MCP server registry — stdio runtime connects lazily on first run. */
-	private mcp(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		const stMcpEnabled = new Setting(containerEl)
-			.setName("Enable MCP")
-			.setDesc("Runs configured MCP servers on this device — first-use consent explains the risk. stdio is desktop-only; HTTP connects over a URL.")
-			.addToggle((t) =>
-				t.setValue(s.mcpEnabled).onChange(async (v) => {
-					if (!v) {
-						s.mcpEnabled = false;
-						await this.plugin.saveSettings();
-						return;
-					}
-					if (s.mcpConsent.consentVersion !== 1) {
-						t.setValue(false);
-						new McpConsentModal(this.app, async () => {
-							await this.plugin.grantMcpConsent();
-							this.display();
-						}).open();
-						return;
-					}
-					s.mcpEnabled = true;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stMcpEnabled, this.plugin.settings, "mcpEnabled");
-
-		const list = containerEl.createDiv({ cls: "oa-mcp-list" });
-		const entries = Object.entries(s.mcpServers).sort(([a], [b]) => a.localeCompare(b));
-		if (entries.length === 0) {
-			this.emptyState(list, {
-				title: "No MCP servers configured",
-				description: "Add one below, install one from the catalog, or import an mcp.json document.",
-			});
-		}
-		for (const [name, srv] of entries) {
-			const isHttp = (srv.transport ?? (srv.url ? "http" : "stdio")) === "http";
-			const summary = isHttp
-				? srv.url || "No URL set"
-				: [srv.command, ...(srv.args ?? [])].filter(Boolean).join(" ") || "No command set";
-			const card = list.createDiv({ cls: "oa-mcp-server" });
-			new Setting(card)
-				.setName(name)
-				.setDesc(`${isHttp ? "http" : "stdio"} · ${summary}${srv.enabled ? "" : " · disabled"}`)
-				.addToggle((t) =>
-					t.setValue(srv.enabled).onChange(async (v) => {
-						srv.enabled = v;
-						await this.plugin.saveSettings();
-					})
-				)
-				.addExtraButton((b) =>
-					b
-						.setIcon("trash-2")
-						.setTooltip("Remove server")
-						.onClick(async () => {
-							delete s.mcpServers[name];
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
-			if (isHttp) {
-				new Setting(card)
-					.setName("URL")
-					.setDesc("HTTP endpoint of this MCP server.")
-					.addText((t) =>
-						t.setValue(srv.url ?? "").onChange(async (v) => {
-							srv.url = v.trim();
-							await this.plugin.saveSettings();
-						})
-					);
-				const headersSetting = new Setting(card)
-					.setName("Headers")
-					.setDesc("KEY=VALUE pairs, one per line — e.g. Authorization=Bearer …");
-				stackedTextArea(
-					headersSetting,
-					{ rows: 4, value: kvToLines(srv.headers), placeholder: "Authorization=Bearer …", ariaLabel: "Headers" },
-					async (v) => {
-						srv.headers = linesToKv(v);
-						await this.plugin.saveSettings();
-					}
-				);
-			} else {
-				new Setting(card)
-					.setName("Command")
-					.setDesc("Executable spawned over stdio, e.g. npx")
-					.addText((t) =>
-						t.setValue(srv.command ?? "").onChange(async (v) => {
-							srv.command = v.trim();
-							await this.plugin.saveSettings();
-						})
-					);
-				new Setting(card)
-					.setName("Arguments")
-					.setDesc("Space-separated arguments passed to the command.")
-					.addText((t) =>
-						t.setValue((srv.args ?? []).join(" ")).onChange(async (v) => {
-							srv.args = v.split(/\s+/).filter(Boolean);
-							await this.plugin.saveSettings();
-						})
-					);
-				const envSetting = new Setting(card).setName("Environment").setDesc("KEY=VALUE pairs, one per line.");
-				stackedTextArea(
-					envSetting,
-					{ rows: 4, value: kvToLines(srv.env), placeholder: "DEBUG=true", ariaLabel: "Environment variables" },
-					async (v) => {
-						srv.env = linesToKv(v);
-						await this.plugin.saveSettings();
-					}
-				);
-			}
-		}
-
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Add MCP server")
-				.setCta()
-				.onClick(async () => {
-					let name = "new-server";
-					let n = 1;
-					while (name in s.mcpServers) name = `new-server-${++n}`;
-					s.mcpServers[name] = {
-						command: "npx",
-						args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
-						enabled: true,
-					};
-					await this.plugin.saveSettings();
-					this.display();
-				})
-		);
-
-		const importEl = containerEl.createDiv({ cls: "oa-mcp-import" });
-		/* owner directive S3-7 (2026-07-23): label row first, paste area below it
-		   (was reversed — the field sat above its own label) */
-		new Setting(importEl)
-			.setName("Import mcp.json")
-			.setDesc("Paste a standard mcp.json document below. Servers are merged by name.")
-			.addButton((b) =>
-				b.setButtonText("Import").onClick(async () => {
-					try {
-						const parsed = parseMcpServersDoc(area.value);
-						Object.assign(s.mcpServers, parsed);
-						await this.plugin.saveSettings();
-						new Notice(`Open Agent: imported ${Object.keys(parsed).length} MCP server(s).`);
-						this.display();
-					} catch (err) {
-						new Notice(`Open Agent: import failed — ${err instanceof Error ? err.message : String(err)}`);
-					}
-				})
-			);
-		const area = importEl.createEl("textarea", {
-			cls: "oa-mcp-import-text",
-			attr: {
-				rows: "6",
-				placeholder:
-					'{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]\n    }\n  }\n}',
-			},
-		});
-
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Install from catalog")
-				.onClick(() => new McpCatalogModal(this.app, this.plugin, () => this.display()).open())
-		);
-
-		containerEl.createDiv({
-			cls: "oa-mcp-note",
-			text: "Servers connect lazily on the next chat run. The catalog offers curated, pinned servers — git-installed ones clone and run third-party code on this device without a sandbox.",
-		});
-	}
-
-	private memory(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		const stMemoryEnabled = new Setting(containerEl).setName("Enable long-term memory").addToggle((t) =>
-			t.setValue(s.memoryEnabled).onChange(async (v) => {
-				s.memoryEnabled = v;
-				await this.plugin.saveSettings();
-			})
-		);
-		markModified(stMemoryEnabled, this.plugin.settings, "memoryEnabled");
-
-		const stMemoryFolder = new Setting(containerEl).setName("Memory folder").setDesc("Vault folder for MEMORY.md and USER.md.").addText((t) =>
-			t.setValue(s.memoryFolder).onChange(async (v) => {
-				try {
-					s.memoryFolder = canonicalVaultPath(v.trim() || "openagent/openagent-memory", { label: "Memory folder" });
-					await this.plugin.saveSettings();
-				} catch (e) {
-					t.setValue(s.memoryFolder);
-					new Notice(`Open Agent: ${e instanceof Error ? e.message : String(e)}`);
-				}
-			})
-		);
-		markModified(stMemoryFolder, this.plugin.settings, "memoryFolder");
-
-		const stUserProfileEnabled = new Setting(containerEl)
-			.setName("User profile")
-			.setDesc("Let the agent build a model of who you are (USER.md).")
-			.addToggle((t) =>
-				t.setValue(s.userProfileEnabled).onChange(async (v) => {
-					s.userProfileEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stUserProfileEnabled, this.plugin.settings, "userProfileEnabled");
-
-		const stMemoryCharLimit = new Setting(containerEl)
-			.setName("Memory Budget")
-			.setDesc("Size cap for MEMORY.md (500–20,000). When full, the agent must consolidate before adding more.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "500";
-				t.inputEl.max = "20000";
-				t.inputEl.step = "500";
-				t.setValue(String(s.memoryCharLimit)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.memoryCharLimit = Math.min(20_000, Math.max(500, n));
-					this.plugin.memoryStore.setLimits(s.memoryCharLimit, s.userCharLimit);
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stMemoryCharLimit, this.plugin.settings, "memoryCharLimit");
-		this.resetButton(stMemoryCharLimit, "memoryCharLimit");
-
-		const stUserCharLimit = new Setting(containerEl)
-			.setName("Profile Budget")
-			.setDesc("Character budget for USER.md (500–20,000). Same consolidation behavior as the memory budget.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "500";
-				t.inputEl.max = "20000";
-				t.inputEl.step = "500";
-				t.setValue(String(s.userCharLimit)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.userCharLimit = Math.min(20_000, Math.max(500, n));
-					this.plugin.memoryStore.setLimits(s.memoryCharLimit, s.userCharLimit);
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stUserCharLimit, this.plugin.settings, "userCharLimit");
-		this.resetButton(stUserCharLimit, "userCharLimit");
-
-		const stMemoryNudgeInterval = new Setting(containerEl)
-			.setName("Memory nudge interval")
-			.setDesc("Remind the agent to save what it learned — every N of your messages (0 disables).");
-		stMemoryNudgeInterval.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Memory nudge interval",
-				min: 0,
-				max: 30,
-				step: 1,
-				value: s.memoryNudgeInterval,
-				commit: (v) => {
-					s.memoryNudgeInterval = v;
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stMemoryNudgeInterval, this.plugin.settings, "memoryNudgeInterval");
-		this.resetButton(stMemoryNudgeInterval, "memoryNudgeInterval");
-
-		/* Structured memory (v0.1.176, Hindsight-style engine — plugin-native,
-		   no Docker/MCP/server): the agent distills conversations into typed
-		   facts (world/experience) and recalls them per message via fusion
-		   (BM25 + entity + temporal + trust). Facts live in
-		   <memory folder>/.engine/facts.jsonl — MEMORY.md/USER.md stay the
-		   human-readable core. */
-		this.subheading(
-			containerEl,
-			"Structured memory",
-			"Typed facts the agent extracts and recalls automatically, Hindsight-style."
-		);
-
-		const stMemoryEngineEnabled = new Setting(containerEl)
-			.setName("Structured memory")
-			.setDesc("Extract durable facts from conversations and recall them in later chats (stored under the memory folder).")
-			.addToggle((t) =>
-				t.setValue(s.memoryEngineEnabled).onChange(async (v) => {
-					s.memoryEngineEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stMemoryEngineEnabled, this.plugin.settings, "memoryEngineEnabled");
-
-		const stMemoryEngineRetainEveryN = new Setting(containerEl)
-			.setName("Retain every N turns")
-			.setDesc("How often the agent distills the conversation into facts (1 = every turn).");
-		stMemoryEngineRetainEveryN.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Retain every N turns",
-				min: 1,
-				max: 10,
-				step: 1,
-				value: s.memoryEngineRetainEveryN,
-				commit: (v) => {
-					s.memoryEngineRetainEveryN = Math.min(10, Math.max(1, v));
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stMemoryEngineRetainEveryN, this.plugin.settings, "memoryEngineRetainEveryN");
-		this.resetButton(stMemoryEngineRetainEveryN, "memoryEngineRetainEveryN");
-
-		const stMemoryEngineRecallMax = new Setting(containerEl)
-			.setName("Recall budget")
-			.setDesc("Maximum facts recalled and injected per message.");
-		stMemoryEngineRecallMax.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Recall budget",
-				min: 3,
-				max: 20,
-				step: 1,
-				value: s.memoryEngineRecallMax,
-				commit: (v) => {
-					s.memoryEngineRecallMax = Math.min(20, Math.max(3, v));
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stMemoryEngineRecallMax, this.plugin.settings, "memoryEngineRecallMax");
-		this.resetButton(stMemoryEngineRecallMax, "memoryEngineRecallMax");
-
-		const stMemoryEngineEmbedModel = new Setting(containerEl)
-			.setName("Embedding model")
-			.setDesc("Pick a model to enable semantic recall (finds memories whose wording differs) — off = keyword recall only.")
-			.addDropdown((d) => {
-				/* v0.1.179: a picker like the Model tab — the active provider's
-				   catalog plus the current value (kept visible even off-catalog,
-				   so a saved id is never silently dropped). */
-				const activeProvider = s.providers.find((p) => p.id === s.activeProviderId);
-				const catalog = withCurrentModel(catalogOf(activeProvider), s.memoryEngineEmbedModel);
-				d.addOption("", "off (keyword recall only)");
-				for (const m of catalog) {
-					if (m) d.addOption(m, m);
-				}
-				d.selectEl.setAttribute("aria-label", "Embedding model");
-				d.setValue(s.memoryEngineEmbedModel).onChange(async (v) => {
-					s.memoryEngineEmbedModel = v;
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stMemoryEngineEmbedModel, this.plugin.settings, "memoryEngineEmbedModel");
-
-		/* Context (owner directive 2026-07-30, Hermes Desktop parity — official
-		   groups context.* under "Memory & Context"): what gets injected into
-		   every conversation. Rows moved here verbatim: "Context file" from
-		   Chat (was Agent), "Attach active note by default" from General. */
-		this.subheading(containerEl, "Context", "What gets injected into every conversation.");
-
-		const stContextFile = new Setting(containerEl)
-			.setName("Context file")
-			.setDesc("Vault file injected into every conversation (like Hermes context files). Empty disables.")
-			.addText((t) =>
-				t
-					.setPlaceholder("AGENTS.md")
-					.setValue(s.contextFile)
-					.onChange(async (v) => {
-						s.contextFile = v.trim();
-						await this.plugin.saveSettings();
-					})
-			);
-		markModified(stContextFile, this.plugin.settings, "contextFile");
-		this.resetButton(stContextFile, "contextFile");
-
-		const stIncludeActiveNote = new Setting(containerEl)
-			.setName("Attach active note by default")
-			.setDesc("New chats start with the active-note context chip enabled.")
-			.addToggle((t) =>
-				t.setValue(s.includeActiveNote).onChange(async (v) => {
-					s.includeActiveNote = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stIncludeActiveNote, this.plugin.settings, "includeActiveNote");
-
-		/* Compression (v0.1.175, Hermes Desktop parity — official groups
-		   compression.* under "Memory & Context"): the four knobs desktop
-		   exposes. Three already lived in settings but had no UI; target_ratio
-		   is new (token-sized verbatim tail, complementing the message floor). */
-		this.subheading(
-			containerEl,
-			"Compression",
-			"What happens when a long conversation nears the context limit."
-		);
-
-		const stCompressionEnabled = new Setting(containerEl)
-			.setName("Compression")
-			.setDesc("Summarize older context when conversations get large.")
-			.addToggle((t) =>
-				t.setValue(s.compressionEnabled).onChange(async (v) => {
-					s.compressionEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stCompressionEnabled, this.plugin.settings, "compressionEnabled");
-
-		const stCompressionThreshold = new Setting(containerEl)
-			.setName("Compress when above")
-			.setDesc("Start compacting once the conversation fills this share of the context window.");
-		stCompressionThreshold.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Compress when above",
-				min: 10,
-				max: 99,
-				step: 1,
-				value: Math.round(s.compressionThreshold * 100),
-				format: (v) => `${v}%`,
-				unit: "%",
-				commit: (v) => {
-					s.compressionThreshold = Math.min(0.99, Math.max(0.1, v / 100));
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stCompressionThreshold, this.plugin.settings, "compressionThreshold");
-		this.resetButton(stCompressionThreshold, "compressionThreshold");
-
-		const stCompressionTargetRatio = new Setting(containerEl)
-			.setName("Preserve recent tail")
-			.setDesc("Keep this share of the most recent messages untouched when compressing.");
-		stCompressionTargetRatio.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Preserve recent tail",
-				min: 5,
-				max: 50,
-				step: 1,
-				value: Math.round(s.compressionTargetRatio * 100),
-				format: (v) => `${v}%`,
-				unit: "%",
-				commit: (v) => {
-					s.compressionTargetRatio = Math.min(0.5, Math.max(0.05, v / 100));
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stCompressionTargetRatio, this.plugin.settings, "compressionTargetRatio");
-		this.resetButton(stCompressionTargetRatio, "compressionTargetRatio");
-
-		const stCompressionProtectLastN = new Setting(containerEl)
-			.setName("Keep last N messages")
-			.setDesc("Minimum recent messages never folded into the summary.");
-		stCompressionProtectLastN.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Keep last N messages",
-				min: 0,
-				max: 24,
-				step: 1,
-				value: s.compressionProtectLastN,
-				commit: (v) => {
-					s.compressionProtectLastN = Math.min(24, Math.max(0, v));
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stCompressionProtectLastN, this.plugin.settings, "compressionProtectLastN");
-		this.resetButton(stCompressionProtectLastN, "compressionProtectLastN");
-	}
-
 	private automations(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
@@ -4130,7 +2874,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				t.setValue(task.enabled).onChange(async (v) => {
 					task.enabled = v;
 					if (v) task.nextRun = nextCronRun(task.schedule.expr, Date.now()) ?? 0;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 			)
@@ -4167,7 +2911,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						s.cronTasks = s.cronTasks.filter((t) => t.id !== task.id);
 						if (this.editingCronId === task.id) this.editingCronId = null;
 						this.cronHistoryOpen.delete(task.id);
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -4570,7 +3314,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						s.cronTasks.push(task);
 						new Notice(`Open Agent: automation \u201c${task.name}\u201d added \u2014 next run ${formatRelative(task.nextRun)}.`);
 					}
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 		);
@@ -4584,230 +3328,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private advanced(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group labels — Limits, then System prompt. */
-		this.subheading(containerEl, "Limits", "Caps that keep runs bounded and reversible.");
-		/* v0.1.151: "Max tool iterations" moved from Chat (Hermes agent.max_turns
-		   lives in Advanced) — block verbatim, same slider + markModified. */
-		const stMaxIterations = new Setting(containerEl)
-			.setName("Max tool iterations")
-			.setDesc("Safety cap on tool-call rounds per user message.");
-		stMaxIterations.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Max tool iterations",
-				min: 1,
-				max: 40,
-				step: 1,
-				value: s.maxIterations,
-				commit: (v) => {
-					s.maxIterations = v;
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stMaxIterations, this.plugin.settings, "maxIterations");
-		this.resetButton(stMaxIterations, "maxIterations");
-
-		const stToolOutputLimit = new Setting(containerEl)
-			.setName("Tool output limit")
-			.setDesc("Characters rendered inside a tool-call card before it is sliced for display (the full result stays in history).")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "1000";
-				t.inputEl.max = "50000";
-				t.inputEl.step = "1000";
-				t.setValue(String(s.toolOutputMaxChars)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.toolOutputMaxChars = Math.min(50_000, Math.max(1_000, n));
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				});
-			});
-		markModified(stToolOutputLimit, this.plugin.settings, "toolOutputMaxChars");
-		this.resetButton(stToolOutputLimit, "toolOutputMaxChars");
-
-		const stCheckpointMax = new Setting(containerEl)
-			.setName("Checkpoint snapshots kept")
-			.setDesc("Rollback snapshots in openagent/checkpoints/ are pruned to the newest N per note. Off disables pruning, not snapshots.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "5";
-				t.inputEl.max = "200";
-				t.inputEl.step = "5";
-				t.setValue(String(s.checkpointMaxSnapshots)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.checkpointMaxSnapshots = Math.min(200, Math.max(5, n));
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stCheckpointMax, this.plugin.settings, "checkpointMaxSnapshots");
-		this.resetButton(stCheckpointMax, "checkpointMaxSnapshots");
-
-		this.subheading(containerEl, "System prompt", "Operator-level instructions appended to every conversation.");
-		const spSetting = new Setting(containerEl)
-			.setName("Custom system prompt")
-			.setDesc("Extra instructions appended to every conversation's system prompt.");
-		stackedTextArea(
-			spSetting,
-			{
-				rows: 6,
-				value: s.customSystemPrompt,
-				placeholder: "e.g. Always answer in Indonesian; cite note titles when you reference them.",
-				ariaLabel: "Custom system prompt",
-			},
-			async (v) => {
-				s.customSystemPrompt = v;
-				await this.plugin.saveSettings();
-			}
-		);
-
-		const stRequestTimeout = new Setting(containerEl)
-			.setName("Request timeout (ms)")
-			.setDesc("Applied to every provider request, chat and model-listing alike.")
-			.addText((t) =>
-				t.setValue(String(s.requestTimeoutMs)).onChange(async (v) => {
-					s.requestTimeoutMs = Math.max(5000, parseInt(v) || 120000);
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stRequestTimeout, this.plugin.settings, "requestTimeoutMs");
-		this.resetButton(stRequestTimeout, "requestTimeoutMs");
-
-		const stDebugMode = new Setting(containerEl)
-			.setName("Debug mode")
-			.setDesc("Log requests and responses to the developer console.")
-			.addToggle((t) =>
-				t.setValue(s.debugMode).onChange(async (v) => {
-					s.debugMode = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stDebugMode, this.plugin.settings, "debugMode");
-	}
-
-	private notifications(containerEl: HTMLElement): void {
-		const prefs = this.plugin.settings.notifications;
-		const status = this.plugin.getNativeNotificationStatus();
-		const statusText = !status.supported
-			? status.reason === "mobile"
-				? "Unavailable on mobile. Native banners are desktop-only; Obsidian notices still work."
-				: "Unavailable in this desktop runtime. Obsidian notices still work."
-			: status.permission === "granted"
-				? "Supported · permission granted."
-				: status.permission === "denied"
-					? "Supported · permission denied. Re-enable notifications for Obsidian in system settings."
-					: "Supported · permission not requested. Use the test button to request it from a user gesture.";
-
-		this.subheading(
-			containerEl,
-			"Native desktop notifications",
-			"Optional OS banners layered on top of existing Obsidian notices. Open Agent must be running."
-		);
-		new Setting(containerEl).setName("Native notification status").setDesc(statusText);
-
-		new Setting(containerEl)
-			.setName("Enable native notifications")
-			.setDesc("Master switch. Off by default; individual event choices below are ready when you opt in.")
-			.addToggle((t) =>
-				t.setValue(prefs.nativeEnabled).onChange(async (value) => {
-					prefs.nativeEnabled = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		const nativeKinds: { key: keyof typeof prefs.nativeKinds; name: string; desc: string }[] = [
-			{ key: "turnDone", name: "Chat completed", desc: "Away-only banner after the final interactive turn, including steer/goal continuations." },
-			{ key: "turnError", name: "Chat error", desc: "Away-only generic alert. Stop/abort never counts as an error." },
-			{ key: "approvalRequired", name: "Approval required", desc: "Alerts while away, or while the chat pane is not visible." },
-			{ key: "inputRequired", name: "Input required", desc: "Alerts while away, or while the chat pane is not visible." },
-			{ key: "backgroundDone", name: "Automation completed", desc: "Away-only; also requires that automation's Notify switch and non-silent output." },
-			{ key: "backgroundError", name: "Automation error", desc: "Away-only generic alert, independent of the automation's Notify switch." },
-		];
-		for (const item of nativeKinds) {
-			new Setting(containerEl)
-				.setName(item.name)
-				.setDesc(item.desc)
-				.addToggle((t) =>
-					t.setValue(prefs.nativeKinds[item.key]).onChange(async (value) => {
-						prefs.nativeKinds[item.key] = value;
-						await this.plugin.saveSettings();
-					})
-				);
-		}
-
-		new Setting(containerEl)
-			.setName("Test native notification")
-			.setDesc("Sends a test banner — the only action that may ask for OS permission. Works even while notifications are off.")
-			.addButton((button) => {
-				button.setButtonText(
-					status.permission === "default"
-						? "Request permission & test"
-						: status.permission === "denied"
-							? "Permission denied"
-							: "Send test"
-				);
-				button.setDisabled(!status.supported || status.permission === "denied");
-				button.onClick(async () => {
-					button.setDisabled(true).setButtonText("Sending…");
-					const result = await this.plugin.testNativeNotification();
-					const message =
-						result === "sent"
-							? "Open Agent: test handed to the operating system."
-							: result === "denied"
-								? "Open Agent: notification permission was not granted."
-								: result === "unsupported"
-									? "Open Agent: native notifications are unavailable here."
-									: "Open Agent: the native notification test failed.";
-					new Notice(message, 6000);
-					this.display();
-				});
-			});
-
-		this.subheading(
-			containerEl,
-			"Completion sound",
-			"Independent per-vault app cue for a successful terminal interactive-chat turn. Never plays for errors, approvals, input, Stop, or automations."
-		);
-		new Setting(containerEl)
-			.setName("Play completion sound")
-			.setDesc(
-				this.plugin.isCompletionSoundSupported()
-					? "Off by default. Generated locally with Web Audio; no audio file or network request."
-					: "Web Audio is unavailable in this runtime, so completion cues cannot play."
-			)
-			.addToggle((t) =>
-				t.setValue(prefs.completionSoundEnabled).onChange(async (value) => {
-					prefs.completionSoundEnabled = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		const selected = COMPLETION_SOUND_VARIANTS.find((v) => v.id === prefs.completionSoundVariant) ?? COMPLETION_SOUND_VARIANTS[0];
-		new Setting(containerEl)
-			.setName("Completion sound preset")
-			.setDesc(`${selected.description} Preview works even while completion sound is off.`)
-			.addDropdown((dropdown) => {
-				for (const variant of COMPLETION_SOUND_VARIANTS) dropdown.addOption(String(variant.id), variant.name);
-				dropdown.setValue(String(selected.id)).onChange(async (value) => {
-					prefs.completionSoundVariant = Number(value);
-					await this.plugin.saveSettings();
-					this.display();
-				});
-			})
-			.addButton((button) =>
-				button
-					.setButtonText("Preview")
-					.setDisabled(!this.plugin.isCompletionSoundSupported())
-					.onClick(async () => {
-						const result = await this.plugin.previewCompletionSound(prefs.completionSoundVariant);
-						if (result !== "played") new Notice("Open Agent: completion sound could not play in this runtime.", 5000);
-					})
-			);
-	}
 }
 
 /** Delete-profile confirmation with the Hermes keep/trash data choice (default: keep). */
@@ -4818,55 +3338,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 
 /* ── data portability modals (docs/plans/data-portability-plan.md) ─────────────── */
 
-/** `2026-07-20-09-00` — export filename stamp (UTC, per-minute resolution). */
-function exportStamp(): string {
-	return new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
-}
-
-/** Clipboard with a legacy fallback (older webviews). */
-async function copyText(text: string): Promise<void> {
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch {
-		const ta = document.createElement("textarea");
-		ta.value = text;
-		document.body.appendChild(ta);
-		ta.select();
-		document.execCommand("copy");
-		ta.remove();
-	}
-}
-
-/**
- * Long-text field stacked INSIDE its setting-item (info above, textarea
- * taking the full row width below — one coherent card). The single
- * sanctioned way to render multi-line text in settings; control-column
- * textareas (addTextArea) are banned (smoke guard enforces).
- */
-function stackedTextArea(
-	setting: Setting,
-	opts: { rows: number; value: string; placeholder?: string; ariaLabel: string },
-	onChange: (v: string) => void | Promise<void>
-): HTMLTextAreaElement {
-	setting.settingEl.addClass("oa-has-stacked");
-	const ta = setting.settingEl.createEl("textarea", {
-		attr: {
-			rows: String(opts.rows),
-			"aria-label": opts.ariaLabel,
-			...(opts.placeholder ? { placeholder: opts.placeholder } : {}),
-		},
-	});
-	ta.value = opts.value;
-	ta.addEventListener("change", () => void onChange(ta.value));
-	/* v0.1.116: rasa editor markdown di SEMUA stackedTextArea — Tab/Shift+Tab
-	   indentasi multi-baris, Enter melanjutkan list/checkbox/nomor/quote
-	   (item kosong = keluar), auto-tutup pasangan + bungkus seleksi,
-	   skip-over, Backspace pasangan kosong (paket lengkap, pilihan owner). */
-	ta.addEventListener("keydown", (e) => {
-		markdownTextareaKeydown(e, ta, { newlineOnShiftEnter: false });
-	});
-	return ta;
-}
 
 /**
  * Generic full-width stacked control row inside a setting-item (info above,

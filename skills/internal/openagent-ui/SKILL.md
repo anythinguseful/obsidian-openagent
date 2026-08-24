@@ -41,6 +41,7 @@ AI-generated *right now* — never emit them, whatever other skills suggest:
 
 - Interface copy in English (user chats with me in Indonesian, but UI strings are English).
 - Sentence case buttons and labels; verbs that say exactly what happens ("Save changes", "Run all now"). Errors say what happened + how to fix, next to the field, red via `.oa-field-error` / `--color-red`.
+- **Sentence case survives upstream parity.** Obsidian's plugin guidelines are explicit: "only the first word in a sentence, and proper nouns, should be capitalized." Hermes Desktop's `FIELD_LABELS` are Title Case because they are schema-driven form labels — copy the *term* ("Compression threshold"), never the casing ("Compression Threshold"). Fixed 2026-08-24 ("Memory budget", "Profile budget"); `v0.1.196` in `test/smoke/settings.cjs` now scans every `.setName`/`subheading` in `src/` and fails on any mid-label capital outside an allowlist of real proper nouns (Terminal & Processes, Danger Zone, Browse Hub, Mixture of Agents, Quick Ask, MIT License, Brave/Tavily/SearXNG, the `Local` backend). Two casing rules the scan encodes: a colon starts a NEW sentence (so "Context menu: Add selection to chat" is correct — it quotes the literal editor-menu entry), and a label that names a product keeps that product's capitalisation.
 - Compact meta lines use ` · ` separators and relative times ("next in 3h").
 
 ### Settings descriptions (2026-08-22 — owner: "singkat, padat, jelas, mudah dipahami; menerangkan kegunaan utama")

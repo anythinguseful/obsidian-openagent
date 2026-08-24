@@ -9,6 +9,7 @@
  */
 
 import { Notice, MarkdownView, Platform, Plugin, TFile, WorkspaceLeaf, normalizePath, requestUrl } from "obsidian";
+import type { Workspace } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
 	CRON_MONITOR_CONTENT_STORE_MAX,
@@ -100,6 +101,19 @@ import { CompletionSoundPlayer, type CompletionSoundResult } from "./completionS
 
 const noop = (): void => {};
 
+/* Focusing a leaf is cosmetic: a failure is never worth surfacing, but a bare
+   call leaves the rejection unhandled (silent in an Electron renderer, fatal
+   under Node's default in tests). `revealLeaf` is typed `Promise<void>` on
+   current Obsidian yet returned plain `void` on older desktop builds — and the
+   smoke harness models exactly that. Chaining `.catch` unconditionally would
+   throw "revealLeaf(...).catch is not a function", so probe for a thenable. */
+function revealQuietly(workspace: Workspace, leaf: WorkspaceLeaf): void {
+	const result: unknown = workspace.revealLeaf(leaf);
+	if (result && typeof (result as Promise<void>).catch === "function") {
+		void (result as Promise<void>).catch(noop);
+	}
+}
+
 export default class OpenAgentPlugin extends Plugin {
 	settings: OpenAgentSettings;
 	memoryStore: MemoryStore;
@@ -127,6 +141,7 @@ export default class OpenAgentPlugin extends Plugin {
 		/* build identity line — obsidian caches require(), so "did the new
 		   build actually load?" should be answerable from the console */
 		console.info(`[Open Agent] build ${BUILD_STAMP}`);
+		this.installRejectionNet();
 		await this.loadSettings();
 
 		/* Notifications v0.1.142: both channels are per-vault and opt-in.
@@ -225,14 +240,14 @@ export default class OpenAgentPlugin extends Plugin {
 			onRefreshModels: () => this.refreshQuickAskModels(),
 			onSetVisibleModels: (next) => {
 				this.settings.visibleModels = next;
-				void this.saveSettings();
+				this.saveSettingsSafe();
 			},
 			onToggleCollapsed: (slug) => {
 				const st = this.settings;
 				st.collapsedMenuProviders = st.collapsedMenuProviders.includes(slug)
 					? st.collapsedMenuProviders.filter((x) => x !== slug)
 					: [...st.collapsedMenuProviders, slug];
-				void this.saveSettings();
+				this.saveSettingsSafe();
 			},
 			onOpenSettings: () => this.openSettings(),
 			/* v0.1.85 — live getter: toggle a snippet's Quick Ask flag in
@@ -341,6 +356,57 @@ export default class OpenAgentPlugin extends Plugin {
 		this.announceMissedCronRuns();
 	}
 
+	/**
+	 * Last-resort net for promise rejections that escaped their call site
+	 * (v0.1.152).
+	 *
+	 * `saveSettingsSafe()` fixes the known category; this catches the ones we
+	 * have not found yet, so a background failure surfaces as a notice instead
+	 * of a console line nobody reads.
+	 *
+	 * Obsidian gives every plugin the same `window`, so this handler sees
+	 * rejections from the app and from other plugins too. Claiming those would
+	 * put our name on someone else's bug, so an event is only surfaced when the
+	 * stack points back into this plugin. The event is never
+	 * `preventDefault()`ed — the console record stays intact either way.
+	 */
+	private installRejectionNet(): void {
+		const onRejection = (event: PromiseRejectionEvent): void => {
+			const reason: unknown = event.reason;
+			const stack = reason instanceof Error ? `${reason.stack ?? ""}` : "";
+			/* esbuild stamps the bundle path into stack frames; the plugin id is
+			   the stable part of it across vaults and platforms. */
+			if (!stack.includes(this.manifest.id)) return;
+			const detail = reason instanceof Error ? reason.message : String(reason);
+			console.error("[Open Agent] unhandled promise rejection", reason);
+			new Notice(`Open Agent: background task failed — ${detail}`, 8000);
+		};
+		/* A reporter must never be the thing that breaks startup: onload() aborts
+		   on a throw and the whole plugin dies. Non-DOM hosts (the smoke harness,
+		   any headless runner) have no window.addEventListener at all. */
+		const target: unknown = typeof window === "undefined" ? undefined : window;
+		if (
+			!target ||
+			typeof (target as Window).addEventListener !== "function" ||
+			typeof (target as Window).removeEventListener !== "function"
+		) {
+			return;
+		}
+		const host = target as Window;
+		try {
+			host.addEventListener("unhandledrejection", onRejection);
+		} catch {
+			return;
+		}
+		this.register(() => {
+			try {
+				host.removeEventListener("unhandledrejection", onRejection);
+			} catch {
+				/* teardown is best-effort; a failure here must not block unload */
+			}
+		});
+	}
+
 	onunload(): void {
 		if (this.cronTimer) window.clearInterval(this.cronTimer);
 		this.nativeNotifications?.dispose();
@@ -410,7 +476,7 @@ export default class OpenAgentPlugin extends Plugin {
 		if (leaves.length === 0) {
 			const target = this.targetLeafFor(this.settings.chatLeafLocation);
 			await target?.setViewState({ type: CHAT_VIEW_TYPE, active: true });
-			if (target) workspace.revealLeaf(target);
+			if (target) revealQuietly(workspace, target);
 			return;
 		}
 		await this.moveChatViewToConfiguredLocation();
@@ -429,7 +495,7 @@ export default class OpenAgentPlugin extends Plugin {
 		const loc = this.settings.chatLeafLocation;
 		const target = this.targetLeafFor(loc);
 		if (!target || this.leafRegion(leaf) === loc) {
-			workspace.revealLeaf(leaf);
+			revealQuietly(workspace, leaf);
 			return;
 		}
 		/* capture the conversation before the old view unmounts */
@@ -438,7 +504,7 @@ export default class OpenAgentPlugin extends Plugin {
 		const state = leaf.getViewState();
 		leaf.detach();
 		await target.setViewState(state);
-		workspace.revealLeaf(target);
+		revealQuietly(workspace, target);
 	}
 
 	/** v0.1.163: hand the pending session id to a freshly-mounted ChatView and
@@ -706,6 +772,28 @@ export default class OpenAgentPlugin extends Plugin {
 		/* A backend/consent/approval/Workspace change invalidates prepared
 		   approvals and terminates work started under the old security identity. */
 		if (this.runner) await this.runner.reconcileTerminal(this.effectiveSettings());
+	}
+
+	/**
+	 * Fire-and-forget settings save for UI callbacks (v0.1.152).
+	 *
+	 * `saveSettings()` deliberately keeps throwing: ten call sites (MCP and
+	 * terminal consent, chat message transactions) roll their in-memory state
+	 * back when the write fails, and swallowing the error there would leave
+	 * consent recorded as granted while nothing reached disk.
+	 *
+	 * The other ~129 call sites are Obsidian control callbacks — `onChange`,
+	 * `onClick`, `onSubmit`. Those discard the promise they are handed, so a
+	 * rejected write vanished silently: the toggle stayed flipped, no notice
+	 * appeared, and the setting was gone on the next restart. Anything that
+	 * only needs "save it, tell the user if that failed" belongs here.
+	 */
+	saveSettingsSafe(): void {
+		void this.saveSettings().catch((err) => {
+			const detail = err instanceof Error ? err.message : String(err);
+			console.error("[Open Agent] failed to save settings", err);
+			new Notice(`Open Agent: could not save settings — ${detail}`, 8000);
+		});
 	}
 
 	/* ---------------- data portability & reset ----------------

@@ -130,7 +130,11 @@ export class HttpTransport implements McpTransport {
 	}
 
 	send(json: string): void {
-		this.chain = this.chain.then(() => this.roundTrip(json));
+		/* The chain only serializes POSTs — it must never carry a failure
+		   forward. Without the `.catch` a single rejection (e.g. an `onLine`
+		   consumer that throws) poisons `this.chain` permanently and every
+		   later send() silently stops POSTing. Same idiom as PromptQueue. */
+		this.chain = this.chain.catch(() => {}).then(() => this.roundTrip(json));
 	}
 
 	onLine(cb: (line: string) => void): void {

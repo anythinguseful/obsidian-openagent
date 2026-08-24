@@ -263,6 +263,9 @@ export interface ChatAppProps {
 	runner: AgentRunner;
 	sessions: SessionStore;
 	saveSettings: () => Promise<void>;
+	/** Fire-and-forget save: reports its own failure, never rejects. Use
+	    this unless the caller rolls state back on failure. */
+	saveSettingsSafe: () => void;
 	openSettings: (section?: string) => void;
 	applyProfile: (id: string) => Promise<void>;
 	renderComponent: Component;
@@ -2593,8 +2596,15 @@ nudgeCounterRef.current = 0;
 							   optional and must never break the run. */
 							let embed: ((texts: string[]) => Promise<(number[] | null)[] | null>) | undefined;
 							const embedModel = runSettings.memoryEngineEmbedModel.trim();
-							if (embedModel && provider?.baseUrl.trim()) {
-								embed = (texts) => embedTexts(provider, embedModel, texts);
+							/* v0.1.152 (owner 2026-08-24): embedding carries its OWN provider
+							   pin, so a local embedding server can serve recall while chat runs
+							   on a cloud model. Empty pin = follow the chat provider, which is
+							   exactly the pre-v0.1.152 behaviour. */
+							const embedProvider = runSettings.memoryEngineEmbedProviderId
+								? runSettings.providers.find((p) => p.id === runSettings.memoryEngineEmbedProviderId) ?? provider
+								: provider;
+							if (embedModel && embedProvider?.baseUrl.trim()) {
+								embed = (texts) => embedTexts(embedProvider, embedModel, texts);
 							}
 							const [facts, obs] = await Promise.all([
 								engine.search(q, runSettings.memoryEngineRecallMax, embed),
@@ -3751,10 +3761,19 @@ nudgeCounterRef.current = 0;
 		const head = queue.find((e) => e.id !== queueEditId); // the entry being edited is skipped (desktop)
 		if (!head) return;
 		queueDrainingRef.current = true;
-		void sendQueued(head).finally(() => {
-			queueDrainingRef.current = false;
-		});
-	}, [running, queue, queueParked, queueEditId, sendQueued]);
+		/* `.finally` re-throws, so it alone leaves the rejection unhandled; the
+		   `.catch` both releases the drain lock and reports the loss. */
+		void sendQueued(head)
+			.catch((e: unknown) => {
+				pushLocalNoticeTurn(
+					`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+					"error"
+				);
+			})
+			.finally(() => {
+				queueDrainingRef.current = false;
+			});
+	}, [running, queue, queueParked, queueEditId, sendQueued, pushLocalNoticeTurn]);
 
 	/* per-row "send": idle = dispatch that entry now (a manual drain — lifts
 	   any park, desktop); busy = promote to head, un-park, interrupt — the
@@ -3784,9 +3803,14 @@ nudgeCounterRef.current = 0;
 				}
 				unparkQueue(sessionId);
 				setQueueParked(false);
-				void sendQueued(entry);
+				void sendQueued(entry).catch((e: unknown) => {
+					pushLocalNoticeTurn(
+						`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+						"error"
+					);
+				});
 			},
-			[running, queueEditId, sessionId, sessionPartitionKey, persistQueue, props.sessions, sendQueued, stopAgent]
+			[running, queueEditId, sessionId, sessionPartitionKey, persistQueue, props.sessions, sendQueued, stopAgent, pushLocalNoticeTurn]
 		);
 
 	const beginQueueEdit = useCallback(
@@ -3893,7 +3917,16 @@ nudgeCounterRef.current = 0;
 			if (head) {
 				unparkQueue(sessionId);
 				setQueueParked(false);
-				sendQueued(head);
+				/* The dispatch claim already removed this entry from the queue, so a
+				   rejection here would drop the prompt silently (and, in an Electron
+				   renderer, without even a crash). Surface it instead. `.finally` does
+				   NOT handle a rejection — only an explicit `.catch` does. */
+				void sendQueued(head).catch((e: unknown) => {
+					pushLocalNoticeTurn(
+						`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+						"error"
+					);
+				});
 			}
 			return;
 		}
@@ -3963,7 +3996,10 @@ nudgeCounterRef.current = 0;
 	   list re-reads the new active provider. */
 	const selectModel = useCallback(
 		async (m: string, providerId?: string) => {
-			if (providerId && providerId !== getActiveProvider(settings).id) {
+			/* Optional chaining, matching the Quick Ask twin in main.ts: with no
+			   provider configured (or all disabled) getActiveProvider returns null,
+			   and a bare `.id` here threw instead of just activating the pick. */
+			if (providerId && providerId !== getActiveProvider(settings)?.id) {
 				activateProviderCatalog(settings, providerId);
 			}
 			settings.model = m;
@@ -3971,7 +4007,7 @@ nudgeCounterRef.current = 0;
 			setModels(withCurrentModel(catalogOf(getActiveProvider(settings)), m));
 			/* a normal-model pick leaves the Mixture of Agents virtual provider */
 			if (settings.moa?.active_preset) settings.moa = setActiveMoaPreset(settings.moa, "");
-			await props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);
@@ -3983,7 +4019,7 @@ nudgeCounterRef.current = 0;
 		(next: string[]) => {
 			settings.visibleModels = next;
 			bumpSettingsRev();
-			void props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);
@@ -3993,7 +4029,7 @@ nudgeCounterRef.current = 0;
 				? settings.collapsedMenuProviders.filter((s) => s !== slug)
 				: [...settings.collapsedMenuProviders, slug];
 			bumpSettingsRev();
-			void props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);
@@ -4008,7 +4044,7 @@ nudgeCounterRef.current = 0;
 			if (!settings.moa) return;
 			settings.moa = setActiveMoaPreset(settings.moa, name);
 			bumpSettingsRev();
-			await props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);

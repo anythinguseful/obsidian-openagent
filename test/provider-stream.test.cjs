@@ -184,6 +184,70 @@ const check = (ok, label) => {
 		check(result.diagnostics.eofWithoutCompletion && !result.diagnostics.sawDone, "EOF-only completion anomaly is observable");
 	}
 
+	/* v0.1.152: every exit path must tear the wire down. The finally block used
+	   to clear the idle timer and drop the abort listener but never abort the
+	   controller or cancel the reader, so a stream that ended in a throw left
+	   the HTTP connection open and the body locked — one leaked socket per
+	   failed reply, accumulating for the life of the session. */
+	{
+		let observed = null;
+		global.fetch = async (_url, init) => {
+			observed = init.signal;
+			let index = 0;
+			const chunks = [encoder.encode(event(delta("partial")) + "data: {malformed\n\n")];
+			return {
+				ok: true,
+				status: 200,
+				body: new ReadableStream({
+					pull(controller) {
+						if (index < chunks.length) controller.enqueue(chunks[index++]);
+						else controller.close();
+					},
+				}),
+				text: async () => "",
+			};
+		};
+		bufferedJson = { choices: [{ message: { content: "after protocol error" }, finish_reason: "stop" }] };
+		await chatCompletion(provider, settings, history, null, {});
+		check(observed !== null && observed.aborted, "protocol error aborts the request controller");
+	}
+
+	/* [DONE] breaks out of the read loop with bytes still queued, so unlike the
+	   protocol-error path the body is NOT closed and really is holding a lock.
+	   Cancelling a closed stream is a spec no-op, so this is the only shape
+	   that can prove the reader is actually released. */
+	{
+		let cancelled = false;
+		global.fetch = async () => ({
+			ok: true,
+			status: 200,
+			body: new ReadableStream({
+				start(controller) {
+					controller.enqueue(encoder.encode(event(delta("first")) + event("[DONE]")));
+					/* deliberately never closed: more data is still "coming" */
+				},
+				cancel() { cancelled = true; },
+			}),
+			text: async () => "",
+		});
+		const result = await chatCompletion(provider, settings, history, null, {});
+		check(result.content === "first", "[DONE] with an open body still returns its content");
+		check(cancelled, "an undrained body is cancelled instead of left locked");
+	}
+
+	/* The happy path must ALSO release the wire: a completed stream that is
+	   never aborted keeps the socket pinned until the server times out. */
+	{
+		let observed = null;
+		global.fetch = async (_url, init) => {
+			observed = init.signal;
+			return responseFromChunks([encoder.encode(event(delta("done")) + event("[DONE]"))]);
+		};
+		const result = await chatCompletion(provider, settings, history, null, {});
+		check(result.content === "done", "successful stream still returns its content");
+		check(observed !== null && observed.aborted, "completed stream releases the connection");
+	}
+
 	/* Quick Ask can hear both chatCompletion's buffered-fallback reset and
 	   attemptWithResilience's next-hop reset for one failed attempt. */
 	{

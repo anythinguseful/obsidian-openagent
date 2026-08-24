@@ -140,6 +140,13 @@ export function friendlyTransportError(err: unknown, provider: ProviderConfig): 
 /** Model-catalogue calls shouldn't wait minutes — settings UIs need fast feedback. */
 const MODELS_TIMEOUT_MS = 30_000;
 
+/** v0.1.152 (latency): embedding recall runs on the BLOCKING path — the chat
+ *  request is not sent until it settles. A stalled embedding server therefore
+ *  buys 30s of dead air before the user sees anything, so semantic recall gets
+ *  its own tight budget: past it we give up and fall back to keyword recall,
+ *  which is a ranking downgrade, not a lost feature. */
+const EMBED_TIMEOUT_MS = 5_000;
+
 /* Small FNV-1a hash (hex) — enough entropy for tool-call id suffixes. */
 function fnv1a(s: string): string {
 	let h = 0x811c9dc5;
@@ -462,7 +469,7 @@ export async function embedTexts(
 				body: JSON.stringify({ model, input: texts }),
 				throw: true,
 			},
-			MODELS_TIMEOUT_MS,
+			EMBED_TIMEOUT_MS,
 			provider
 		);
 		const data = resp.json as { data?: unknown } | null;
@@ -618,6 +625,9 @@ async function streamingCompletion(
 	}
 	let timedOut = false;
 	let timer = 0;
+	/* Held so the finally block can cancel an in-flight read; see the teardown
+	   comment there. */
+	let activeReader: { cancel: () => Promise<void> } | null = null;
 	const armTimer = () => {
 		if (timer) window.clearTimeout(timer);
 		timer = window.setTimeout(() => {
@@ -654,6 +664,7 @@ async function streamingCompletion(
 		}
 
 		const reader = resp.body.getReader();
+		activeReader = reader;
 		const decoder = new TextDecoder();
 		let buffer = "";
 		let content = "";
@@ -675,6 +686,13 @@ async function streamingCompletion(
 			try {
 				json = JSON.parse(payload);
 			} catch {
+				malformedEvents++;
+				return false;
+			}
+			/* `data: null` / `data: 7` parse fine but are not SSE frames. Reading
+			   .usage off null threw a raw TypeError out of the read loop, bypassing
+			   the ProviderStreamProtocolError path built for exactly this case. */
+			if (!json || typeof json !== "object" || Array.isArray(json)) {
 				malformedEvents++;
 				return false;
 			}
@@ -771,5 +789,19 @@ async function streamingCompletion(
 	} finally {
 		if (timer) window.clearTimeout(timer);
 		cb.signal?.removeEventListener("abort", onCallerAbort);
+		/* Tear the wire down on EVERY exit path (v0.1.152). Clearing the timer
+		   and dropping the listener above frees our own bookkeeping but leaves
+		   the HTTP connection open and the body locked: a stream that ends in a
+		   throw (protocol error, caller abort) would otherwise leak one socket
+		   per failed reply for the life of the session. Cancelling the reader
+		   first unlocks the body; abort() then closes the connection. Both are
+		   best-effort — a stream already closed or errored rejects here, and
+		   that must never mask the real error being propagated. */
+		try {
+			void activeReader?.cancel().catch(() => {});
+		} catch {
+			/* reader already released */
+		}
+		ctl.abort();
 	}
 }

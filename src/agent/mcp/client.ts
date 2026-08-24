@@ -19,6 +19,14 @@ export interface McpTransport {
 	start(): void;
 	send(json: string): void;
 	onLine(cb: (line: string) => void): void;
+	/**
+	 * Transport-level failure channel (v0.1.152). Optional so HTTP-style
+	 * transports, whose failures already surface as rejected sends, need not
+	 * implement it. The stdio transport MUST: `spawn()` reports an unusable
+	 * command through an asynchronous "error" event, which is invisible to a
+	 * try/catch around start() and would otherwise crash the process.
+	 */
+	onError?(cb: (err: Error) => void): void;
 	close(): void;
 }
 
@@ -44,6 +52,8 @@ export class McpClient {
 	private started = false;
 	private pending = new Map<number | string, { resolve: (v: unknown) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
 	private toolCache: McpToolSchema[] | null = null;
+	/** Set once the transport reports a fatal error; makes later calls fail fast. */
+	private deadReason: Error | null = null;
 
 	constructor(
 		private transport: McpTransport,
@@ -55,7 +65,20 @@ export class McpClient {
 		if (this.started) return;
 		this.started = true;
 		this.transport.onLine((line) => this.handleLine(line));
+		/* A dead transport can never answer, so fail every in-flight request
+		   NOW instead of making each one wait out its own timeout. */
+		this.transport.onError?.((err) => this.failAll(err));
 		this.transport.start();
+	}
+
+	/** Rejects every in-flight request with `err` and clears their timers. */
+	private failAll(err: Error): void {
+		this.deadReason = err;
+		for (const [, p] of this.pending) {
+			clearTimeout(p.timer);
+			p.reject(err);
+		}
+		this.pending.clear();
 	}
 
 	/** initialize handshake (blocking until the server answers). */
@@ -88,17 +111,16 @@ export class McpClient {
 	}
 
 	close(): void {
-		for (const [, p] of this.pending) {
-			clearTimeout(p.timer);
-			p.reject(new Error("MCP connection closed."));
-		}
-		this.pending.clear();
+		this.failAll(new Error("MCP connection closed."));
 		this.transport.close();
 	}
 
 	/* ------------------------------------------------------------------ */
 
 	private request(method: string, params: unknown): Promise<unknown> {
+		/* The transport already died — don't make the caller wait out a full
+		   timeout for an answer that can never arrive. */
+		if (this.deadReason) return Promise.reject(this.deadReason);
 		const id = this.nextId++;
 		this.send({ jsonrpc: "2.0", id, method, params });
 		return new Promise<unknown>((resolve, reject) => {
@@ -123,7 +145,13 @@ export class McpClient {
 		if (!trimmed) return;
 		let msg: JsonRpcResponse;
 		try {
-			msg = JSON.parse(trimmed) as JsonRpcResponse;
+			const parsed: unknown = JSON.parse(trimmed);
+			/* `null` / `7` / `"hi"` / `[]` are valid JSON but not JSON-RPC frames,
+			   so the catch above never fires for them. Reading .id off null threw
+			   from inside a stdout "data" handler — asynchronous, so no caller
+			   try/catch can see it and the whole process goes down. */
+			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+			msg = parsed as JsonRpcResponse;
 		} catch {
 			return; // ignore non-JSON noise on stdout
 		}

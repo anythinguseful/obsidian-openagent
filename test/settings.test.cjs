@@ -153,12 +153,82 @@ check(normalizeLoadedSettings({ memoryEngineEmbedModel: "  embedding-gemma-300m 
 check(normalizeLoadedSettings({ memoryEngineEmbedModel: 42 }).memoryEngineEmbedModel === "", "normalize: non-string embedding model → empty");
 check(normalizeLoadedSettings({ memoryEngineRecallMax: 99 }).memoryEngineRecallMax === 20, "normalize: recall budget clamped to 20");
 
+/* v0.1.152 (owner 2026-08-24 "ada main model dan embedding model"): embedding
+   now carries its OWN provider pin, so a local embedding server can serve
+   recall while chat runs elsewhere. The pin must obey the same stale-pin
+   hygiene as the aux slots, and — the trap this caught during development —
+   it must be sanitized AFTER the preset merge builds s.providers. Sanitized
+   any earlier, every real provider id looks dangling and gets wiped. */
+check(normDefault.memoryEngineEmbedProviderId === "", "normalize({}): embedding provider defaults empty (follow chat provider)");
+{
+	/* A real data.json stores only the keys the user actually touched, so a
+	   provider entry routinely arrives with NO baseUrl — the preset merge is
+	   what supplies it. Pinning such a provider is therefore the case that
+	   proves the sanitize runs after that merge: before it, s.providers is
+	   still the raw loaded array and p.baseUrl is undefined. */
+	const pinned = normalizeLoadedSettings({
+		providers: [{ id: "lmstudio", apiKey: "x" }],
+		memoryEngineEmbedProviderId: "lmstudio",
+	});
+	check(pinned.memoryEngineEmbedProviderId === "lmstudio", "normalize: embedding pin SURVIVES a provider whose base URL comes from the preset merge");
+}
+{
+	const dangling = normalizeLoadedSettings({ memoryEngineEmbedProviderId: "no-such-provider" });
+	check(dangling.memoryEngineEmbedProviderId === "", "normalize: embedding pin to an unknown provider falls back to the chat provider");
+}
+{
+	/* a provider with no base URL cannot answer /v1/embeddings — keeping the
+	   pin would send recall to a dead endpoint instead of degrading to keyword */
+	const noUrl = normalizeLoadedSettings({
+		providers: [{ id: "lmstudio", baseUrl: "" }],
+		memoryEngineEmbedProviderId: "lmstudio",
+	});
+	check(noUrl.memoryEngineEmbedProviderId === "", "normalize: embedding pin dropped when the provider has no base URL");
+}
+check(normalizeLoadedSettings({ memoryEngineEmbedProviderId: 42 }).memoryEngineEmbedProviderId === "", "normalize: non-string embedding provider → empty");
+
+/* v0.1.152 (owner: "embedding default mati"): semantic recall must stay OFF
+   until the user picks a model, because an embedding call sits on the
+   blocking path before the chat request is sent. */
+check(normDefault.memoryEngineEmbedModel === "" && normDefault.memoryEngineEmbedProviderId === "", "normalize({}): embedding is OFF by default (no blocking call on the send path)");
+
+/* v0.1.152 (Lesson 121 regression): title generation is a SECOND request to
+   the main model on every new session. The old `!== false` idiom meant
+   "default true", so a malformed stored value flipped it back ON and
+   contradicted DEFAULT_SETTINGS. Only a literal true may enable it. */
+check(normDefault.titleGenerationEnabled === false, "normalize({}): title generation OFF by default (no second request per session)");
+check(normalizeLoadedSettings({ titleGenerationEnabled: true }).titleGenerationEnabled === true, "normalize: title generation honours an explicit true");
+check(normalizeLoadedSettings({ titleGenerationEnabled: false }).titleGenerationEnabled === false, "normalize: title generation honours an explicit false");
+for (const junk of [null, 0, "", "no", "false", {}]) {
+	check(
+		normalizeLoadedSettings({ titleGenerationEnabled: junk }).titleGenerationEnabled === false,
+		`normalize: malformed title-generation value ${JSON.stringify(junk)} does NOT silently enable the second request`
+	);
+}
+
 /* v0.1.175: compression target_ratio default + out-of-range → fallback
    (same reject+fallback pattern as the sibling compressionThreshold) */
 check(normDefault.compressionTargetRatio === 0.2, "normalize({}): compression target_ratio defaults to 0.20");
 check(normalizeLoadedSettings({ compressionTargetRatio: 0.9 }).compressionTargetRatio === 0.2, "normalize: target_ratio > 0.5 falls back to 0.20");
 check(normalizeLoadedSettings({ compressionTargetRatio: 0.01 }).compressionTargetRatio === 0.2, "normalize: target_ratio < 0.05 falls back to 0.20");
 check(normalizeLoadedSettings({ compressionTargetRatio: "junk" }).compressionTargetRatio === 0.2, "normalize: malformed target_ratio falls back to 0.20");
+
+/* v0.1.193: threshold/protect_last_n realigned to Hermes config_defaults
+   (compression.threshold 0.50, compression.protect_last_n 20; verified
+   2026-08-24). At the old 0.8/4 a chat compacted very late and kept almost
+   nothing, so a long session could overflow the provider window mid-tool-call.
+   Both the default AND the sanitize fallback must land on the new value —
+   they used to be two separate literals, which is exactly how they drift. */
+check(normDefault.compressionThreshold === 0.5, "normalize({}): compression threshold defaults to 0.50 (Hermes)");
+check(normDefault.compressionProtectLastN === 20, "normalize({}): protect_last_n defaults to 20 (Hermes)");
+check(normalizeLoadedSettings({ compressionThreshold: 1.5 }).compressionThreshold === 0.5, "normalize: out-of-range threshold falls back to 0.50");
+check(normalizeLoadedSettings({ compressionThreshold: "junk" }).compressionThreshold === 0.5, "normalize: malformed threshold falls back to 0.50");
+check(normalizeLoadedSettings({ compressionProtectLastN: 99 }).compressionProtectLastN === 20, "normalize: out-of-range protect_last_n falls back to 20");
+check(normalizeLoadedSettings({ compressionProtectLastN: "junk" }).compressionProtectLastN === 20, "normalize: malformed protect_last_n falls back to 20");
+/* a vault that already saved a legal value keeps it — this is a default
+   change, not a forced migration */
+check(normalizeLoadedSettings({ compressionThreshold: 0.8 }).compressionThreshold === 0.8, "normalize: saved threshold 0.80 survives the default change");
+check(normalizeLoadedSettings({ compressionProtectLastN: 4 }).compressionProtectLastN === 4, "normalize: saved protect_last_n 4 survives the default change");
 
 /* v0.1.150 appearance: enums fall back to defaults, default-ON toggles keep
    current behaviour when absent, default-OFF toggles fail closed. */

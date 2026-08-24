@@ -31,14 +31,24 @@ interface ChildLike {
 	stdin: { write: (d: string) => void; end: () => void };
 	stdout: { on: (ev: string, cb: (d: Buffer | string) => void) => void };
 	stderr: { on: (ev: string, cb: (d: Buffer | string) => void) => void };
-	on: (ev: string, cb: (code: number | null) => void) => void;
+	on: (ev: string, cb: (arg: never) => void) => void;
 	kill: (sig?: string) => void;
 }
+
+/**
+ * Hard ceiling on unparsed stdout held in memory (v0.1.152). A well-behaved
+ * MCP server emits newline-delimited JSON, so the buffer only ever holds one
+ * partial line; a server that streams without newlines would otherwise grow it
+ * without bound for as long as the plugin stays loaded. terminal/service.ts
+ * caps its child output the same way.
+ */
+export const MCP_STDIO_MAX_BUFFER = 8 * 1024 * 1024;
 
 class StdioTransport implements McpTransport {
 	private child: ChildLike | null = null;
 	private buffer = "";
 	private lineCb: ((line: string) => void) | null = null;
+	private errorCb: ((err: Error) => void) | null = null;
 
 	constructor(
 		private cp: { spawn: (cmd: string, args: string[], opts: Record<string, unknown>) => ChildLike },
@@ -48,11 +58,29 @@ class StdioTransport implements McpTransport {
 	) {}
 
 	start(): void {
-		const child = this.cp.spawn(this.command, this.args, {
-			env: this.env,
-			stdio: ["pipe", "pipe", "pipe"],
-		});
+		let child: ChildLike;
+		try {
+			child = this.cp.spawn(this.command, this.args, {
+				env: this.env,
+				stdio: ["pipe", "pipe", "pipe"],
+			});
+		} catch (err) {
+			/* Some runtimes throw synchronously (EACCES on a non-executable
+			   path). Report it on the same channel as the async failure so
+			   callers have exactly one thing to handle. */
+			this.fail(err);
+			return;
+		}
 		this.child = child;
+		/* MUST come before any other wiring: spawn reports an unusable command
+		   through an ASYNCHRONOUS "error" event. With no listener, EventEmitter
+		   promotes it to an uncaught exception that takes down the whole
+		   Obsidian process — a try/catch at the caller cannot see it, because
+		   the throw lands long after start() returned. */
+		child.on("error", (err: never) => {
+			this.child = null;
+			this.fail(err);
+		});
 		child.stdout.on("data", (chunk: Buffer | string) => this.feed(String(chunk)));
 		child.stderr.on("data", () => {
 			/* stderr is diagnostics, never protocol — deliberately ignored */
@@ -63,11 +91,29 @@ class StdioTransport implements McpTransport {
 	}
 
 	send(json: string): void {
-		this.child?.stdin.write(json + "\n");
+		try {
+			this.child?.stdin.write(json + "\n");
+		} catch (err) {
+			/* EPIPE: the server died between our liveness check and the write. */
+			this.fail(err);
+		}
 	}
 
 	onLine(cb: (line: string) => void): void {
 		this.lineCb = cb;
+	}
+
+	onError(cb: (err: Error) => void): void {
+		this.errorCb = cb;
+	}
+
+	/** Test seam: how much unparsed stdout is currently held. */
+	bufferLength(): number {
+		return this.buffer.length;
+	}
+
+	private fail(err: unknown): void {
+		this.errorCb?.(err instanceof Error ? err : new Error(String(err)));
 	}
 
 	close(): void {
@@ -88,5 +134,9 @@ class StdioTransport implements McpTransport {
 			this.buffer = this.buffer.slice(idx + 1);
 			if (line.trim()) this.lineCb?.(line);
 		}
+		/* No newline in sight and the buffer is past the ceiling: this is not
+		   framed JSON-RPC. Drop what we hold — keeping a prefix of a line we
+		   can never complete only leaks memory. */
+		if (this.buffer.length > MCP_STDIO_MAX_BUFFER) this.buffer = "";
 	}
 }

@@ -152,7 +152,11 @@ export function parseCronExpr(expr: string): CronFields {
 	};
 }
 
-export function validateCronExpr(expr: string): { ok: boolean; error?: string } {
+/** Discriminated so `!v.ok` narrows `v.error` to a real string — callers assign it
+ *  straight to `textContent`, which does not accept `undefined`. */
+export type CronExprValidation = { ok: true } | { ok: false; error: string };
+
+export function validateCronExpr(expr: string): CronExprValidation {
 	try {
 		parseCronExpr(expr);
 		return { ok: true };

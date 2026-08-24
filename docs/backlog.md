@@ -12,6 +12,24 @@ Ide yang sengaja **ditunda**, bukan dikerjakan sekarang. Tiap entri mencatat: ke
 
 > **STATUS: aktif dipakai mulai 2026-07-19.**
 
+## Batas atas "Protected recent messages" (0–24) — DITUNDA (2026-08-24)
+
+Default naik ke **20** (paritas Hermes: `protect_last_n: 20`), tapi slider dan
+sanitize (`src/settings.ts` L1262-1264) masih meng-clamp di **0–24** — sisa
+ruang cuma 4 langkah di atas default, jadi slider terasa mentok.
+
+**Kenapa ditunda**: menaikkan max mengubah rentang tersimpan yang sudah
+di-pin tiga guard (`test/settings.test.cjs` v0.1.193, smoke v0.1.193,
+probe `F15knobs` `prot.max === "24"`). Hermes sendiri tidak menetapkan max —
+di sana form-nya schema-driven, jadi tidak ada angka upstream untuk disalin.
+Tanpa angka rujukan, memilih 48/64/100 = tebakan.
+
+**Alternatif murah (sekarang)**: biarkan. Default 20 valid, clamp tidak
+pernah menolak nilai sah, dan nilai vault lama (mis. 4) tetap hidup.
+
+**Kapan diangkat**: saat ada keluhan nyata "tidak bisa naik" atau saat
+Hermes memublikasikan batas resmi.
+
 ## Vector / embeddings index — DITUNDA (2026-07-19)
 
 **Ide**: index semantik vault (embeddings + cosine search) ala Smart Connections/Copilot, untuk pencarian konseptual dan Vault QA.

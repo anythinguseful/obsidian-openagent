@@ -63,6 +63,7 @@ export class ChatView extends ItemView {
 				runner={this.plugin.runner}
 				sessions={this.plugin.sessionStore}
 				saveSettings={() => this.plugin.saveSettings()}
+				saveSettingsSafe={() => this.plugin.saveSettingsSafe()}
 				openSettings={(section?: string) => this.plugin.openSettings(section)}
 				applyProfile={(id: string) => this.plugin.applyProfile(id)}
 				renderComponent={this.renderComponent}
@@ -108,6 +109,7 @@ export class ChatView extends ItemView {
 				runner={this.plugin.runner}
 				sessions={this.plugin.sessionStore}
 				saveSettings={() => this.plugin.saveSettings()}
+				saveSettingsSafe={() => this.plugin.saveSettingsSafe()}
 				openSettings={(section?: string) => this.plugin.openSettings(section)}
 				applyProfile={(id: string) => this.plugin.applyProfile(id)}
 				renderComponent={this.renderComponent}

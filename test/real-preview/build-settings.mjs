@@ -645,20 +645,35 @@ async function main() {
 
 		/* F44 — v0.1.179 embedding model picker: a DROPDOWN (not a text input),
 		   seeded from the active provider's catalog, with an "off" option and
-		   the current value kept visible. */
+		   the current value kept visible.
+		   2026-08-24 (v0.1.152, owner "ada main model dan embedding model"): the
+		   row lives in the MODEL tab now and carries its own provider dropdown,
+		   so the page opened here moves with it. */
 		{
-			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory");
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "model"), "model");
 			const emb = await page.evaluate(() => {
 				const row = [...document.querySelectorAll(".setting-item")].find(
 					(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Embedding model"
 				);
-				const sel = row?.querySelector("select");
+				const sel = [...(row?.querySelectorAll("select") ?? [])].find(
+					(x) => x.getAttribute("aria-label") === "Embedding model"
+				);
+				const provSel = [...(row?.querySelectorAll("select") ?? [])].find(
+					(x) => x.getAttribute("aria-label") === "Embedding provider"
+				);
 				const textInput = row?.querySelector("input[type=text], input:not([type])");
 				return {
 					present: !!sel,
 					isTextInput: !!textInput,
 					value: sel?.value ?? null,
 					options: sel ? [...sel.options].map((o) => o.text) : [],
+					/* v0.1.152: the pair half — a provider dropdown beside the model,
+					   exactly like the main model pick */
+					providerPresent: !!provSel,
+					providerOptions: provSel ? [...provSel.options].map((o) => o.text) : [],
+					applyPresent: [...(row?.querySelectorAll("button") ?? [])].some(
+						(b) => (b.textContent ?? "").trim() === "Apply"
+					),
 					desc: (row?.querySelector(".setting-item-description")?.textContent ?? "").trim(),
 				};
 			});
@@ -670,6 +685,8 @@ async function main() {
 					emb.value === "" &&
 					emb.options.includes("off (keyword recall only)") &&
 					emb.options.includes("gemma-4-e4b-uncensored-hauway-qat-4b") &&
+					emb.providerPresent === true &&
+					emb.applyPresent === true &&
 					emb.desc.includes("Pick a model"),
 				...emb,
 			};
@@ -704,23 +721,24 @@ async function main() {
 					);
 				};
 				return {
-					thrNum: numVal("Compress when above"),
-					thrUnit: unitShown("Compress when above"),
-					thrUnitInside: unitInside("Compress when above"),
-					thrRange: rangeVal("Compress when above"),
-					tailNum: numVal("Preserve recent tail"),
-					tailUnit: unitShown("Preserve recent tail"),
-					tailUnitInside: unitInside("Preserve recent tail"),
-					tailRange: rangeVal("Preserve recent tail"),
+					thrNum: numVal("Compression threshold"),
+					thrUnit: unitShown("Compression threshold"),
+					thrUnitInside: unitInside("Compression threshold"),
+					thrRange: rangeVal("Compression threshold"),
+					tailNum: numVal("Compression target"),
+					tailUnit: unitShown("Compression target"),
+					tailUnitInside: unitInside("Compression target"),
+					tailRange: rangeVal("Compression target"),
 				};
 			});
 			await page.close();
 			probes.F45pctSlider = {
 				fixed:
-					pct.thrNum === "80" &&
+					/* 2026-08-24: default realigned to Hermes (0.50) */
+					pct.thrNum === "50" &&
 					pct.thrUnit === true &&
 					pct.thrUnitInside === true &&
-					pct.thrRange === "80" &&
+					pct.thrRange === "50" &&
 					pct.tailNum === "20" &&
 					pct.tailUnit === true &&
 					pct.tailUnitInside === true &&
@@ -729,7 +747,7 @@ async function main() {
 			};
 		}
 
-		/* F46 — v0.1.187 reset button: change Memory Budget → re-render → the
+		/* F46 — v0.1.187 reset button: change Memory budget → re-render → the
 		   ↺ button + modified-dot appear → click → value reverts to default
 		   and the button disappears. Real-DOM proof of the whole loop. */
 		{
@@ -737,7 +755,7 @@ async function main() {
 			const r = await page.evaluate(() => {
 				const row = () =>
 					[...document.querySelectorAll(".setting-item")].find(
-						(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Memory Budget"
+						(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Memory budget"
 					);
 				const setVal = (v) => {
 					const input = row()?.querySelector('input[type="number"]');
@@ -1210,14 +1228,57 @@ async function main() {
 			await page.close();
 		}
 
-		// F15 — Context & compression knobs + auxiliary-model slots (v0.1.17,
-		// Hermes Desktop aux parity): all four knobs exist with the shipped
-		// ranges/defaults; both aux rows start un-pinned ("auto (use main)",
+		// F15knobs — context & compression knobs, now on the Memory & Context
+		// page (2026-08-24 dedupe: the Model tab used to render its own copy
+		// of three of these rows, writing the SAME setting keys from two
+		// places). This half of the old F15 asserts the knobs survived the
+		// move with the Hermes-aligned defaults (threshold 0.50,
+		// protect_last_n 20) and that "Context window" leads the group.
+		{
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory-knobs");
+			const findRowM = `(name) => [...document.querySelectorAll(".setting-item")].find((el) => el.querySelector(".setting-item-name")?.textContent?.trim() === name)`;
+			probes.F15knobs = await page.evaluate((findRowSrc) => {
+				const findRow = eval(findRowSrc);
+				const ctx = document.querySelector('input[aria-label="Context window"]');
+				const enable = findRow("Auto-compression")?.querySelector('.checkbox-container input[type="checkbox"]');
+				const thr = findRow("Compression threshold")?.querySelector('input[type="range"]');
+				const prot = findRow("Protected recent messages")?.querySelector('input[type="range"]');
+				const protNum = findRow("Protected recent messages")?.querySelector('input[type="number"]');
+				/* row order inside the Compression group: the threshold is a
+				   percentage OF the context window, so the window comes first */
+				const rows = [...document.querySelectorAll(".setting-item-name")].map((n) => n.textContent?.trim());
+				return {
+					ctx: !!ctx && ctx.placeholder === "0 = auto",
+					enableOn: enable ? enable.checked : null,
+					thr: thr ? { min: thr.min, max: thr.max, step: thr.step, value: thr.value } : null,
+					prot: prot ? { min: prot.min, max: prot.max, value: prot.value } : null,
+					protNum: protNum?.value ?? null,
+					order:
+						rows.indexOf("Context window") >= 0 &&
+						rows.indexOf("Context window") < rows.indexOf("Auto-compression") &&
+						rows.indexOf("Auto-compression") < rows.indexOf("Compression threshold"),
+					/* the Model tab's duplicate is asserted by F15.gone, which runs
+					   ON that page; a constant here would assert nothing. */
+				};
+			}, findRowM);
+			const k = probes.F15knobs;
+			k.fixed =
+				k.ctx && k.enableOn === true &&
+				k.thr?.min === "10" && k.thr?.max === "99" && k.thr?.step === "1" && k.thr?.value === "50" &&
+				k.prot?.min === "0" && k.prot?.max === "24" && k.prot?.value === "20" && k.protNum === "20" &&
+				k.order;
+			await page.close();
+		}
+
+		// F15 — auxiliary-model slots (v0.1.17, Hermes Desktop aux parity):
+		// both aux rows start un-pinned ("auto (use main)",
 		// Set-to-main disabled); Change opens an inline provider+model pick
 		// INSIDE that row (the main global pick also has a commit button —
 		// every lookup stays row-scoped); switching the provider clears the
 		// model draft (Apply disabled, nothing written); Apply pins the pair
 		// without touching the main model; Set to main restores auto.
+		// 2026-08-24: the knob half moved to F15knobs (Memory & Context); the
+		// compression MODEL slot deliberately stays here.
 		{
 			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "model"), "model");
 			/* v0.1.154 amended: the title flow has TWO rows — the enable toggle
@@ -1228,18 +1289,16 @@ async function main() {
 			const findRow = `(name, aux) => [...document.querySelectorAll(".setting-item")].find((el) => el.querySelector(".setting-item-name")?.textContent?.trim() === name && (!aux || [...el.querySelectorAll("button")].some((b) => (b.textContent ?? "").trim() === "Set to main")))`;
 			const before = await page.evaluate((findRowSrc) => {
 				const findRow = eval(findRowSrc);
-				const ctx = document.querySelector('input[aria-label="Context window"]');
-				const enable = findRow("Enable compression")?.querySelector('.checkbox-container input[type="checkbox"]');
-				const thr = findRow("Compression threshold")?.querySelector('input[type="range"]');
-				const prot = findRow("Protected tail messages")?.querySelector('input[type="range"]');
 				const comp = findRow("Compression");
 				const title = findRow("Title model", true);
 				const setMain = (row) => [...(row?.querySelectorAll("button") ?? [])].find((b) => (b.textContent ?? "").trim() === "Set to main");
+				/* the duplicated knobs must NOT be on this page any more */
+				const gone =
+					!document.querySelector('input[aria-label="Context window"]') &&
+					!findRow("Enable compression") && !findRow("Compression threshold") &&
+					!findRow("Protected tail messages");
 				return {
-					ctx: !!ctx && ctx.placeholder === "0 = auto",
-					enableOn: enable ? enable.checked : null,
-					thr: thr ? { min: thr.min, max: thr.max, step: thr.step, value: thr.value } : null,
-					prot: prot ? { min: prot.min, max: prot.max, value: prot.value } : null,
+					gone,
 					compAuto: comp?.textContent.includes("auto (use main)") ?? false,
 					titleAuto: title?.textContent.includes("auto (use main)") ?? false,
 					compSetMainDisabled: setMain(comp)?.disabled ?? null,
@@ -1312,9 +1371,7 @@ async function main() {
 			}, findRow);
 			const b = probes.F15.before, m = probes.F15.mid, a = probes.F15.after, r = probes.F15.restored;
 			probes.F15.fixed =
-				b.ctx && b.enableOn === true &&
-				b.thr?.min === "0.5" && b.thr?.max === "0.95" && b.thr?.step === "0.05" && b.thr?.value === "0.8" &&
-				b.prot?.min === "0" && b.prot?.max === "12" && b.prot?.value === "4" &&
+				b.gone &&
 				b.compAuto && b.titleAuto && b.compSetMainDisabled === true && b.titleSetMainDisabled === true && b.auxEmpty &&
 				Array.isArray(m.modelOpts) && m.modelOpts.length === 1 && m.modelOpts[0] === "meta-llama/llama-3.3-70b-instruct" &&
 				m.applyDisabled === true && m.untouched &&

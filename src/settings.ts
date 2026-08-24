@@ -760,6 +760,11 @@ export interface OpenAgentSettings {
 	memoryEngineRecallMax: number;
 	/** v0.1.178 optional embedding model name (semantic recall); "" = off */
 	memoryEngineEmbedModel: string;
+	/** v0.1.152 provider the embedding model runs on; "" = follow the chat provider.
+	 *  Embedding is its OWN pair (owner 2026-08-24: "ada main model dan embedding
+	 *  model") because an embedding endpoint is usually a different, local server
+	 *  than the chat model. */
+	memoryEngineEmbedProviderId: string;
 
 	// ── Sessions ─────────────────────────────────────────────
 	saveSessions: boolean;
@@ -886,8 +891,12 @@ export const DEFAULT_SETTINGS: OpenAgentSettings = {
 
 	modelContextLength: 0,
 	compressionEnabled: true,
-	compressionThreshold: 0.8,
-	compressionProtectLastN: 4,
+	/* Hermes parity (config_defaults compression.*): threshold 0.50 and
+	   protect_last_n 20. Verified 2026-08-24 against the upstream docs table.
+	   Saved vaults keep whatever they already persisted — only fresh installs
+	   and an explicit ↺ reset land on these. */
+	compressionThreshold: 0.5,
+	compressionProtectLastN: 20,
 	compressionTargetRatio: 0.2,
 	auxModels: {},
 	moa: null,
@@ -972,6 +981,7 @@ export const DEFAULT_SETTINGS: OpenAgentSettings = {
 	memoryEngineRetainEveryN: 1,
 	memoryEngineRecallMax: 8,
 	memoryEngineEmbedModel: "",
+	memoryEngineEmbedProviderId: "",
 
 	saveSessions: true,
 	sessionsFolder: "openagent/openagent-sessions",
@@ -1232,7 +1242,7 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 	s.providers = PROVIDER_PRESETS.map((preset) => {
 		const found = loaded.find((p: any) => p?.id === preset.id);
 		return found
-			? { ...preset, ...found, customHeaders: { ...preset.customHeaders, ...(found.customHeaders ?? {}) } }
+			? { ...preset, ...found, customHeaders: { ...preset.customHeaders, ...(sanitizeCustomHeaders(found.customHeaders) ?? {}) } }
 			: { ...preset, customHeaders: { ...preset.customHeaders } };
 	});
 	// per-provider model catalogs (Hermes Desktop parity, v0.1.14): sanitize
@@ -1246,20 +1256,41 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 	/* context & compression (v0.1.17): clamps + stale aux pins return to auto */
 	s.modelContextLength = Math.max(0, Math.floor(Number(s.modelContextLength) || 0));
 	s.compressionEnabled = s.compressionEnabled !== false;
+	/* fallbacks read DEFAULT_SETTINGS rather than repeating the literal, so a
+	   default change (e.g. the 2026-08-24 Hermes alignment 0.8→0.5, 4→20)
+	   cannot leave the reject path pointing at the retired value. */
 	{
 		const t = Number(s.compressionThreshold);
-		s.compressionThreshold = Number.isFinite(t) && t >= 0.1 && t <= 0.99 ? t : 0.8;
+		s.compressionThreshold =
+			Number.isFinite(t) && t >= 0.1 && t <= 0.99 ? t : DEFAULT_SETTINGS.compressionThreshold;
 	}
 	{
 		const n = Math.floor(Number(s.compressionProtectLastN));
-		s.compressionProtectLastN = Number.isFinite(n) && n >= 0 && n <= 24 ? n : 4;
+		s.compressionProtectLastN =
+			Number.isFinite(n) && n >= 0 && n <= 24 ? n : DEFAULT_SETTINGS.compressionProtectLastN;
 	}
 	{
 		const r = Number(s.compressionTargetRatio);
-		s.compressionTargetRatio = Number.isFinite(r) && r >= 0.05 && r <= 0.5 ? r : 0.2;
+		s.compressionTargetRatio =
+			Number.isFinite(r) && r >= 0.05 && r <= 0.5 ? r : DEFAULT_SETTINGS.compressionTargetRatio;
 	}
-	s.titleGenerationEnabled = s.titleGenerationEnabled !== false;
+	/* v0.1.152 (latency): title generation is a SECOND request to the main
+	   model on every new session — Lesson 121 turned it off by default for
+	   exactly that reason. The old `!== false` idiom encodes "default true",
+	   so any malformed stored value (null, 0, "", "no") silently flipped it
+	   back ON and contradicted DEFAULT_SETTINGS. Only a literal `true` may
+	   enable it; everything else falls back to the default. */
+	s.titleGenerationEnabled = inRaw.titleGenerationEnabled === true;
 	s.auxModels = sanitizeAuxModels(inRaw.auxModels, s.providers);
+	/* v0.1.152 embedding pin: same stale-pin hygiene as the aux slots — it
+	   survives only while its provider still exists WITH a base URL, else it
+	   falls back to the chat provider. This MUST sit after the preset merge
+	   above: run any earlier and `s.providers` is still the default list, so
+	   every user-added provider id would look dangling and be wiped. */
+	{
+		const embProv = typeof inRaw.memoryEngineEmbedProviderId === "string" ? inRaw.memoryEngineEmbedProviderId.trim() : "";
+		s.memoryEngineEmbedProviderId = s.providers.some((p) => p.id === embProv && p.baseUrl.trim()) ? embProv : "";
+	}
 	/* MoA (v0.1.29): tolerate hand-edited data.json — a present but junk
 	   config normalizes to the default preset; absent/null stays null so
 	   the virtual provider only appears once the user has SAVED a preset
@@ -1339,6 +1370,23 @@ export const EXPORT_SCHEMA_VERSION = 1;
 
 /** Header names that may carry credentials — redacted alongside apiKey. */
 const SENSITIVE_HEADER_RE = /^(authorization|x-api-key|proxy-authorization|cookie)$/i;
+/** `JSON.parse` accepts far more than an object: `null`, `123`, `"halo"` and
+ * `[1,2]` are all valid JSON. The Custom headers field stored whatever came
+ * back, so typing `null` crashed the next Settings render on
+ * `Object.keys(null)`, and a bare string spread into per-character headers
+ * (`{"0":"h","1":"a",…}`) that were then sent on every provider request. Only
+ * a plain object of string values is a header map — anything else is rejected
+ * here, at the boundary, so neither the UI nor the wire ever sees it. */
+export function sanitizeCustomHeaders(value: unknown): Record<string, string> | null {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+	const out: Record<string, string> = {};
+	for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+		if (!k.trim() || typeof v !== "string") return null;
+		out[k] = v;
+	}
+	return out;
+}
+
 /** Env-var names that are almost always credentials — blanked on export. */
 const SENSITIVE_ENV_RE = /(api[_-]?key|secret|token|password|passwd|credential|bearer)/i;
 
@@ -1361,11 +1409,19 @@ export function redactSettingsSecrets(s: OpenAgentSettings): OpenAgentSettings {
 	   credentials — blank anything secret-shaped on export, same as provider
 	   keys. */
 	for (const srv of Object.values(clone.mcpServers ?? {})) {
-		for (const k of Object.keys(srv.env ?? {})) {
-			if (SENSITIVE_ENV_RE.test(k)) srv.env[k] = "";
+		/* Bind the maps once: the loop body writes back into them, and the reader
+		   must see the same object the keys came from. */
+		const env = srv.env;
+		if (env) {
+			for (const k of Object.keys(env)) {
+				if (SENSITIVE_ENV_RE.test(k)) env[k] = "";
+			}
 		}
-		for (const k of Object.keys(srv.headers ?? {})) {
-			if (SENSITIVE_HEADER_RE.test(k)) srv.headers[k] = "";
+		const headers = srv.headers;
+		if (headers) {
+			for (const k of Object.keys(headers)) {
+				if (SENSITIVE_HEADER_RE.test(k)) headers[k] = "";
+			}
 		}
 	}
 	return clone;

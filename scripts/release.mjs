@@ -57,6 +57,7 @@ if (useGithubCiProof) {
 } else {
 	step("PDF security browser", "npm", ["run", "test:pdf-security"]);
 }
+step("floating promises", "npm", ["run", "check:promises"]);
 step("source/docs", "npm", ["run", "check:docs"]);
 step("development skills", "npm", ["run", "check:skills"]);
 

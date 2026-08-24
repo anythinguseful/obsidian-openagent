@@ -184,7 +184,11 @@ export class AgentLoop {
 		const tool = this.tools.find((t) => t.name === name);
 		let args: Record<string, any> = {};
 		try {
-			args = argsJson ? JSON.parse(argsJson) : {};
+			/* A model can emit `null`, a number or a bare string as tool arguments:
+			   valid JSON, not an argument object. `null` in particular parsed
+			   cleanly and then threw on the first property read downstream. */
+			const parsed = argsJson ? JSON.parse(argsJson) : {};
+			if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed;
 		} catch {
 			/* tolerate malformed args */
 		}

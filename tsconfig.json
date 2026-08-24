@@ -10,7 +10,7 @@
 		"moduleResolution": "node",
 		"importHelpers": true,
 		"isolatedModules": true,
-		"strictNullChecks": false,
+		"strictNullChecks": true,
 		"jsx": "react-jsx",
 		"esModuleInterop": true,
 		"skipLibCheck": true,

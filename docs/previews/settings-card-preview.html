@@ -407,10 +407,9 @@
           <div class="oa-row-info"><div class="oa-row-name">Recall budget</div><div class="oa-row-desc">Maximum facts recalled and injected per message.</div></div>
           <div class="oa-row-control"><div class="slider"><input type="range" min="1" max="20" value="8"><span class="numwrap"><input type="number" value="8"></span></div></div>
         </div>
-        <div class="oa-row">
-          <div class="oa-row-info"><div class="oa-row-name">Embedding model</div><div class="oa-row-desc">Pick a model to enable semantic recall — off = keyword recall only.</div></div>
-          <div class="oa-row-control"><select><option>off (keyword recall only)</option><option>embedding-gemma-300m</option></select></div>
-        </div>
+        <!-- "Embedding model" moved to Settings → Model (2026-08-24): it is now a
+             peer of the main model picker, with its own provider dropdown + Apply.
+             This mockup has no Model card, so the row is not reproduced here. -->
       </div>
     </div>
 
@@ -421,20 +420,24 @@
       </div>
       <div class="oa-card-body">
         <div class="oa-row">
-          <div class="oa-row-info"><div class="oa-row-name">Compression</div><div class="oa-row-desc">Summarize older context when conversations get large.</div></div>
+          <div class="oa-row-info"><div class="oa-row-name">Context window</div><div class="oa-row-desc">Tokens the model can see at once. 0 = auto-detect (falls back to 256000).</div></div>
+          <div class="oa-row-control"><input type="text" placeholder="0 = auto"></div>
+        </div>
+        <div class="oa-row">
+          <div class="oa-row-info"><div class="oa-row-name">Auto-compression</div><div class="oa-row-desc">Summarize older context when conversations get large.</div></div>
           <div class="oa-row-control"><span class="toggle on"></span></div>
         </div>
         <div class="oa-row">
-          <div class="oa-row-info"><div class="oa-row-name">Compress when above</div><div class="oa-row-desc">Start compacting once the conversation fills this share of the context window.</div></div>
-          <div class="oa-row-control"><div class="slider"><input type="range" min="10" max="99" value="80"><span class="numwrap has-unit"><input type="number" value="80"><span class="unit">%</span></span></div></div>
+          <div class="oa-row-info"><div class="oa-row-name">Compression threshold</div><div class="oa-row-desc">Start compacting once the conversation fills this share of the context window.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="10" max="99" value="50"><span class="numwrap has-unit"><input type="number" value="50"><span class="unit">%</span></span></div></div>
         </div>
         <div class="oa-row">
-          <div class="oa-row-info"><div class="oa-row-name">Preserve recent tail</div><div class="oa-row-desc">Keep this share of the most recent messages untouched when compressing.</div></div>
+          <div class="oa-row-info"><div class="oa-row-name">Compression target</div><div class="oa-row-desc">Keep this share of the most recent messages untouched when compressing.</div></div>
           <div class="oa-row-control"><div class="slider"><input type="range" min="5" max="50" value="20"><span class="numwrap has-unit"><input type="number" value="20"><span class="unit">%</span></span></div></div>
         </div>
         <div class="oa-row">
-          <div class="oa-row-info"><div class="oa-row-name">Keep last N messages</div><div class="oa-row-desc">Minimum recent messages never folded into the summary.</div></div>
-          <div class="oa-row-control"><div class="slider"><input type="range" min="0" max="24" value="4"><span class="numwrap"><input type="number" value="4"></span></div></div>
+          <div class="oa-row-info"><div class="oa-row-name">Protected recent messages</div><div class="oa-row-desc">Minimum recent messages never folded into the summary.</div></div>
+          <div class="oa-row-control"><div class="slider"><input type="range" min="0" max="24" value="20"><span class="numwrap"><input type="number" value="20"></span></div></div>
         </div>
       </div>
     </div>

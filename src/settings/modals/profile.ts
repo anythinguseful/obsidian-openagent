@@ -4,6 +4,7 @@ import { buildProfileExport, type AgentProfile, type ProfileExportSkill } from "
 import type OpenAgentPlugin from "../../main";
 import { Skill, SkillsStore } from "../../agent/skills";
 import { skillsFolderFor } from "../../agent/profiles";
+import { copyText } from "../../ui/clipboard";
 
 export class ConfirmProfileDeleteModal extends Modal {
 	constructor(app: App, private profile: AgentProfile, private onDone: (trashFolders: boolean) => void) {
@@ -38,17 +39,7 @@ function exportStamp(): string {
 	return new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
 }
 
-async function copyText(text: string): Promise<void> {
-	try { await navigator.clipboard.writeText(text); }
-	catch {
-		const ta = document.createElement("textarea");
-		ta.value = text;
-		document.body.appendChild(ta);
-		ta.select();
-		document.execCommand("copy");
-		ta.remove();
-	}
-}
+
 
 export class ProfileExportModal extends Modal {
 	constructor(app: App, private plugin: OpenAgentPlugin, private profile: AgentProfile) {
