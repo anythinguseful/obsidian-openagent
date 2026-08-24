@@ -1,5 +1,15 @@
 {
   "at": "2026-08-23T13:14:51.624Z",
+  "_stale": {
+    "staleAsOf": "91f9177",
+    "recordedAt": "2026-08-23T13:14:51.624Z",
+    "why": "This witness predates two shipped UI changes; regenerating it needs headless Chromium, which could not be installed in the authoring sandbox (playwright browser download blocked, ECONNRESET).",
+    "knownDrift": [
+      "F13.names still lists 'Embedding model' inside Memory & Context; 91f9177 moved that picker to Settings -> Model as a peer of the main model picker.",
+      "F13.names still shows Title Case 'Memory Budget' / 'Profile Budget'; 07d066f sentence-cased them to 'Memory budget' / 'Profile budget'."
+    ],
+    "howToClear": "Run `node test/real-preview/build-settings.mjs` on a machine with Chromium available, then commit the rewritten witness. planSettingsWitnessUpdate rewrites the file as {at, probes} only, so this _stale block disappears by itself once the witness is regenerated."
+  },
   "probes": {
     "F1": {
       "status": "absent-field"
