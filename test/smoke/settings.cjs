@@ -2431,5 +2431,29 @@ module.exports = function settingsGuards() {
 			failed++;
 		}
 	}
+	// Settings visual grouping: named subsections own their following direct
+	// siblings inside a quiet shell; ordinary values remain native rows, while
+	// MCP servers and cron tasks are stronger managed objects.
+	{
+		const tab = read("src/settingsTab.ts");
+		const css = read("styles.css");
+		const ok =
+			tab.includes("this.groupSubsections(content);") &&
+			tab.includes("private groupSubsections(content: HTMLElement): void") &&
+			tab.includes('group.className = "oa-settings-group"') &&
+			tab.includes('const taskCard = containerEl.createDiv({ cls: "oa-cron-task" });') &&
+			tab.includes("this.cronHistory(taskCard, task)") &&
+			css.includes(".oa-settings .oa-settings-group {") &&
+			css.includes(".oa-settings .oa-settings-group > .oa-subsection {") &&
+			css.includes(".oa-settings .oa-settings-group > .setting-item + .setting-item {") &&
+			css.includes(".oa-settings .oa-cron-task {") &&
+			css.includes(".oa-settings .oa-mcp-server .setting-item + .setting-item {");
+		if (ok) {
+			console.log("✓ Settings visual grouping: group shells keep native rows together and align MCP/cron managed objects");
+		} else {
+			console.error("✗ Settings visual grouping drifted");
+			failed++;
+		}
+	}
 	return failed;
 };

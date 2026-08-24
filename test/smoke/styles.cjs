@@ -494,7 +494,7 @@ module.exports = function stylesGuards() {
 			css22.includes(".oa-settings {\n\t--setting-items-radius: var(--radius-m, 8px);") &&
 			css22.includes(".oa-settings .oa-subsection {\n\tmargin-top: 28px;") &&
 			css22.includes("margin: 2px 0 8px;") &&
-			css22.includes(".oa-settings .oa-mcp-server {\n\tborder: 1px solid var(--background-modifier-border);\n\tborder-radius: var(--radius-m, 8px);\n\tpadding: 10px 12px;\n\tmargin-bottom: 6px;\n}") &&
+			css22.includes(".oa-settings .oa-mcp-server {\n\tborder: 1px solid var(--background-modifier-border);\n\tborder-radius: var(--radius-m, 8px);\n\tpadding: 0;\n\tmargin: 8px 12px;\n\tbackground: var(--background-primary);\n\toverflow: hidden;\n}") &&
 			css22.includes("\tborder-radius: var(--radius-s, 4px);\n}\n.oa-hub-chip-x:hover") &&
 			css22.includes("line-height: 1.5;\n\tpadding: 8px 10px;\n\tborder-radius: var(--radius-m, 8px);") &&
 			css22.includes("\tfont-size: var(--font-ui-smaller);\n\tpadding: 8px 10px;\n\tborder-radius: var(--radius-m, 8px);\n\tborder: 1px solid var(--background-modifier-border);\n\tbackground: var(--background-primary);\n\tcolor: var(--text-normal);\n\tresize: vertical;\n}") &&
