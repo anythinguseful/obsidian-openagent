@@ -1236,7 +1236,7 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 	s.providers = PROVIDER_PRESETS.map((preset) => {
 		const found = loaded.find((p: any) => p?.id === preset.id);
 		return found
-			? { ...preset, ...found, customHeaders: { ...preset.customHeaders, ...(found.customHeaders ?? {}) } }
+			? { ...preset, ...found, customHeaders: { ...preset.customHeaders, ...(sanitizeCustomHeaders(found.customHeaders) ?? {}) } }
 			: { ...preset, customHeaders: { ...preset.customHeaders } };
 	});
 	// per-provider model catalogs (Hermes Desktop parity, v0.1.14): sanitize
@@ -1349,6 +1349,23 @@ export const EXPORT_SCHEMA_VERSION = 1;
 
 /** Header names that may carry credentials — redacted alongside apiKey. */
 const SENSITIVE_HEADER_RE = /^(authorization|x-api-key|proxy-authorization|cookie)$/i;
+/** `JSON.parse` accepts far more than an object: `null`, `123`, `"halo"` and
+ * `[1,2]` are all valid JSON. The Custom headers field stored whatever came
+ * back, so typing `null` crashed the next Settings render on
+ * `Object.keys(null)`, and a bare string spread into per-character headers
+ * (`{"0":"h","1":"a",…}`) that were then sent on every provider request. Only
+ * a plain object of string values is a header map — anything else is rejected
+ * here, at the boundary, so neither the UI nor the wire ever sees it. */
+export function sanitizeCustomHeaders(value: unknown): Record<string, string> | null {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+	const out: Record<string, string> = {};
+	for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+		if (!k.trim() || typeof v !== "string") return null;
+		out[k] = v;
+	}
+	return out;
+}
+
 /** Env-var names that are almost always credentials — blanked on export. */
 const SENSITIVE_ENV_RE = /(api[_-]?key|secret|token|password|passwd|credential|bearer)/i;
 

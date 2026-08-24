@@ -2397,5 +2397,29 @@ module.exports = function settingsGuards() {
 			failed++;
 		}
 	}
+	{
+		/* v0.1.152: `JSON.parse` accepts null/number/string/array, none of which is a
+		   header map. Typing `null` into Custom headers stored null and crashed the
+		   next Settings render on Object.keys(null); a bare string spread into
+		   per-character headers ({"0":"h",...}) sent on every provider request.
+		   Both boundaries must sanitize: the input site and the disk-load merge. */
+		const set = read("src/settings.ts");
+		const tab = read("src/settingsTab.ts");
+		const ok =
+			set.includes("export function sanitizeCustomHeaders(value: unknown): Record<string, string> | null") &&
+			set.includes("if (!value || typeof value !== \"object\" || Array.isArray(value)) return null;") &&
+			set.includes("if (!k.trim() || typeof v !== \"string\") return null;") &&
+			set.includes("...(sanitizeCustomHeaders(found.customHeaders) ?? {})") &&
+			tab.includes("const parsed = sanitizeCustomHeaders(JSON.parse(v));") &&
+			tab.includes("if (!parsed) return;") &&
+			!tab.includes("viewed.customHeaders = v.trim() ? JSON.parse(v) : {};") &&
+			!set.includes("...(found.customHeaders ?? {})");
+		if (ok) {
+			console.log("\u2713 v0.1.152: custom headers sanitized at both boundaries \u2014 non-object JSON cannot crash settings or reach the wire");
+		} else {
+			console.error("\u2717 v0.1.152 custom-header sanitize drifted (raw JSON.parse stored, or the load merge stopped sanitizing)");
+			failed++;
+		}
+	}
 	return failed;
 };

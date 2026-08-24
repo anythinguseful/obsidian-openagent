@@ -270,3 +270,63 @@ ada, kedua situs baca memakainya, normalisasi `parts` tetap utuh, dan jumlah
 cast `JSON.parse(...) as Session` **nol**. Red-proof tiga arah: mencabut
 sanitasi di `load()`, di `list()`, atau melemahkan normalisasi `parts`
 masing-masing memerahkan lane.
+
+## Putaran 3 — dimensi Q–V (2026-08-24)
+
+Catatan: dimensi "Q" dan "S" dari sesi lampau tidak pernah tertulis di dokumen
+ini dan isinya tidak terekam di manapun, jadi huruf-huruf itu **dipakai ulang**
+untuk pemeriksaan baru di bawah alih-alih mengarang isi lama.
+
+| Dim | Pemeriksaan | Mentah | Nyata | Hasil |
+|---|---|---|---|---|
+| Q | Comparator `sort()` mengembalikan boolean | 0 | 0 | Bersih |
+| R | Callback `async` di `forEach` (tak ditunggu) | 0 | 0 | Bersih |
+| S | `.replace()` pola string (hanya kemunculan pertama) | 6 | 0 | Semua atas `toISOString().slice(0,16)` — target tunggal |
+| T | Regex `/g` tersimpan (`lastIndex` stateful) | 4 | 0 | 2 mereset `lastIndex`, 2 memakai `matchAll`/`replace` |
+| U | Akses `[0]` tanpa cek panjang | 42 → 21 | 0 | `split()` selalu ≥1; `match[0]` dijaga `if`; `groups[0]` literal 4 elemen |
+| V | Parse JSON non-objek di batas input | 26 | **1** | **Bug nyata — SELESAI** |
+
+**T (regex stateful).** Empat regex `/g` disimpan di konstanta modul. Pola ini
+berbahaya karena `.test()`/`.exec()` berulang atas objek regex yang sama akan
+melanjutkan dari `lastIndex` sebelumnya dan melewatkan kecocokan secara
+bergantian. Keempatnya sudah aman: `AT_REF_RE` dan `MERMAID_TRAILING_PERCENT`
+menyetel `lastIndex = 0` tepat sebelum loop `exec`, sedangkan
+`SLASH_COMMAND_RE` dan `MERMAID_SUBGRAPH_LINE` dipakai lewat `matchAll()` dan
+`replace()` yang tidak terpengaruh state.
+
+**U (akses indeks 0).** Dari 42 kecocokan mentah, 21 benar-benar memakai
+hasilnya langsung. Semuanya terbukti aman atas alasan struktural, bukan
+kebetulan: `String.prototype.split()` **selalu** mengembalikan minimal satu
+elemen (walau string kosong), `match[0]` hanya diakses di dalam cabang yang
+sudah memastikan match tidak `null`, dan `groups[0]` menunjuk array literal
+beranggota empat. `memory.ts:111` (`hit[0].i`) didahului `if (hit.length === 0)`.
+
+**V (JSON non-objek di batas input) — satu bug nyata.**
+`JSON.parse` menerima jauh lebih banyak daripada objek: `null`, `123`, `"halo"`
+dan `[1,2]` semuanya JSON valid. Kolom **Custom headers** menyimpan apa pun yang
+kembali dari `JSON.parse(v)` tanpa memeriksa bentuknya.
+
+Direproduksi runtime:
+
+| Yang diketik | Akibat |
+|---|---|
+| `null` | tersimpan `null` → render Settings berikutnya crash: `Object.keys(null)` — `Cannot convert undefined or null to object` |
+| `"halo"` | tersebar jadi header per-karakter `{"0":"h","1":"a","2":"l","3":"o"}` — **dikirim ke provider di setiap request** |
+| `[1,2]` | jadi header `{"0":1,"1":2}` |
+| `123` | tersimpan senyap sebagai angka |
+
+Kasus `null` adalah crash yang terlihat; kasus string justru lebih buruk karena
+**senyap** — header sampah ikut terkirim ke jaringan tanpa gejala di UI.
+
+Perbaikan: `sanitizeCustomHeaders()` di `src/settings.ts` hanya menerima objek
+biasa yang seluruh nilainya string (kunci kosong ditolak), mengembalikan `null`
+untuk yang lain. Dipasang di **dua** batas — titik ketik (`settingsTab.ts`:
+input non-map tidak disimpan, pengguna dibiarkan lanjut mengetik) dan titik
+muat (`settings.ts`: merge preset, sehingga vault yang **sudah terlanjur**
+menyimpan nilai rusak ikut pulih saat load). Header sah lolos tanpa perubahan.
+
+Penjagaan: lane `v0.1.152` di `test/smoke/settings.cjs` menuntut helper ada,
+kedua batas memakainya, dan bentuk lama (`JSON.parse(v)` mentah, merge tanpa
+sanitasi) tidak bisa kembali. Red-proof tiga arah: mengembalikan parse mentah di
+input, mencabut sanitasi di merge, atau melemahkan cek nilai string —
+masing-masing memerahkan lane.

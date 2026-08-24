@@ -115,6 +115,7 @@ import {
 	ProfileExportSkill,
 	buildProfileExport,
 	DEFAULT_SETTINGS,
+	sanitizeCustomHeaders,
 } from "./settings";
 import { Skill, SkillsStore } from "./agent/skills";
 import {
@@ -835,7 +836,15 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						.setValue(Object.keys(viewed.customHeaders).length ? JSON.stringify(viewed.customHeaders) : "")
 						.onChange(async (v) => {
 							try {
-								viewed.customHeaders = v.trim() ? JSON.parse(v) : {};
+								if (!v.trim()) {
+									viewed.customHeaders = {};
+								} else {
+									/* a header map is an object of strings — `null`, a number,
+									   a string or an array are valid JSON but not headers */
+									const parsed = sanitizeCustomHeaders(JSON.parse(v));
+									if (!parsed) return; // keep typing; don't store a non-map
+									viewed.customHeaders = parsed;
+								}
 								await this.plugin.saveSettings();
 							} catch {
 								/* keep typing */
