@@ -1965,6 +1965,13 @@ module.exports = function settingsGuards() {
 		const ok =
 			prov.includes("export async function embedTexts") &&
 			prov.includes("/embeddings") &&
+			/* v0.1.152 (latency): embedding sits on the BLOCKING send path, so it
+			   must NOT reuse the 30s catalogue budget — a stalled server would buy
+			   30s of dead air before the chat request goes out. Tight own budget,
+			   and the catalogue constant must stay 30s for the settings UI. */
+			prov.includes("const EMBED_TIMEOUT_MS = 5_000;") &&
+			prov.includes("const MODELS_TIMEOUT_MS = 30_000;") &&
+			/\n\t\t\tEMBED_TIMEOUT_MS,/.test(prov) &&
 			eng.includes("export function cosineSimilarity") &&
 			eng.includes("export async function fuseScores") &&
 			eng.includes("export function rankObservations") &&

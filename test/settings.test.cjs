@@ -187,6 +187,25 @@ check(normDefault.memoryEngineEmbedProviderId === "", "normalize({}): embedding 
 }
 check(normalizeLoadedSettings({ memoryEngineEmbedProviderId: 42 }).memoryEngineEmbedProviderId === "", "normalize: non-string embedding provider → empty");
 
+/* v0.1.152 (owner: "embedding default mati"): semantic recall must stay OFF
+   until the user picks a model, because an embedding call sits on the
+   blocking path before the chat request is sent. */
+check(normDefault.memoryEngineEmbedModel === "" && normDefault.memoryEngineEmbedProviderId === "", "normalize({}): embedding is OFF by default (no blocking call on the send path)");
+
+/* v0.1.152 (Lesson 121 regression): title generation is a SECOND request to
+   the main model on every new session. The old `!== false` idiom meant
+   "default true", so a malformed stored value flipped it back ON and
+   contradicted DEFAULT_SETTINGS. Only a literal true may enable it. */
+check(normDefault.titleGenerationEnabled === false, "normalize({}): title generation OFF by default (no second request per session)");
+check(normalizeLoadedSettings({ titleGenerationEnabled: true }).titleGenerationEnabled === true, "normalize: title generation honours an explicit true");
+check(normalizeLoadedSettings({ titleGenerationEnabled: false }).titleGenerationEnabled === false, "normalize: title generation honours an explicit false");
+for (const junk of [null, 0, "", "no", "false", {}]) {
+	check(
+		normalizeLoadedSettings({ titleGenerationEnabled: junk }).titleGenerationEnabled === false,
+		`normalize: malformed title-generation value ${JSON.stringify(junk)} does NOT silently enable the second request`
+	);
+}
+
 /* v0.1.175: compression target_ratio default + out-of-range → fallback
    (same reject+fallback pattern as the sibling compressionThreshold) */
 check(normDefault.compressionTargetRatio === 0.2, "normalize({}): compression target_ratio defaults to 0.20");

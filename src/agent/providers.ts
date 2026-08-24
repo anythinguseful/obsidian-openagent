@@ -140,6 +140,13 @@ export function friendlyTransportError(err: unknown, provider: ProviderConfig): 
 /** Model-catalogue calls shouldn't wait minutes — settings UIs need fast feedback. */
 const MODELS_TIMEOUT_MS = 30_000;
 
+/** v0.1.152 (latency): embedding recall runs on the BLOCKING path — the chat
+ *  request is not sent until it settles. A stalled embedding server therefore
+ *  buys 30s of dead air before the user sees anything, so semantic recall gets
+ *  its own tight budget: past it we give up and fall back to keyword recall,
+ *  which is a ranking downgrade, not a lost feature. */
+const EMBED_TIMEOUT_MS = 5_000;
+
 /* Small FNV-1a hash (hex) — enough entropy for tool-call id suffixes. */
 function fnv1a(s: string): string {
 	let h = 0x811c9dc5;
@@ -462,7 +469,7 @@ export async function embedTexts(
 				body: JSON.stringify({ model, input: texts }),
 				throw: true,
 			},
-			MODELS_TIMEOUT_MS,
+			EMBED_TIMEOUT_MS,
 			provider
 		);
 		const data = resp.json as { data?: unknown } | null;

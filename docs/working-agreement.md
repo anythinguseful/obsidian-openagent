@@ -2012,3 +2012,54 @@ Aturan:
    `memory.ts` membatalkan penghapusan baris embedding, dan hanya ketahuan
    lewat `grep` susulan. Pakai salinan `/tmp` lalu `cp` kembali, atau balikkan
    mutasinya dengan pengganti `python3` ber-assert.
+
+## Lesson 211 — Jalur yang memblokir sebelum request terkirim adalah anggaran latensi, dan default-nya harus dibaca sebagai perilaku
+
+Owner melaporkan "masalah latency" dari build sebelumnya tanpa gejala persis.
+Penelusuran menemukan dua hal berbeda, dan cara menemukannya yang penting.
+
+**(1) Recall embedding duduk di jalur pemblokir.** `ChatApp` menunggu
+`engine.search` + `engine.searchObservations` selesai SEBELUM request chat
+dikirim. Komentar di atasnya menulis "zero latency — no LLM in this phase":
+benar untuk fusion murni, menyesatkan begitu model embedding diisi, karena di
+situ ada panggilan HTTP penuh. Diukur dengan server tiruan: server sehat lambat
+2s → tunggu 2s; server menggantung → tunggu **30s** dead air sebelum apa pun
+tampil. Dua panggilan itu paralel (`Promise.all`), jadi biayanya satu round
+trip — diverifikasi, bukan diasumsikan.
+
+Akarnya: `embedTexts` meminjam `MODELS_TIMEOUT_MS = 30_000`, anggaran untuk
+**katalog model** di UI Settings, di mana 30s memang wajar. Anggaran yang cocok
+untuk panggilan latar UI tidak otomatis cocok untuk jalur kirim pesan. Fix =
+`EMBED_TIMEOUT_MS = 5_000` terpisah; tiga pemakai `MODELS_TIMEOUT_MS` lain tidak
+disentuh. Lewat batas → jatuh ke keyword recall (turun peringkat, bukan fitur
+hilang).
+
+**(2) `titleGenerationEnabled` bisa menyala sendiri.** Lesson 121 sengaja
+mematikannya karena itu request KEDUA ke model utama tiap sesi baru. Tapi
+normalisasinya memakai `s.titleGenerationEnabled = s.titleGenerationEnabled
+!== false` — idiom yang berarti "default true" — sementara `DEFAULT_SETTINGS`
+menulis `false`. Dua baris itu saling bertentangan, dan yang menang adalah
+normalisasi: `null`, `0`, `""`, `"no"`, `{}` semuanya jadi `true`.
+
+Aturan:
+
+1. Sebelum menambah `await` di jalur kirim pesan, tanya: kalau ini menggantung,
+   berapa lama pengguna melihat layar diam? Itu anggaran latensi, dan harus
+   punya timeout sendiri — jangan meminjam konstanta dari jalur lain hanya
+   karena nilainya kebetulan ada.
+2. Konstanta timeout bersama menyembunyikan asumsi tentang siapa yang menunggu.
+   Beri nama sesuai jalurnya (`EMBED_` vs `MODELS_`), dan pin keduanya di guard
+   supaya tidak diam-diam menyatu lagi.
+3. `x !== false` bukan sanitasi, itu pernyataan default. Pakai hanya bila
+   default-nya memang `true`. Untuk default `false`, satu-satunya bentuk benar
+   adalah `=== true`. Kalau `DEFAULT_SETTINGS` dan normalisasi tidak sepakat,
+   normalisasi yang menang — jadi ketidaksepakatan itu selalu bug.
+4. Verifikasi default sebagai **perilaku**, bukan dengan membaca
+   `DEFAULT_SETTINGS`. Bangun modulnya, panggil `normalize({})`, cetak hasilnya.
+   Bug ini tak terlihat sampai nilai cacat benar-benar dijalankan.
+5. Komentar yang mengklaim biaya ("zero latency") ikut basi saat kode di
+   bawahnya tumbuh. Klaim performa dalam komentar butuh syarat eksplisit
+   ("selama tidak ada embedding"), atau jangan ditulis.
+6. Saat owner melapor lambat tanpa gejala persis, ukur dulu setiap jalur
+   pemblokir dengan server tiruan sebelum menawarkan perbaikan. "Lambat" harus
+   terukur, bukan tebakan — sama seperti Lesson 121.

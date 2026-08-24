@@ -1274,7 +1274,13 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 		s.compressionTargetRatio =
 			Number.isFinite(r) && r >= 0.05 && r <= 0.5 ? r : DEFAULT_SETTINGS.compressionTargetRatio;
 	}
-	s.titleGenerationEnabled = s.titleGenerationEnabled !== false;
+	/* v0.1.152 (latency): title generation is a SECOND request to the main
+	   model on every new session — Lesson 121 turned it off by default for
+	   exactly that reason. The old `!== false` idiom encodes "default true",
+	   so any malformed stored value (null, 0, "", "no") silently flipped it
+	   back ON and contradicted DEFAULT_SETTINGS. Only a literal `true` may
+	   enable it; everything else falls back to the default. */
+	s.titleGenerationEnabled = inRaw.titleGenerationEnabled === true;
 	s.auxModels = sanitizeAuxModels(inRaw.auxModels, s.providers);
 	/* v0.1.152 embedding pin: same stale-pin hygiene as the aux slots — it
 	   survives only while its provider still exists WITH a base URL, else it
