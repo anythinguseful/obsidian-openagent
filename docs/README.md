@@ -114,6 +114,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | [Settings descriptions audit 2026-08-22](audits/settings-descriptions-audit-2026-08-22.md) | done | Full Settings copy inventory; approved A–E changes and anti-regression voice/length guards shipped. |
 | [UI audit](audits/ui-audit.md) | done | UI audit using the vendored web-design-guidelines skill. |
 | [UI contract audit 2026-08-20](audits/ui-contract-audit-2026-08-20.md) | done | Bug-bounty pass of the openagent-ui contract: 14 rules verified, 3 warns, 1 contract clarification (var() fallback scoping). |
+| [UI aesthetics audit 2026-08-25](audits/ui-aesthetics-audit-2026-08-25.md) | done | Source-level audit of cards, rows, and dividers in Settings and chat; rejects a global card treatment and records the Conversations-row interaction gap. |
 
 ## Reference (`reference/`)
 
