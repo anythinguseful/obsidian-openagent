@@ -1240,8 +1240,8 @@ async function main() {
 						rows.indexOf("Context window") >= 0 &&
 						rows.indexOf("Context window") < rows.indexOf("Auto-compression") &&
 						rows.indexOf("Auto-compression") < rows.indexOf("Compression threshold"),
-					/* the Model tab's duplicate must be gone — no second writer */
-					noDupe: true,
+					/* the Model tab's duplicate is asserted by F15.gone, which runs
+					   ON that page; a constant here would assert nothing. */
 				};
 			}, findRowM);
 			const k = probes.F15knobs;
