@@ -1,15 +1,16 @@
 ---
 title: "Error & bug sweep (2026-08-24)"
 type: audit
-status: active
+status: done
 date: 2026-08-24
 tags: [openagent, audit, bugs, quality]
 ---
 
-> **Status: active** — fase sapuan-lebar (read-only) selesai; peta di
-> bawah adalah hasilnya. **T1 sudah diperbaiki** (2026-08-24, guard
-> `v0.1.197`, Lesson 199) — lihat bagian T1. Urutan lanjutan yang disepakati
-> owner: T1 → `strictNullChecks` → runtime agent → Phase 4.
+> **Status: done** — seluruh dimensi yang dicatat audit ini telah disapu,
+> diverifikasi ulang, dan setiap temuan nyata yang dicatat sudah diperbaiki
+> pada 2026-08-24. Audit tidak membuka pekerjaan implementasi lanjutan secara
+> implisit; pekerjaan berikutnya memerlukan ruang lingkup baru yang dipilih
+> owner.
 
 # Error & bug sweep
 
@@ -442,4 +443,16 @@ kegagalan simpan terlihat pengguna, tidak senyap.
 terkonfirmasi lewat pengukuran ulang (bukan pembacaan dokumen), tiga dimensi
 baru bersih, dan dua ketidaktepatan pencatatan dikoreksi. Kecurigaan terhadap
 angka lama sah untuk diajukan, dan sekarang sudah terjawab dengan bukti.
+
+## Closure (2026-08-25)
+
+Audit ini ditutup setelah pengecekan ulang atas statusnya sendiri. Status
+`active` sebelumnya tidak lagi jujur: Putaran 4 menyelesaikan verifikasi atas
+seluruh dimensi yang didokumentasikan, dan semua temuan nyata yang dicatat di
+T1, A, B, P, dan V sudah memiliki perbaikan serta guard regresi.
+
+Tidak ada kandidat bug, fase implementasi, atau urutan kerja lanjutan yang
+masih didefinisikan oleh audit ini. Pekerjaan berikutnya harus dimulai dari
+keluhan nyata, audit baru dengan scope eksplisit, atau plan baru yang disetujui
+owner — bukan dari asumsi bahwa audit ini masih menyisakan pekerjaan.
 

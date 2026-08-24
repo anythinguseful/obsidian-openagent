@@ -57,8 +57,9 @@ already provided proof. The owner approved it, and it shipped.
 >
 > Session Panel, Settings modal Phases 1–3, MCP credential isolation, the
 > security-sensitive MCP Catalog extraction, release retention, the
-> smoke/harness split, and the Settings section-renderer extraction are complete
-> and verified in `main`.
+> smoke/harness split, the Settings section-renderer extraction, and the
+> [error & bug sweep](../audits/error-bug-sweep-2026-08-24.md) are complete and
+> verified in `main`. The closed audit defines no implied follow-up work.
 >
 > The **smoke/harness split** completed on 2026-08-24: `test/smoke.test.cjs`
 > went from 7,012 to 1,296 lines across eleven phases. See
