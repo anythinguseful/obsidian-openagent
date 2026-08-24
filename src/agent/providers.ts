@@ -682,6 +682,13 @@ async function streamingCompletion(
 				malformedEvents++;
 				return false;
 			}
+			/* `data: null` / `data: 7` parse fine but are not SSE frames. Reading
+			   .usage off null threw a raw TypeError out of the read loop, bypassing
+			   the ProviderStreamProtocolError path built for exactly this case. */
+			if (!json || typeof json !== "object" || Array.isArray(json)) {
+				malformedEvents++;
+				return false;
+			}
 			if (json.usage) usage = normalizeUsage(json.usage);
 			const choice = json.choices?.[0];
 			if (!choice) return false;

@@ -284,7 +284,7 @@ untuk pemeriksaan baru di bawah alih-alih mengarang isi lama.
 | S | `.replace()` pola string (hanya kemunculan pertama) | 6 | 0 | Semua atas `toISOString().slice(0,16)` — target tunggal |
 | T | Regex `/g` tersimpan (`lastIndex` stateful) | 4 | 0 | 2 mereset `lastIndex`, 2 memakai `matchAll`/`replace` |
 | U | Akses `[0]` tanpa cek panjang | 42 → 21 | 0 | `split()` selalu ≥1; `match[0]` dijaga `if`; `groups[0]` literal 4 elemen |
-| V | Parse JSON non-objek di batas input | 26 | **1** | **Bug nyata — SELESAI** |
+| V | Parse JSON non-objek di batas input | 26 | **3** | **3 bug nyata — SELESAI** |
 
 **T (regex stateful).** Empat regex `/g` disimpan di konstanta modul. Pola ini
 berbahaya karena `.test()`/`.exec()` berulang atas objek regex yang sama akan
@@ -330,3 +330,36 @@ kedua batas memakainya, dan bentuk lama (`JSON.parse(v)` mentah, merge tanpa
 sanitasi) tidak bisa kembali. Red-proof tiga arah: mengembalikan parse mentah di
 input, mencabut sanitasi di merge, atau melemahkan cek nilai string —
 masing-masing memerahkan lane.
+
+### Koreksi: angka "1 bug nyata" tadinya salah
+
+Angka itu sempat ditulis berdasarkan hitungan AST, lalu **diverifikasi ulang
+dengan membaca 12 dari 26 lokasi satu per satu**. Sepuluh memang aman. Dua
+justru bug, dan keduanya sempat lolos karena dibaca sekilas sebagai "sudah ada
+`try/catch`" — padahal `try/catch` di sana hanya menangkap JSON *rusak*, bukan
+JSON *valid yang bukan objek*. Pelajarannya sudah dicatat: hitungan alat bukan
+temuan sampai tiap lokasinya dibaca.
+
+**V-2 — `src/agent/providers.ts` (SSE `data: null`) — bug nyata.**
+`handleLine()` membaca `json.usage` tepat setelah `JSON.parse` berhasil. Provider
+yang mengirim `data: null` (JSON valid) membuat baris itu melempar `TypeError:
+Cannot read properties of null` **mentah keluar dari loop pembaca** — tidak ada
+`try` di sekitar pemanggilan `handleLine`. Akibatnya jalur error yang memang
+sudah dirancang untuk kasus ini, `ProviderStreamProtocolError` dengan diagnostik
+`malformedEvents`, terlewati; pengguna dapat stack trace generik, bukan pesan
+protokol yang informatif. Perbaikan: frame non-objek (`null`, angka, string,
+array) dihitung sebagai `malformedEvents++` dan dilewati, persis seperti frame
+yang gagal parse.
+
+**V-3 — `src/agent/agentLoop.ts` (argumen tool `null`) — bug nyata.**
+`args = argsJson ? JSON.parse(argsJson) : {}` bertipe `Record<string, any>`,
+tetapi model yang memancarkan `null` sebagai argumen tool membuat `args` benar
+benar `null`. `catch` di bawahnya tidak menolong karena parse-nya *sukses*.
+Crash baru muncul di pembacaan properti pertama di hilir (`args.path` dan
+sejenisnya), jauh dari sumbernya, sehingga sulit dilacak. Perbaikan: hasil parse
+hanya dipakai bila objek biasa non-array; selain itu tetap `{}` — tool berjalan
+dengan argumen kosong dan memberi pesan error normal alih-alih meledak.
+
+Penjagaan: lane `v0.1.152` kedua di `test/smoke/agent.cjs`. Red-proof dua arah —
+mencabut cek bentuk di `providers.ts`, atau mengembalikan penugasan `args`
+mentah di `agentLoop.ts` — masing-masing memerahkan lane.

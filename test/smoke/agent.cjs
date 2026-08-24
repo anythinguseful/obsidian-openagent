@@ -195,5 +195,26 @@ module.exports = function agentGuards() {
 			failed++;
 		}
 	}
+	{
+		/* v0.1.152: JSON.parse succeeding does not mean an object came back. A
+		   provider emitting `data: null` threw a raw TypeError out of the SSE read
+		   loop (reading .usage off null), bypassing ProviderStreamProtocolError;
+		   a model emitting `null` as tool arguments threw on the first property
+		   read. Both must degrade, not crash. */
+		const prov = read("src/agent/providers.ts");
+		const loop = read("src/agent/agentLoop.ts");
+		const ok =
+			prov.includes('if (!json || typeof json !== "object" || Array.isArray(json)) {') &&
+			prov.includes("malformedEvents++") &&
+			loop.includes("const parsed = argsJson ? JSON.parse(argsJson) : {};") &&
+			loop.includes('if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed;') &&
+			!loop.includes("args = argsJson ? JSON.parse(argsJson) : {};");
+		if (ok) {
+			console.log("\u2713 v0.1.152: non-object JSON degrades \u2014 `data: null` counts as a malformed SSE frame, null tool args fall back to {}");
+		} else {
+			console.error("\u2717 v0.1.152 non-object JSON guard drifted (SSE frame or tool args accept a non-object again)");
+			failed++;
+		}
+	}
 	return failed;
 };

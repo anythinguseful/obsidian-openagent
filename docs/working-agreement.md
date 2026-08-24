@@ -1939,3 +1939,24 @@ isi ke sini).
 - Perbaikan dipasang di **dua** batas, dan itu disengaja: titik ketik menghentikan data rusak masuk, titik muat menyembuhkan vault yang **sudah terlanjur** menyimpannya. Menambal titik ketik saja akan membiarkan pengguna yang sudah kena tetap rusak selamanya. **Untuk bug yang sudah sempat mengotori data tersimpan, perbaikan input tidak lengkap tanpa perbaikan load.**
 - Menolak input yang salah **tidak boleh** berarti membuang ketikan pengguna: input non-map di-`return` diam-diam tanpa menyimpan, sehingga pengguna bisa terus mengetik hingga JSON-nya utuh — sama seperti perilaku `catch` yang sudah ada. **Validasi di kolom teks yang diketik hidup harus toleran pada keadaan setengah jadi.**
 - Dimensi lain di putaran ini (comparator boolean, `async` di `forEach`, regex `/g` stateful, akses `[0]`) semuanya bersih — tetapi bersih **karena diperiksa alasannya**, bukan karena tidak ada kecocokan: `split()` dijamin ≥1 elemen, `match[0]` selalu di dalam cabang ber-`if`, dua regex `/g` mereset `lastIndex` sebelum loop. **Mencatat "0 nyata" tanpa mencatat alasannya membuat sapuan berikutnya harus mengulang seluruh pekerjaan.**
+
+## Lesson 209 — `try/catch` di sekitar `JSON.parse` bukan bukti keamanan
+
+Saat menyapu dimensi V, dua bug nyata (`providers.ts` SSE `data: null`,
+`agentLoop.ts` argumen tool `null`) sempat dinilai "aman" karena keduanya sudah
+punya `try/catch`. Itu keliru: `try/catch` hanya menangkap JSON **rusak**.
+`null`, `123`, `"teks"` dan `[1]` adalah JSON **valid** — parse-nya sukses,
+`catch` tidak pernah jalan, dan crash baru muncul di pembacaan properti
+berikutnya, sering di fungsi lain.
+
+1. Saat mengaudit `JSON.parse`, jangan berhenti di "ada `catch`". Tanyakan:
+   kalau parse **berhasil** tapi hasilnya bukan objek, baris di bawahnya
+   selamat atau tidak?
+2. Tangkapan yang benar tidak selalu berarti kelas error yang benar. Di
+   `providers.ts` sudah ada `ProviderStreamProtocolError` khusus frame cacat;
+   `data: null` justru melewatinya dan keluar sebagai `TypeError` mentah. Bug
+   bukan cuma "crash", tapi "crash lewat jalur yang salah".
+3. Hitungan dari alat (grep/AST) adalah petunjuk pencarian, bukan temuan.
+   Angka "26 mentah → 1 nyata" bertahan sampai 12 lokasi dibaca satu per satu,
+   lalu berubah jadi 3. Tulis angka hanya setelah membaca, dan koreksi angka
+   lama secara eksplisit ketika salah — jangan diam-diam menimpanya.
