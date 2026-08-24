@@ -183,7 +183,7 @@ check(
 /* Ratchet on the deliberate fire-and-forget population. These are `void`-marked
    and therefore intentional, but `void` does NOT swallow a rejection — so the
    set must not quietly grow. Lower the cap whenever sites are converted. */
-const VOID_BUDGET = 96;
+const VOID_BUDGET = 79;
 check(
 	voidMarked.length <= VOID_BUDGET,
 	`void fire-and-forget budget: ${voidMarked.length} <= ${VOID_BUDGET}`,
