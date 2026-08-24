@@ -25,9 +25,11 @@ disebut bug. Kolom "nyata" di bawah hanya diisi setelah penelusuran itu.
 
 123 file `.ts`/`.tsx` di `src/`, 36.350 baris.
 
-`tsconfig.json` memakai `strictNullChecks: false` (dengan `noImplicitAny: true`).
-Konsekuensinya penting untuk membaca dokumen ini: **gate `tsc` yang hijau lebih
-lemah daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya.
+Saat sapuan ini dimulai, `tsconfig.json` memakai `strictNullChecks: false`
+(dengan `noImplicitAny: true`), sehingga **gate `tsc` yang hijau lebih lemah
+daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya. Itulah
+konteks dimensi A. **Sejak dimensi A ditutup, flag itu ON**: putaran 4
+mengukur ulang dan `tsc --strictNullChecks` bersih (0 error).
 
 ## Ringkasan: 11 dimensi, 3 bug nyata + 1 celah laten
 
@@ -220,7 +222,7 @@ dimensi B bahwa grep melaporkan angka yang terlalu kecil.
 | L | Non-null assertion `!` | 15 | 0 | Semua terbukti aman — lihat catatan |
 | M | `parseInt` tanpa radix | 2 | 0 | Keduanya bergerbang `\|\| default` |
 | N | Hasil `.match()` diakses langsung | 3 | 0 | Ketiganya sudah memakai `?.` |
-| O | Perbandingan longgar `==` / `!=` | 0 | 0 | Bersih |
+| O | Perbandingan longgar `==` / `!=` | 10 | 0 | Angka mentah dikoreksi di putaran 4 (semula ditulis 0): 9 idiom `== null` + 1 regex |
 | P | Hasil `JSON.parse` di-cast buta | 23 | **1** | **Bug nyata — SELESAI** |
 
 **L (non-null `!`).** Kluster terbesar, 7× `record!` di
@@ -381,3 +383,63 @@ Penjagaan: lane `v0.1.152` kedua di `test/smoke/agent.cjs`. Red-proof tiga arah 
 mencabut cek bentuk di `providers.ts`, mengembalikan penugasan `args` mentah di
 `agentLoop.ts`, atau mencabut cek bentuk di `mcp/client.ts` — masing-masing
 memerahkan lane.
+
+## Putaran 4 — audit-ulang atas angka lama (2026-08-24)
+
+Alasan: dimensi V pernah dilaporkan "1 bug nyata" berdasarkan hitungan alat,
+lalu jadi 4 setelah semua lokasi dibaca. Rasio itu (2 bug dari 12 lokasi
+pertama) membuat setiap angka lain yang tidak diverifikasi manual jadi
+mencurigakan. Putaran ini **tidak mencari bug baru di permukaan baru** — ia
+mencoba **memfalsifikasi angka yang sudah tertulis**.
+
+| Dim | Klaim lama | Hasil verifikasi ulang | Putusan |
+|---|---|---|---|
+| A | 9 → 2 (+1 laten) | `tsconfig` kini `strictNullChecks: true`; `tsc --strictNullChecks` = **0 error** | Terkonfirmasi, sudah tertutup |
+| B | 37 → 7 | `check-floating-promises.mjs`: 6 checks, 0 gagal; 0 floating tak-bertanda; `void` 79/79 | Terkonfirmasi |
+| C | 15 → 0 | AST: `JSON.parse` tanpa `try` & bukan deep-clone = **tepat 2** (`hub.ts:231`, `mcp/http.ts:76`); keduanya dibaca ulang, aman | Terkonfirmasi |
+| D | 58 → 0 | 34 `catch` kosong di jalur tulis/simpan diperiksa; mayoritas idiom `mkdir`-abaikan | Terkonfirmasi (catatan di bawah) |
+| F | 0 | `innerHTML`/`outerHTML`/`insertAdjacentHTML` = 0; `detachLeavesOfType` di `onunload` = 0; hotkey default = 0 | Terkonfirmasi |
+| G | 15 → 0 | Dipasangkan per (target, event, handler, **flag capture**): 12 kelompok, **0 tanpa pasangan** | Terkonfirmasi, lebih kuat |
+| H | 2 → 0 | 2 `setInterval` / 2 `clearInterval`; `holdTimer` dilepas via pointerup+pointercancel+lostpointercapture | Terkonfirmasi |
+| I | 0 | `useEffect(async` = 0 | Terkonfirmasi |
+| J | 38 → 0 | `@ts-ignore` = 0, `@ts-expect-error` = 0 | Terkonfirmasi |
+| K | 0 | `[-1]` / `[x.length]` = 0 | Terkonfirmasi |
+| L | 15 → 0 | AST: **tepat 15** non-null `!`; 2 yang tak dibahas dokumen lama (`intro.tsx:57`, `model-picker.tsx:157`) ikut dibuktikan aman | Terkonfirmasi, cakupan dilengkapi |
+| M | 2 → 0 | 2 `parseInt` tanpa radix (+1 `Number.parseInt` sudah beradix) | Terkonfirmasi |
+| N | 3 → 0 | AST: hasil `.match()` diakses tanpa `?.` = **0** | Terkonfirmasi |
+| O | 0 mentah | Sebenarnya **10 mentah → 0 nyata**: 9 idiom `== null` (sengaja, menangkap `null`+`undefined`) + 1 regex base64 | Angka mentah dikoreksi, putusan tetap |
+
+**Dua celah kecil dalam angka lama, bukan bug baru.** (1) Dimensi O ditulis
+"0 hit mentah" padahal ada 10 — yang benar semuanya sah, jadi kesimpulannya
+tidak berubah, tapi "0 mentah" menyiratkan pemeriksaan yang tidak pernah
+terjadi. (2) Kalimat pembuka dokumen ini masih menyebut `strictNullChecks:
+false` sebagai kondisi berjalan; flag itu sudah ON sejak dimensi A ditutup.
+
+**Dimensi baru yang disapu di putaran ini, semuanya bersih:**
+
+| Dim | Pemeriksaan | Mentah | Nyata | Hasil |
+|---|---|---|---|---|
+| W | Lemparan di dalam callback `.on(...)` (asinkron, tak tertangkap pemanggil) | 11 | 0 | Dipilih justru karena kelas inilah yang membuat bug `mcp/client.ts` parah |
+| Y | Hasil `.find()`/`.pop()`/`.shift()` diakses tanpa `?.` | 0 | 0 | Bersih |
+| Z | Pembagian dengan penyebut non-literal (risiko `NaN`/`Infinity`) | 8 | 0 | BM25 diuji runtime dengan korpus kosong & dokumen kosong — hasil 0, bukan `NaN` |
+
+**W (paling relevan).** Sebelas callback `.on(...)` tanpa `try` internal.
+Diperiksa satu-satu: `stdio.ts:80` memanggil `this.fail()` → `failAll()` yang
+hanya me-*reject* promise tertunda dan tidak pernah melempar; sepuluh sisanya
+(terminal service, `editor-menu`) memakai penjaga `settled` dan operasi
+sederhana tanpa jalur lempar. Nol temuan — tapi dimensi ini wajib ada di
+dokumen supaya bug berikutnya di kelas ini punya tempat pulang.
+
+**Catatan D.** 34 `catch` kosong berada di jalur tulis/simpan. Yang berpotensi
+menelan kehilangan data diperiksa lebih dalam: `persistSession` dipanggil 8×
+dengan `void`, tanpa `catch` internal atas `sessionStore.save()`. Ini **bukan**
+bug: `void` adalah penanda fire-and-forget resmi repo ini (dibatasi ratchet
+`VOID_BUDGET = 79` di gate CI), dan `installRejectionNet()` di `main.ts`
+menangkap `unhandledrejection` milik plugin lalu memunculkan `Notice` —
+kegagalan simpan terlihat pengguna, tidak senyap.
+
+**Kesimpulan putaran 4.** Tidak ada bug baru. Empat belas dimensi lama
+terkonfirmasi lewat pengukuran ulang (bukan pembacaan dokumen), tiga dimensi
+baru bersih, dan dua ketidaktepatan pencatatan dikoreksi. Kecurigaan terhadap
+angka lama sah untuk diajukan, dan sekarang sudah terjawab dengan bukti.
+
