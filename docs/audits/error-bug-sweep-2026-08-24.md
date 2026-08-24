@@ -7,8 +7,9 @@ tags: [openagent, audit, bugs, quality]
 ---
 
 > **Status: active** — fase sapuan-lebar (read-only) selesai; peta di
-> bawah adalah hasilnya. Fase dalam (perbaikan + guard) belum dimulai dan
-> menunggu keputusan owner soal urutan.
+> bawah adalah hasilnya. **T1 sudah diperbaiki** (2026-08-24, guard
+> `v0.1.197`, Lesson 199) — lihat bagian T1. Urutan lanjutan yang disepakati
+> owner: T1 → `strictNullChecks` → runtime agent → Phase 4.
 
 # Error & bug sweep
 
@@ -47,7 +48,7 @@ lemah daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya.
 Kesimpulan sapuan: basis kode ini jauh lebih disiplin daripada yang disugestikan
 oleh `strictNullChecks: false`. Sembilan dari sebelas dimensi bersih total.
 
-## T1 — Salin ke clipboard bisa gagal diam-diam (bug nyata)
+## T1 — Salin ke clipboard bisa gagal diam-diam (bug nyata) — **SELESAI**
 
 **Skenario.** Pengguna menekan tombol salin di blok kode dalam chat. Obsidian
 berjalan di webview; kalau dokumen sedang tidak fokus atau host memblokir
@@ -79,10 +80,42 @@ dalam 1500 ms setelah klik, timeout tetap menembak `setCopied` pada komponen
 yang sudah mati. `ChatApp.tsx` menjaga hal ini dengan `mountedRef.current`;
 dua situs ini tidak.
 
-**Usulan perbaikan.** Pakai ulang `copyText()` yang sudah ada alih-alih
-menulis fallback ketiga — sekaligus menghapus duplikasi `copyText` di
-`profile.ts`. Guard regresi: pin bahwa tidak ada `navigator.clipboard.writeText`
-di `src/` yang berdiri tanpa jalur fallback.
+**Perbaikan yang dikirim (2026-08-24).**
+
+Usulan pertama — "pakai ulang `copyText()` dari `settings/sections/helpers.ts`"
+— **ditarik sebelum ditulis**. Arah impor yang berlaku di repo adalah
+`settings/ → ui/` (3 kali); `ui/ → settings/` nol kali. Usulan itu akan
+membalik layering demi perbaikan dua baris.
+
+Bentuk final: `src/ui/clipboard.ts` menjadi satu-satunya jalur yang disanksi.
+
+- Kontraknya `Promise<boolean>`, bukan `Promise<void>`. Alasannya konkret:
+  `copyDiagnostics()` dulu menampilkan Notice "diagnostics copied" tanpa
+  syarat, termasuk ketika kedua jalur gagal. Sekarang Notice-nya mengikuti
+  hasil.
+- Enam call-site menyatu; tiga fallback tulisan-tangan (`helpers.ts`,
+  `profile.ts`, `settingsTab.ts`) hilang. `helpers.ts` menyimpan
+  `export { copyText }` sebagai re-export agar permukaan impor settings tidak
+  berubah.
+- **Tidak disatukan, sengaja:** `ChatApp.copySelection`. Fallback-nya
+  menjalankan `execCommand("copy")` pada sorotan yang masih hidup, bukan pada
+  textarea terlepas — di sana seleksi *adalah* muatannya, dan merutekannya
+  lewat `copyText` justru akan menghapus seleksi itu. Strategi berbeda,
+  kontrak sama; ia sudah menangani penolakan.
+- Efek samping unmount ikut ditutup: kedua situs React kini memakai
+  `mounted`/`timer` ref, sejajar dengan pola `mountedRef` di `ChatApp`.
+
+**Guard regresi `v0.1.197`** (`test/smoke/misc.cjs`): berjalan atas 124 file
+sumber, menolak `navigator.clipboard` di mana pun kecuali dua file yang
+disanksi, memastikan modul kanonik masih memuat kedua jalur *dan* melaporkan
+boolean, memastikan kedua call-site memeriksa boolean itu, plus lantai korpus
+supaya pemindai yang tidak memindai apa pun tidak lolos diam-diam.
+
+Red-proof 4/4, tiap lengan diverifikasi lewat pesan `✗` miliknya sendiri.
+Lengan M2 sempat **tidak merah**: guard membaca file mentah, dan docstring
+`clipboard.ts` sendiri menyebut `document.execCommand("copy")` — predikatnya
+puas dari prosa, bukan dari kode. Diperbaiki dengan strip komentar sebelum
+memeriksa (Lesson 199).
 
 ## Dimensi A — rincian 9 temuan `strictNullChecks`
 

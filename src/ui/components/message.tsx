@@ -12,7 +12,8 @@
  * taking the App/Component/MarkdownDoc imports with it.
  */
 
-import { ReactNode, useState, type MouseEvent } from "react";
+import { ReactNode, useEffect, useRef, useState, type MouseEvent } from "react";
+import { copyText } from "../clipboard";
 import { CopyIcon, CheckIcon } from "../icons";
 
 export function Message({
@@ -63,13 +64,30 @@ export function MessageAction({
 
 export function CopyAction({ getText, tooltip = "Copy" }: { getText: () => string; tooltip?: string }) {
 	const [copied, setCopied] = useState(false);
+	/* the 1500ms reset must not fire setState on an unmounted action */
+	const mounted = useRef(true);
+	const timer = useRef<number | null>(null);
+	useEffect(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+			if (timer.current !== null) window.clearTimeout(timer.current);
+		};
+	}, []);
 	return (
 		<MessageAction
 			tooltip={copied ? "Copied!" : tooltip}
 			onClick={() => {
-				navigator.clipboard.writeText(getText()).then(() => {
+				/* copyText never rejects; a false result means the host blocked
+				   every path, so the tooltip must not claim success */
+				void copyText(getText()).then((ok) => {
+					if (!ok || !mounted.current) return;
 					setCopied(true);
-					window.setTimeout(() => setCopied(false), 1500);
+					if (timer.current !== null) window.clearTimeout(timer.current);
+					timer.current = window.setTimeout(() => {
+						timer.current = null;
+						if (mounted.current) setCopied(false);
+					}, 1500);
 				});
 			}}
 		>

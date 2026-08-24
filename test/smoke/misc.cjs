@@ -259,5 +259,77 @@ module.exports = async function miscGuards() {
 		}
 	}
 
+	// v0.1.197 (error/bug sweep 2026-08-24, finding T1): Obsidian runs in a
+	// webview, so navigator.clipboard.writeText() rejects whenever the document
+	// is unfocused or the host blocks the async Clipboard API. A bare .then()
+	// makes a failed copy look exactly like a successful one and the user
+	// pastes stale content. The repo had drifted into THREE hand-written
+	// fallbacks plus two call sites with none; src/ui/clipboard.ts is now the
+	// single sanctioned path. Anything else reaching for writeText directly is
+	// a regression -- except ChatApp's copySelection, whose fallback runs
+	// execCommand against the live highlight (routing it through copyText
+	// would clear the very selection it is copying).
+	{
+		const walk = (dir) =>
+			fs
+				.readdirSync(dir, { withFileTypes: true })
+				.flatMap((e) =>
+					e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith(".ts") || e.name.endsWith(".tsx") ? [path.join(dir, e.name)] : []
+				);
+		const SANCTIONED = ["src/ui/clipboard.ts", "src/ui/ChatApp.tsx"];
+		const srcFiles = walk(path.join(ROOT, "src"));
+		const offenders = [];
+		for (const f of srcFiles) {
+			const rel = path.relative(ROOT, f).split(path.sep).join("/");
+			if (SANCTIONED.includes(rel)) continue;
+			const body = fs.readFileSync(f, "utf8");
+			// strip comments so this guard's own prose cannot trip it (Lesson 195)
+			const code = body
+				.replace(/\/\*[\s\S]*?\*\//g, "")
+				.split("\n")
+				.filter((l) => !/^\s*(\/\/|\*)/.test(l))
+				.join("\n");
+			if (/navigator\.clipboard/.test(code)) offenders.push(rel);
+		}
+
+		// The module must actually carry BOTH paths and report rather than throw.
+		// Read it comment-stripped: this file's own docstring names execCommand,
+		// and an uncommented read would satisfy the check from prose alone --
+		// the exact failure mode the v0.1.195 meta-guard was written for.
+		const canon = read("src/ui/clipboard.ts")
+			.replace(/\/\*[\s\S]*?\*\//g, "")
+			.split("\n")
+			.filter((l) => !/^\s*(\/\/|\*)/.test(l))
+			.join("\n");
+		const canonSound =
+			canon.includes("navigator.clipboard.writeText(text)") &&
+			canon.includes('document.execCommand("copy")') &&
+			/Promise<boolean>/.test(canon) &&
+			/return true/.test(canon) &&
+			/return false/.test(canon);
+		// the two call sites the sweep found must consume the boolean, not assume success
+		const cb = read("src/ui/components/code-block.tsx");
+		const msg = read("src/ui/components/message.tsx");
+		const consumers =
+			cb.includes("copyText(code)") &&
+			msg.includes("copyText(getText())") &&
+			/if \(!ok \|\| !mounted\.current\) return;/.test(cb) &&
+			/if \(!ok \|\| !mounted\.current\) return;/.test(msg);
+		// a scanner that walks nothing passes vacuously -- floor + named canary
+		const enoughFiles = srcFiles.length >= 100;
+
+		if (offenders.length === 0 && canonSound && consumers && enoughFiles) {
+			console.log(
+				`✓ v0.1.197: clipboard has one sanctioned path — ${srcFiles.length} source files scanned, no raw navigator.clipboard outside ui/clipboard.ts + ChatApp copySelection`
+			);
+		} else {
+			if (offenders.length) console.error(`✗ v0.1.197 raw navigator.clipboard outside the sanctioned path: ${offenders.join(", ")}`);
+			if (!canonSound) console.error("✗ v0.1.197 src/ui/clipboard.ts lost its async-then-execCommand fallback or its boolean report");
+			if (!consumers) console.error("✗ v0.1.197 a copy call site stopped checking the boolean / unmount guard before claiming success");
+			if (!enoughFiles) console.error(`✗ v0.1.197 clipboard scanner walked only ${srcFiles.length} source files — the walk drifted, guard is not measuring anything`);
+			failed++;
+		}
+	}
+
 	return failed;
 };

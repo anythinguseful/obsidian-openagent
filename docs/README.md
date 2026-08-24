@@ -100,7 +100,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | Document | Status | Summary |
 | --- | --- | --- |
 | [Plugin audit 2026-08-09](audits/audit-2026-08-09.md) | done | Full plugin audit after v0.1.127. |
-| [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | active | Repo-wide 11-dimension defect sweep; 1 real bug (clipboard copy fails silently in two React call sites). |
+| [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | active | Repo-wide 11-dimension defect sweep; T1 (silent clipboard failure) fixed under guard v0.1.197. |
 | [Documentation consistency audit 2026-08-23](audits/documentation-consistency-audit-2026-08-23.md) | done | v0.1.151 source/test/release truth versus stale plan status, hub coverage, and release-proof contracts. |
 | [Plugin technical audit 2026-08-11](audits/plugin-audit-2026-08-11.md) | done | Historical v0.1.135 technical audit; its hardening findings informed later work. |
 | [Mermaid inline-percent audit 2026-08-13](audits/mermaid-inline-percent-audit-2026-08-13.md) | done | Root cause and regression scope for invalid trailing Mermaid comments. |

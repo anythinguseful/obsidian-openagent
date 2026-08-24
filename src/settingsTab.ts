@@ -38,6 +38,7 @@ import { memory as memorySection } from "./settings/sections/memory";
 import { mcp as mcpSection } from "./settings/sections/mcp";
 import { terminalSettings as terminalSection } from "./settings/sections/terminal";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
+import { copyText } from "./ui/clipboard";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
 import { getPath, isModified, markModified, setPath } from "./settingsModified";
 import { COMPLETION_SOUND_VARIANTS } from "./completionSound";
@@ -2949,20 +2950,15 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			`Providers with keys ${withKeys.length ? withKeys.join(", ") : "none"}`,
 			`User agent ${navigator.userAgent}`,
 		].join("\n");
-		try {
-			await navigator.clipboard.writeText(text);
-		} catch {
-			/* fallback for hosts without the async Clipboard API */
-			const ta = document.createElement("textarea");
-			ta.value = text;
-			ta.style.position = "fixed";
-			ta.style.opacity = "0";
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand("copy");
-			ta.remove();
-		}
-		new Notice("Open Agent: diagnostics copied to the clipboard.");
+		/* copyText carries the execCommand fallback for hosts without the async
+		   Clipboard API; it never throws, it reports. Do not announce a copy
+		   that did not happen (sweep finding T1). */
+		const ok = await copyText(text);
+		new Notice(
+			ok
+				? "Open Agent: diagnostics copied to the clipboard."
+				: "Open Agent: could not reach the clipboard — copy blocked by the host."
+		);
 	}
 
 	private toolsets(containerEl: HTMLElement): void {

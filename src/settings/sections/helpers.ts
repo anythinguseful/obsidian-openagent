@@ -25,19 +25,13 @@ export function exportStamp(): string {
 	return new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
 }
 
-/** Clipboard with a legacy fallback (older webviews). */
-export async function copyText(text: string): Promise<void> {
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch {
-		const ta = document.createElement("textarea");
-		ta.value = text;
-		document.body.appendChild(ta);
-		ta.select();
-		document.execCommand("copy");
-		ta.remove();
-	}
-}
+/**
+ * Clipboard with a legacy fallback (older webviews).
+ *
+ * Re-exported from ../../ui/clipboard so settings keeps its existing import
+ * surface while the fallback itself lives in one place (sweep finding T1).
+ */
+export { copyText } from "../../ui/clipboard";
 
 /**
  * Long-text field stacked INSIDE its setting-item (info above, textarea

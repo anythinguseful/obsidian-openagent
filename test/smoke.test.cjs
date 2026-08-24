@@ -289,7 +289,13 @@ const miscGuards = require("./smoke/misc.cjs");
 			return [
 				[seg.includes("splitMarkdownSegments") && seg.includes("walkMarkdownFences") && seg.includes("closed: fence.closed"), "md: shared structural fence segmenter (closed vs dangling)"],
 				[md.includes("MarkdownDoc") && md.includes("splitMarkdownSegments") && md.includes("openLinkText") && md.includes("window.open"), "md: MarkdownDoc + link click delegation"],
-				[cb.includes("oa-code-copy") && cb.includes("navigator.clipboard"), "md: CodeBlock copy button"],
+				// v0.1.197 (sweep T1): the copy button no longer reaches for
+				// navigator.clipboard directly — it routes through ui/clipboard
+				// so a blocked host falls back instead of failing silently.
+				[
+					cb.includes("oa-code-copy") && /import \{ copyText \} from "\.\.\/clipboard"/.test(cb) && cb.includes("copyText(code)"),
+					"md: CodeBlock copy button",
+				],
 				[
 					ca.includes("oa-stream-text") && ca.includes("<MarkdownDoc") && ca.includes("streamingBlock ?"),
 					"md: hybrid gate — plain while streaming, markdown on finish",
