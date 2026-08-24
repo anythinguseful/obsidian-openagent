@@ -51,6 +51,37 @@ export interface Session extends SessionMeta {
 	todos?: TodoItem[];
 }
 
+/** A session file is disk data: a truncated write, a hand edit, or a file from
+ * another schema version can leave valid JSON whose required fields are gone.
+ * parsing and casting straight to the Session type asserts a shape nothing ever
+ * checked, so the gap
+ * surfaced only as a crash at the first touch — `search()` did
+ * `for (const turn of session.turns)` ("turns is not iterable"), then
+ * `turn.parts.map` ("cannot read properties of undefined"), and `list()` fed an
+ * undefined `title` into `.toLowerCase()`. One corrupt file took out search and
+ * the chat-load path for every session. Normalize on read instead of trusting
+ * the cast; unknown/extra fields ride through untouched. */
+export function sanitizeSession(value: unknown): Session | null {
+	if (!value || typeof value !== "object") return null;
+	const o = value as Record<string, unknown>;
+	if (typeof o.id !== "string") return null;
+	const turns = Array.isArray(o.turns)
+		? o.turns
+			.filter((t): t is ConversationTurn => !!t && typeof t === "object")
+			.map((t) => ({ ...t, parts: Array.isArray(t.parts) ? t.parts : [] }))
+		: [];
+	return {
+		...(o as unknown as Session),
+		id: o.id,
+		title: typeof o.title === "string" ? o.title : "",
+		createdAt: typeof o.createdAt === "number" ? o.createdAt : 0,
+		updatedAt: typeof o.updatedAt === "number" ? o.updatedAt : 0,
+		model: typeof o.model === "string" ? o.model : "",
+		turnCount: typeof o.turnCount === "number" ? o.turnCount : turns.length,
+		turns,
+	};
+}
+
 export class SessionStore {
 	private app: App;
 	private baseDir: string;
@@ -135,8 +166,8 @@ export class SessionStore {
 			try {
 				const fileId = safeSessionId(file.slice(file.lastIndexOf("/") + 1, -5));
 				const raw = await this.app.vault.adapter.read(file);
-				const s = JSON.parse(raw) as Session;
-				if (s.id !== fileId) continue; // never let file content redirect a later load/remove
+				const s = sanitizeSession(JSON.parse(raw));
+				if (!s || s.id !== fileId) continue; // never let file content redirect a later load/remove
 				metas.push({
 					id: fileId,
 					title: s.title,
@@ -156,7 +187,7 @@ export class SessionStore {
 	async load(id: string, dir = this.dir): Promise<Session | null> {
 		try {
 			const raw = await this.app.vault.adapter.read(this.path(id, dir));
-			return JSON.parse(raw) as Session;
+			return sanitizeSession(JSON.parse(raw));
 		} catch {
 			return null;
 		}

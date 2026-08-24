@@ -208,3 +208,65 @@ dan CI), trap runtime `test/fail-on-unhandled.cjs` yang di-preload ke 40 lane
 sehingga unhandled rejection menjadi kegagalan lane, dan lane perilaku
 `v0.1.199` yang menguji **kedua** kontrak `revealLeaf` termasuk promise yang
 menolak. Pelajaran 201 mencatat sebabnya.
+
+## Putaran 2 — dimensi L–P (2026-08-24)
+
+Dimensi A–K sudah ditutup di bagian sebelumnya dan tidak disapu ulang.
+Semua pemeriksaan putaran ini berbasis AST (bukan grep), sesuai pelajaran
+dimensi B bahwa grep melaporkan angka yang terlalu kecil.
+
+| Dim | Pemeriksaan | Mentah | Nyata | Hasil |
+|---|---|---|---|---|
+| L | Non-null assertion `!` | 15 | 0 | Semua terbukti aman — lihat catatan |
+| M | `parseInt` tanpa radix | 2 | 0 | Keduanya bergerbang `\|\| default` |
+| N | Hasil `.match()` diakses langsung | 3 | 0 | Ketiganya sudah memakai `?.` |
+| O | Perbandingan longgar `==` / `!=` | 0 | 0 | Bersih |
+| P | Hasil `JSON.parse` di-cast buta | 23 | **1** | **Bug nyata — SELESAI** |
+
+**L (non-null `!`).** Kluster terbesar, 7× `record!` di
+`src/agent/terminal/service.ts:729-764`, aman secara struktural: `record`
+hanya `null` saat `action === "list"`, dan setiap situs `!` berada di cabang
+yang sudah menyingkirkan `"list"`. Sumbernya `ownedRecord()`, yang
+**melempar** (bukan mengembalikan `undefined`) ketika id tidak ketemu atau
+pemiliknya beda sesi. Sisanya (`agentLoop.ts:345` setelah cek `length`,
+`ChatApp.tsx:2516`/`3399`, `at-refs.ts:73,82` atas string literal ber-`/`)
+juga terjaga di pemanggilnya.
+
+**M (`parseInt` tanpa radix).** `settings/sections/advanced.ts:106` dan
+`settingsTab.ts:3160`. Sejak ES5 radix default sudah 10 untuk input tanpa
+awalan `0x`, dan keduanya dibungkus `|| <default>` lalu `Math.max`/`Math.floor`,
+jadi `NaN` maupun `0x`-input tidak bisa lolos jadi nilai aneh. Tidak diubah:
+mengubah yang tidak rusak hanya menambah risiko.
+
+**P (cast buta atas `JSON.parse`) — satu bug nyata.** Dari 23 kecocokan, 13
+adalah idiom deep-clone `JSON.parse(JSON.stringify(x))` (bentuknya dijamin
+oleh sumbernya) dan sisanya memvalidasi setelah parse — kecuali
+`src/agent/sessions.ts`. Kedua situs baca file sesi memakai
+`JSON.parse(raw) as Session`: sebuah **klaim** bentuk yang tidak pernah
+diperiksa. File sesi adalah data disk — tulisan terpotong, suntingan tangan,
+atau skema versi lama bisa menghasilkan JSON valid yang kehilangan field wajib.
+
+Direproduksi runtime (bukan dibaca dari kode saja), tiga crash dari satu akar:
+
+| Isi file (JSON valid) | Akibat |
+|---|---|
+| `turns` hilang | `TypeError: session.turns is not iterable` di `search()` |
+| satu turn tanpa `parts` | `TypeError: Cannot read properties of undefined (reading 'map')` |
+| `title` hilang | `TypeError: ... (reading 'toLowerCase')` di `search()` lewat `list()` |
+
+Dampaknya melampaui pencarian: `load()` memasok `setTurnsSynced(s.turns)` ke
+ChatApp, sehingga satu file rusak bisa menjatuhkan pencarian lintas sesi **dan**
+jalur muat chat untuk semua sesi.
+
+Perbaikan: `sanitizeSession()` menormalkan pada titik baca — id non-string
+ditolak (`null`), `turns`/`parts` dipaksa array, `title`/`model`/timestamp
+diberi default, `turnCount` jatuh ke `turns.length`. Field tak dikenal dan
+opsional (`messages`, `goal`, `todos`, `compression`, `personality`, `parent`)
+lewat apa adanya — round-trip sesi normal terbukti identik byte-per-byte.
+Kedua situs baca (`list()` dan `load()`) melewatinya; cast buta dilarang balik.
+
+Penjagaan: lane `v0.1.152` di `test/smoke/agent.cjs` menuntut `sanitizeSession`
+ada, kedua situs baca memakainya, normalisasi `parts` tetap utuh, dan jumlah
+cast `JSON.parse(...) as Session` **nol**. Red-proof tiga arah: mencabut
+sanitasi di `load()`, di `list()`, atau melemahkan normalisasi `parts`
+masing-masing memerahkan lane.

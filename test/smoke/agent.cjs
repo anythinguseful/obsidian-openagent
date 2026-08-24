@@ -168,5 +168,32 @@ module.exports = function agentGuards() {
 			failed++;
 		}
 	}
+	{
+		/* v0.1.152: session files are disk data — a truncated write, a hand edit or an
+		   older schema can leave valid JSON with required fields missing. The old
+		   `JSON.parse(raw) as Session` asserted a shape nothing verified, so one
+		   corrupt file crashed search() ("turns is not iterable", then
+		   turn.parts.map on undefined) and list() (undefined title .toLowerCase()),
+		   taking out cross-session recall and the chat-load path. Both read sites
+		   must normalize; the blind cast must not come back. */
+		const sess = read("src/agent/sessions.ts");
+		const casts = (sess.match(/JSON\.parse\([^)]*\)\s+as\s+Session/g) || []).length;
+		const ok =
+			sess.includes("export function sanitizeSession(value: unknown): Session | null") &&
+			sess.includes("if (typeof o.id !== \"string\") return null;") &&
+			sess.includes("parts: Array.isArray(t.parts) ? t.parts : []") &&
+			sess.includes("turns," ) &&
+			sess.includes('title: typeof o.title === "string" ? o.title : ""') &&
+			sess.includes("const s = sanitizeSession(JSON.parse(raw));") &&
+			sess.includes("if (!s || s.id !== fileId) continue;") &&
+			sess.includes("return sanitizeSession(JSON.parse(raw));") &&
+			casts === 0;
+		if (ok) {
+			console.log("\u2713 v0.1.152: session files sanitized on read (list + load) \u2014 corrupt/partial JSON cannot crash search or chat load");
+		} else {
+			console.error("\u2717 v0.1.152 session sanitize drifted (blind `as Session` cast back, or a read site bypassed sanitizeSession)");
+			failed++;
+		}
+	}
 	return failed;
 };
