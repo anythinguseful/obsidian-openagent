@@ -276,6 +276,11 @@ module.exports = function settingsGuards() {
 				imp: 'import { terminalSettings as terminalSection } from "./settings/sections/terminal";',
 				call: "terminalSection(this.sectionContext(), containerEl);",
 			},
+			{
+				what: "mcp",
+				imp: 'import { mcp as mcpSection } from "./settings/sections/mcp";',
+				call: "mcpSection(this.sectionContext(), containerEl);",
+			},
 		];
 		const ok =
 			wired.every((w) => tab.includes(w.imp) && tab.includes(w.call)) &&
@@ -283,13 +288,18 @@ module.exports = function settingsGuards() {
 			!tab.includes("private terminalSettings(") &&
 			!tab.includes("private memory(") &&
 			!tab.includes("private general(") &&
+			!tab.includes("private mcp(") &&
 			/* Terminal tetap hidup di dalam Capabilities, di bawah subheading-nya */
 			tab.indexOf('this.subheading(containerEl, "Terminal & Processes"') <
 				tab.indexOf("terminalSection(this.sectionContext(), containerEl);") &&
+			/* idem MCP: subheading tetap milik capabilities(), row-nya milik modul */
+			tab.indexOf('this.subheading(containerEl, "MCP servers"') <
+				tab.indexOf("mcpSection(this.sectionContext(), containerEl);") &&
 			/* dan modulnya memang mengekspor fungsi yang diimpor itu */
 			read("src/settings/sections/terminal.ts").includes("export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement): void") &&
 			read("src/settings/sections/memory.ts").includes("export function memory(ctx: SectionContext, containerEl: HTMLElement): void") &&
-			read("src/settings/sections/general.ts").includes("export function general(ctx: SectionContext, containerEl: HTMLElement): void");
+			read("src/settings/sections/general.ts").includes("export function general(ctx: SectionContext, containerEl: HTMLElement): void") &&
+			read("src/settings/sections/mcp.ts").includes("export function mcp(ctx: SectionContext, containerEl: HTMLElement): void");
 		if (ok) {
 			console.log("✓ v0.1.194: extracted section renderers stay wired (import + sectionContext call + subheading order)");
 		} else {
@@ -1122,6 +1132,7 @@ module.exports = function settingsGuards() {
 		// S3-7 the mcp.json import label precedes its textarea,
 		// S3-8 the clone action lives on its own row (uncramped name field).
 		const stab = read("src/settingsTab.ts");
+		const mcpMod = read("src/settings/sections/mcp.ts");
 		const css = read("styles.css");
 		if (
 			stab.includes('nav.addEventListener("keydown"') &&
@@ -1131,8 +1142,11 @@ module.exports = function settingsGuards() {
 			!stab.includes("dipakai untuk memastikan") &&
 			stab.indexOf('.setName("Test connection")') > -1 &&
 			stab.indexOf('.setName("Test connection")') < stab.indexOf('cls: "oa-test-result"') &&
-			stab.indexOf('.setName("Import mcp.json")') > -1 &&
-			stab.indexOf('.setName("Import mcp.json")') < stab.indexOf('cls: "oa-mcp-import-text"') &&
+			/* S3-7 ganti subjek: mcp() diekstrak ke src/settings/sections/mcp.ts
+			   (Phase 3, 2026-08-24). Urutan label-di-atas-textarea tetap dipin;
+			   yang berubah hanya file yang diukur. */
+			mcpMod.indexOf('.setName("Import mcp.json")') > -1 &&
+			mcpMod.indexOf('.setName("Import mcp.json")') < mcpMod.indexOf('cls: "oa-mcp-import-text"') &&
 			stab.includes('setButtonText("Clone active profile")') &&
 			css.includes(".oa-settings .oa-test-result:empty")
 		) {
@@ -1559,7 +1573,9 @@ module.exports = function settingsGuards() {
 			main.includes("restorePersistedMcpConsent") &&
 			setts.includes("interface McpConsent") &&
 			setts.includes("restorePersistedMcpConsent") &&
-			tab.includes("new McpConsentModal") && consent.includes("class McpConsentModal") &&
+			/* 2026-08-24: pemanggil modal pindah dari tab ke sections/mcp.ts */
+			read("src/settings/sections/mcp.ts").includes("new McpConsentModal") &&
+			consent.includes("class McpConsentModal") &&
 			chat.includes("getToolsWithMcp");
 		if (ok) {
 			console.log("✓ v0.1.147h: MCP runtime — pure client + lazy stdio + consent-gated runtime + first-use consent, interactive-path-only injection");
@@ -1575,7 +1591,8 @@ module.exports = function settingsGuards() {
 		const inst = read("src/agent/mcp/install.ts");
 		const catalogModal = read("src/settings/modals/mcp-catalog.ts");
 		const main = read("src/main.ts");
-		const tab = read("src/settingsTab.ts");
+		/* 2026-08-24: baris katalog kini dirender sections/mcp.ts, bukan tab */
+		const tab = read("src/settings/sections/mcp.ts");
 		const ok =
 			http.includes("class HttpTransport") &&
 			http.includes("MCP_HTTP_ACCEPT") &&
@@ -2087,7 +2104,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts")).match(/markModified\(/g) || []).length === 63 && // 39 tab + 17 memory + 4 terminal + 3 general (2026-08-24 Phase 3: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts")).match(/markModified\(/g) || []).length === 63 && // 38 tab + 17 memory + 4 terminal + 3 general + 1 mcp (2026-08-24 Phase 3: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

@@ -176,7 +176,10 @@ const miscGuards = require("./smoke/misc.cjs");
 				[st.includes('key: "vault"') && st.includes('key: "automations"'), "capabilities: toolset switches present"],
 				[!st.includes("oa-tool-groups"), "capabilities: no per-tool rows (Hermes semantics, owner 2026-07-23)"],
 				[st.includes("setSkillEnabled("), "skills browser: per-skill enable toggle"],
-				[st.includes("parseMcpServersDoc("), "mcp: mcp.json import wired"],
+				/* 2026-08-24 Phase 3: mcp() pindah ke src/settings/sections/mcp.ts.
+				   Subjeknya ikut pindah — memakai `st` di sini akan hijau-palsu
+				   kalau importer-nya hilang, karena tab memang tak lagi memuatnya. */
+				[read("src/settings/sections/mcp.ts").includes("parseMcpServersDoc("), "mcp: mcp.json import wired"],
 			];
 		})(),
 		...(() => {

@@ -36,7 +36,7 @@ without dragging class state along. Measured per renderer:
 | --- | --- | --- | --- |
 | `memory` | 288 | — | — |
 | `general` | 189 | — | — |
-| `mcp` | 169 | — | — |
+| `mcp` | 172 | — | — |
 | `renderCommandRows` | 150 | — | — |
 | `workspace` | 125 | — | — |
 | `notifications` | 119 | — | — |
@@ -216,6 +216,44 @@ Each phase is one commit and must pass the full gate before the next begins.
   measuring, and red-proofed **in both directions**: seven mutations must go
   red, and an injected comment listing the groups in reverse order must leave it
   green.
+
+  `mcp` **DONE** (2026-08-24) — Phase 3 complete. 172 lines out
+  (4,259 → 4,085) into `src/settings/sections/mcp.ts`; the call site inside
+  `capabilities()` became `mcpSection(this.sectionContext(), containerEl)`, with
+  the "MCP servers" subheading deliberately left behind in `capabilities()`,
+  exactly as with `terminal`. Verified by byte-exact roundtrip again: slice →
+  de-indent → `this.*` → `ctx.*` → reverse the transform → `===` the original.
+  Identical, so zero hand-retyping risk. Statement order was the hazard to
+  watch: the Import button's `onClick` closes over `area`, which is declared
+  *below* it, and that only works because the closure runs on click.
+
+  A stored note claimed this renderer read the hub cache. **It was wrong** — the
+  boundary was re-grepped and the body reaches for exactly `ctx.plugin` (15×),
+  `ctx.display` (5×), `ctx.app` (2×) and `ctx.emptyState` (1×). It sits next to
+  the hub methods in the file; it references none of them. Five imports went
+  orphan (`kvToLines`, `linesToKv`, `parseMcpServersDoc`, `McpConsentModal`,
+  `McpCatalogModal`) while `stackedTextArea` stayed live (two other callers) and
+  `markModified` kept 38 uses in the tab.
+
+  **Five guards broke; the prediction list had named two.** The three misses all
+  live outside `test/smoke/settings.cjs`'s predicted sites: the root
+  `test/smoke.test.cjs` "mcp.json import wired" arm, and the `v0.1.147h` /
+  `v0.1.147i` MCP blocks, which read `src/settingsTab.ts` into a variable named
+  `tab` and assert on modal construction. Same failure mode as Phase 3's
+  `terminal` step — *the guard for a moved string is often not in the file you
+  expect* — which is now a standing expectation, not a surprise. All five were
+  amended by repointing the subject at the module; none was weakened.
+  `markModified(` stays **63** (38 + 17 + 4 + 3 + 1) with `mcp.ts` added to the
+  sum, and `v0.1.194` gained its fourth `wired` entry plus the MCP
+  subheading-order arm in the same commit, per the Phase-3 rule.
+
+  Red-proof: ten mutations, ten red. Two of the ten were **bad probes first** —
+  one mutated a string that does not exist in the file (`parseMcpServersDoc(doc`
+  vs the real `parseMcpServersDoc(area.value)`), the other renamed
+  `markModified(` to `noop_markModified(`, which still matches the counting
+  regex `/markModified\(/g`. Both reported a false "arm is dead". A probe that
+  never lands looks exactly like a guard that never fires, so the harness now
+  aborts loudly when its `count == 1` assertion fails instead of proceeding.
 - **Phase 4** — `workspace` + `addWorkspaceExclusion`, `command` +
   `renderCommandRows`. Moved in pairs: each private helper has exactly one
   caller, both in the moving set.

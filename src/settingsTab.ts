@@ -27,16 +27,15 @@ import type OpenAgentPlugin from "./main";
 import { ConfirmProfileDeleteModal, ProfileExportModal } from "./settings/modals/profile";
 import { SnippetEditModal } from "./settings/modals/snippet";
 import { HubSkillPreviewModal } from "./settings/modals/hub";
-import { McpConsentModal } from "./settings/modals/consent";
 import { BlueprintCatalogModal } from "./settings/modals/blueprint-catalog";
 import { GuardFindingsModal } from "./settings/modals/guard-findings";
-import { McpCatalogModal } from "./settings/modals/mcp-catalog";
 import { ExportFileSuggestModal, FolderSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
 import { createSegmented, createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
 import { stackedTextArea } from "./settings/sections/helpers";
 import { general as generalSection } from "./settings/sections/general";
 import { memory as memorySection } from "./settings/sections/memory";
+import { mcp as mcpSection } from "./settings/sections/mcp";
 import { terminalSettings as terminalSection } from "./settings/sections/terminal";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
@@ -112,11 +111,8 @@ import {
 	ProfileExportSkill,
 	buildProfileExport,
 	DEFAULT_SETTINGS,
-	kvToLines,
-	linesToKv,
 	DEFAULT_PROMPT_SNIPPETS,
 	newSnippetId,
-	parseMcpServersDoc,
 } from "./settings";
 import { Skill, SkillsStore } from "./agent/skills";
 import {
@@ -2392,7 +2388,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		this.skills(containerEl);
 		this.skillsBrowser(containerEl);
 		this.subheading(containerEl, "MCP servers", "External tool servers over the Model Context Protocol — stdio (a command) or HTTP (a URL).");
-		this.mcp(containerEl);
+		mcpSection(this.sectionContext(), containerEl);
 		this.subheading(
 			containerEl,
 			"Browse Hub",
@@ -3230,177 +3226,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	}
 
 	/** MCP server registry — stdio runtime connects lazily on first run. */
-	private mcp(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		const stMcpEnabled = new Setting(containerEl)
-			.setName("Enable MCP")
-			.setDesc("Runs configured MCP servers on this device — first-use consent explains the risk. stdio is desktop-only; HTTP connects over a URL.")
-			.addToggle((t) =>
-				t.setValue(s.mcpEnabled).onChange(async (v) => {
-					if (!v) {
-						s.mcpEnabled = false;
-						await this.plugin.saveSettings();
-						return;
-					}
-					if (s.mcpConsent.consentVersion !== 1) {
-						t.setValue(false);
-						new McpConsentModal(this.app, async () => {
-							await this.plugin.grantMcpConsent();
-							this.display();
-						}).open();
-						return;
-					}
-					s.mcpEnabled = true;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stMcpEnabled, this.plugin.settings, "mcpEnabled");
-
-		const list = containerEl.createDiv({ cls: "oa-mcp-list" });
-		const entries = Object.entries(s.mcpServers).sort(([a], [b]) => a.localeCompare(b));
-		if (entries.length === 0) {
-			this.emptyState(list, {
-				title: "No MCP servers configured",
-				description: "Add one below, install one from the catalog, or import an mcp.json document.",
-			});
-		}
-		for (const [name, srv] of entries) {
-			const isHttp = (srv.transport ?? (srv.url ? "http" : "stdio")) === "http";
-			const summary = isHttp
-				? srv.url || "No URL set"
-				: [srv.command, ...(srv.args ?? [])].filter(Boolean).join(" ") || "No command set";
-			const card = list.createDiv({ cls: "oa-mcp-server" });
-			new Setting(card)
-				.setName(name)
-				.setDesc(`${isHttp ? "http" : "stdio"} · ${summary}${srv.enabled ? "" : " · disabled"}`)
-				.addToggle((t) =>
-					t.setValue(srv.enabled).onChange(async (v) => {
-						srv.enabled = v;
-						await this.plugin.saveSettings();
-					})
-				)
-				.addExtraButton((b) =>
-					b
-						.setIcon("trash-2")
-						.setTooltip("Remove server")
-						.onClick(async () => {
-							delete s.mcpServers[name];
-							await this.plugin.saveSettings();
-							this.display();
-						})
-				);
-			if (isHttp) {
-				new Setting(card)
-					.setName("URL")
-					.setDesc("HTTP endpoint of this MCP server.")
-					.addText((t) =>
-						t.setValue(srv.url ?? "").onChange(async (v) => {
-							srv.url = v.trim();
-							await this.plugin.saveSettings();
-						})
-					);
-				const headersSetting = new Setting(card)
-					.setName("Headers")
-					.setDesc("KEY=VALUE pairs, one per line — e.g. Authorization=Bearer …");
-				stackedTextArea(
-					headersSetting,
-					{ rows: 4, value: kvToLines(srv.headers), placeholder: "Authorization=Bearer …", ariaLabel: "Headers" },
-					async (v) => {
-						srv.headers = linesToKv(v);
-						await this.plugin.saveSettings();
-					}
-				);
-			} else {
-				new Setting(card)
-					.setName("Command")
-					.setDesc("Executable spawned over stdio, e.g. npx")
-					.addText((t) =>
-						t.setValue(srv.command ?? "").onChange(async (v) => {
-							srv.command = v.trim();
-							await this.plugin.saveSettings();
-						})
-					);
-				new Setting(card)
-					.setName("Arguments")
-					.setDesc("Space-separated arguments passed to the command.")
-					.addText((t) =>
-						t.setValue((srv.args ?? []).join(" ")).onChange(async (v) => {
-							srv.args = v.split(/\s+/).filter(Boolean);
-							await this.plugin.saveSettings();
-						})
-					);
-				const envSetting = new Setting(card).setName("Environment").setDesc("KEY=VALUE pairs, one per line.");
-				stackedTextArea(
-					envSetting,
-					{ rows: 4, value: kvToLines(srv.env), placeholder: "DEBUG=true", ariaLabel: "Environment variables" },
-					async (v) => {
-						srv.env = linesToKv(v);
-						await this.plugin.saveSettings();
-					}
-				);
-			}
-		}
-
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Add MCP server")
-				.setCta()
-				.onClick(async () => {
-					let name = "new-server";
-					let n = 1;
-					while (name in s.mcpServers) name = `new-server-${++n}`;
-					s.mcpServers[name] = {
-						command: "npx",
-						args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
-						enabled: true,
-					};
-					await this.plugin.saveSettings();
-					this.display();
-				})
-		);
-
-		const importEl = containerEl.createDiv({ cls: "oa-mcp-import" });
-		/* owner directive S3-7 (2026-07-23): label row first, paste area below it
-		   (was reversed — the field sat above its own label) */
-		new Setting(importEl)
-			.setName("Import mcp.json")
-			.setDesc("Paste a standard mcp.json document below. Servers are merged by name.")
-			.addButton((b) =>
-				b.setButtonText("Import").onClick(async () => {
-					try {
-						const parsed = parseMcpServersDoc(area.value);
-						Object.assign(s.mcpServers, parsed);
-						await this.plugin.saveSettings();
-						new Notice(`Open Agent: imported ${Object.keys(parsed).length} MCP server(s).`);
-						this.display();
-					} catch (err) {
-						new Notice(`Open Agent: import failed — ${err instanceof Error ? err.message : String(err)}`);
-					}
-				})
-			);
-		const area = importEl.createEl("textarea", {
-			cls: "oa-mcp-import-text",
-			attr: {
-				rows: "6",
-				placeholder:
-					'{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]\n    }\n  }\n}',
-			},
-		});
-
-		new Setting(containerEl).addButton((b) =>
-			b
-				.setButtonText("Install from catalog")
-				.onClick(() => new McpCatalogModal(this.app, this.plugin, () => this.display()).open())
-		);
-
-		containerEl.createDiv({
-			cls: "oa-mcp-note",
-			text: "Servers connect lazily on the next chat run. The catalog offers curated, pinned servers — git-installed ones clone and run third-party code on this device without a sandbox.",
-		});
-	}
-
-
 	private automations(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 
