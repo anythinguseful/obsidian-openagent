@@ -59,13 +59,19 @@ module.exports = function settingsGuards() {
 	{
 		const tab = read("src/settingsTab.ts");
 		const ok =
-			tab.includes('this.subheading(containerEl, "Approvals"') &&
+			/* v0.1.199 (Phase 5): Approvals/Chat surface/Limits moved out with
+			   safety()/appearance()/advanced(). Same labels, new owners. */
+			read("src/settings/sections/safety.ts").includes('ctx.subheading(containerEl, "Approvals"') &&
+			!tab.includes('this.subheading(containerEl, "Approvals"') &&
 			/* v0.1.199 (Phase 4): the Scope group label moved with workspace() */
 			read("src/settings/sections/workspace.ts").includes('ctx.subheading(containerEl, "Scope"') &&
 			!tab.includes('this.subheading(containerEl, "Scope"') &&
-			tab.includes('this.subheading(containerEl, "Chat surface"') &&
-			tab.includes('this.subheading(containerEl, "Limits"') &&
-			tab.includes('this.subheading(containerEl, "System prompt"') &&
+			read("src/settings/sections/appearance.ts").includes('ctx.subheading(containerEl, "Chat surface"') &&
+			!tab.includes('this.subheading(containerEl, "Chat surface"') &&
+			read("src/settings/sections/advanced.ts").includes('ctx.subheading(containerEl, "Limits"') &&
+			!tab.includes('this.subheading(containerEl, "Limits"') &&
+			read("src/settings/sections/advanced.ts").includes('ctx.subheading(containerEl, "System prompt"') && // moved 2026-08-24 (Phase 5)
+			!tab.includes('this.subheading(containerEl, "System prompt"') &&
 			tab.includes('this.subheading(containerEl, "Scheduled tasks"') &&
 			read("src/settings/sections/workspace.ts").includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") && // moved 2026-08-24 (Phase 4)
 			!tab.includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") &&
@@ -429,7 +435,9 @@ module.exports = function settingsGuards() {
 		/* v0.1.199 (Phase 4): workspace() left the class for its own module, so the
 		   subject is the module — not a region of settingsTab.ts. */
 		const workspaceSection = read("src/settings/sections/workspace.ts");
-		const safetySection = region(stab5, "private safety(", "private providers(", { label: "safetySection" });
+		/* v0.1.199 (Phase 5): safety() left the class for its own module, so the
+		   subject is the module -- not a region of settingsTab.ts. */
+		const safetySection = read("src/settings/sections/safety.ts");
 		if (
 			/* the renderer left the class but the tab still owns wiring it up */
 			!stab5.includes("private memory(") &&
@@ -463,10 +471,19 @@ module.exports = function settingsGuards() {
 			stab5.includes('key: "notifications", label: "Notifications"') &&
 			/* v0.1.190: About returns as an informational tab (was hidden-empty) */
 			stab5.includes('key: "about", label: "About"') &&
-			stab5.includes("private appearance(") &&
-			stab5.includes("private notifications(") &&
-			stab5.includes("Enable native notifications") &&
-			stab5.includes("Completion sound preset") &&
+			/* v0.1.199 (Phase 5): appearance()/notifications() render from their own
+			   modules now; the tab must still own the wiring -- prove both halves. */
+			!stab5.includes("private appearance(") &&
+			!stab5.includes("private notifications(") &&
+			stab5.includes("appearanceSection(this.sectionContext(), host)") &&
+			stab5.includes("notificationsSection(this.sectionContext(), host)") &&
+			read("src/settings/sections/appearance.ts").includes("export function appearance(") &&
+			read("src/settings/sections/notifications.ts").includes("export function notifications(") &&
+			/* v0.1.199 (Phase 5): the two notification rows moved with the renderer;
+			   the tab keeps the tab/search registry entry, the module owns the rows. */
+			read("src/settings/sections/notifications.ts").includes("Enable native notifications") &&
+			read("src/settings/sections/notifications.ts").includes("Completion sound preset") &&
+			!stab5.includes("Enable native notifications") &&
 			stab5.includes("private about(")
 		) {
 			console.log("✓ settings IA: Workspace/Safety remain; Appearance + actionable Notifications + informational About are present in tabs/search");
@@ -639,13 +656,17 @@ module.exports = function settingsGuards() {
 			   grup Compression) — pemilik reset-nya ikut pindah ke modul. */
 			mem187.includes("ctx.resetButton(stContextWindow, \"modelContextLength\")") &&
 			!tab.includes("this.resetButton(stContextWindow") &&
-			tab.includes("this.resetButton(stRequestTimeout, \"requestTimeoutMs\")") &&
+			read("src/settings/sections/advanced.ts").includes("ctx.resetButton(stRequestTimeout, \"requestTimeoutMs\")") && // moved 2026-08-24 (Phase 5)
+			!tab.includes("this.resetButton(stRequestTimeout") &&
 			tab.includes("this.resetButton(stTemperature, \"temperature\")") &&
 			mem187.includes("ctx.resetButton(stMemoryCharLimit, \"memoryCharLimit\")") &&
 			mem187.includes("ctx.resetButton(stCompressionThreshold, \"compressionThreshold\")") &&
 			/* toggles/enums/objects/lists never get a reset button */
 			!mem187.includes("ctx.resetButton(stCompressionEnabled") && // subjek pindah
+			/* v0.1.199 (Phase 5): approval mode is an enum and still gets no reset,
+			   but the subject is the safety module now. */
 			!tab.includes("this.resetButton(stApprovalMode") &&
+			!read("src/settings/sections/safety.ts").includes("ctx.resetButton(stApprovalMode") &&
 			!mem187.includes("ctx.resetButton(stMemoryEnabled") && // subjek pindah
 			/* v0.1.188: exclusions are a picked LIST — no ↺ (per-row trash instead).
 			   v0.1.199 (Phase 4): subject moved to the workspace module. */
@@ -660,7 +681,13 @@ module.exports = function settingsGuards() {
 			   10 di modul memory. */
 			/* v0.1.199 (Phase 4): workspace() took 2 call sites with it (8 tab +
 			   10 memory + 2 workspace). The total is unchanged — that is the point. */
-			((tab + mem187 + read("src/settings/sections/workspace.ts")).match(/resetButton\(st/g) || []).length === 20;
+			/* v0.1.199 (Phase 5): safety (1) + advanced (4) left the tab, so the tab
+			   holds 3. Read set grows, the sum stays 20 — that is the invariant.
+			   3 tab + 10 memory + 2 workspace + 1 safety + 4 advanced. */
+			((tab + mem187 +
+				read("src/settings/sections/workspace.ts") +
+				read("src/settings/sections/safety.ts") +
+				read("src/settings/sections/advanced.ts")).match(/resetButton\(st/g) || []).length === 20;
 		if (ok) {
 			console.log("✓ v0.1.187: ↺ reset-to-default on numeric/text fields (20 sites, toggles/enums/objects/lists excluded)");
 		} else {
@@ -984,9 +1011,15 @@ module.exports = function settingsGuards() {
 			!stab126.includes("private workspace(") &&
 			stab126.includes("workspaceSection(this.sectionContext(), host)") &&
 			read("src/settings/sections/workspace.ts").includes("export function workspace(") &&
-			stab126.includes("private safety(") &&
-			stab126.includes("private appearance(") &&
-			stab126.includes("private notifications(") &&
+			/* v0.1.199 (Phase 5): the three renderers moved out; the tab keeps the
+			   registry entries and the wiring, the modules own the rows. */
+			!stab126.includes("private safety(") &&
+			!stab126.includes("private appearance(") &&
+			!stab126.includes("private notifications(") &&
+			stab126.includes("safetySection(this.sectionContext(), host)") &&
+			stab126.includes("appearanceSection(this.sectionContext(), host)") &&
+			stab126.includes("notificationsSection(this.sectionContext(), host)") &&
+			read("src/settings/sections/safety.ts").includes("export function safety(") &&
 			stab126.includes("private about(") &&
 			bs126.includes('"memory", "notifications", "automations"') &&
 			bs126.includes("probes.F33") &&
@@ -995,7 +1028,8 @@ module.exports = function settingsGuards() {
 			bs126.includes("notificationsInSearch") &&
 			bs126.includes("probes.F35sliders") &&
 			stab126.includes('ariaLabel: "Max sessions kept"') &&
-			stab126.includes('ariaLabel: "Max tool iterations"') &&
+			read("src/settings/sections/advanced.ts").includes('ariaLabel: "Max tool iterations"') && // pindah 2026-08-24 (Phase 5)
+			!stab126.includes('ariaLabel: "Max tool iterations"') &&
 			mem126.includes('ariaLabel: "Memory nudge interval"') && // pindah 2026-08-24
 			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
@@ -1083,7 +1117,8 @@ module.exports = function settingsGuards() {
 		const helpers = read("src/settings/sections/helpers.ts");
 		const css = read("styles.css");
 		if (
-			st.includes('"Custom system prompt"') &&
+			read("src/settings/sections/advanced.ts").includes('"Custom system prompt"') && // moved 2026-08-24 (Phase 5)
+			!st.includes('"Custom system prompt"') &&
 			/* Phase 2 amended: stackedTextArea moved to the shared helpers module
 			   because both moved (mcp, advanced) and retained (cronForm) renderers
 			   call it; stackedControl stays in the tab (only retained callers). */
@@ -1096,7 +1131,10 @@ module.exports = function settingsGuards() {
 			/* v0.1.182 amended: row variant added for provider+model pairs */
 			st.includes("stackedControl(pickSetting, { row: true })") &&
 			/* negative pin spans both files now that the helper moved */
-			!(st + helpers).includes("addTextArea(") &&
+			/* v0.1.199 (Phase 5): advanced() moved and took two stackedTextArea call
+			   sites with it — pin the new caller so the helper keeps a user. */
+			read("src/settings/sections/advanced.ts").includes("stackedTextArea(") &&
+			!(st + helpers + read("src/settings/sections/advanced.ts")).includes("addTextArea(") &&
 			css.includes(".oa-settings .setting-item.oa-has-stacked textarea") &&
 			css.includes(".oa-stacked-control select.dropdown") &&
 			!css.includes(".oa-snippet-modal-text") // retired control-column hack
@@ -1216,7 +1254,13 @@ module.exports = function settingsGuards() {
 			read("src/settingsTab.ts") +
 			read("src/settings/sections/general.ts") +
 			read("src/settings/sections/memory.ts") +
-			read("src/settings/sections/terminal.ts");
+			read("src/settings/sections/terminal.ts") +
+			/* v0.1.199 (Phase 5): four more renderers left the tab. The negative pins
+			   below only mean something if the read set covers every owner. */
+			read("src/settings/sections/safety.ts") +
+			read("src/settings/sections/appearance.ts") +
+			read("src/settings/sections/advanced.ts") +
+			read("src/settings/sections/notifications.ts");
 		const ok =
 			stabC.includes("Thinking budget — sent to providers that support it, ignored elsewhere.") &&
 			stabC.includes("Named identities: persona + optional provider/model pin") &&
@@ -1523,6 +1567,7 @@ module.exports = function settingsGuards() {
 		const chat = read("src/ui/ChatApp.tsx");
 		const tab = read("src/settingsTab.ts");
 		const red = read("src/agent/redact.ts");
+		const safetyMod = read("src/settings/sections/safety.ts"); // renderer pindah 2026-08-24 (Phase 5)
 		const ok =
 			setts.includes("approvalTimeoutSec: number;") &&
 			setts.includes("redactSecrets: boolean;") &&
@@ -1531,9 +1576,12 @@ module.exports = function settingsGuards() {
 			tools.includes("checkpointBeforeWrite(ctx, path)") &&
 			chat.includes("approvalTimeoutSec") &&
 			chat.includes("timed out after") &&
-			tab.includes("Approval timeout") &&
-			tab.includes("Redact secrets") &&
-			tab.includes("Checkpoints") &&
+			/* v0.1.199 (Phase 5): the three safety rows render from safety.ts now. */
+			safetyMod.includes("Approval timeout") &&
+			safetyMod.includes("Redact secrets") &&
+			safetyMod.includes("Checkpoints") &&
+			!tab.includes("Approval timeout") &&
+			tab.includes("safetySection(this.sectionContext(), host)") &&
 			red.includes("redactSecretsInText");
 		if (ok) {
 			console.log("✓ v0.1.147e: safety parity — approval timeout (auto-deny), secret redaction on tool output, pre-edit checkpoints");
@@ -1722,6 +1770,7 @@ module.exports = function settingsGuards() {
 		const tab = read("src/settingsTab.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const reason = read("src/ui/components/reasoning.tsx");
+		const appearanceMod = read("src/settings/sections/appearance.ts"); // renderer pindah 2026-08-24 (Phase 5)
 		const css = read("styles.css");
 		/* Every tab in the SECTIONS registry must have a matching case in
 		   renderSectionBody — a key without a case renders an EMPTY tab (the
@@ -1737,14 +1786,18 @@ module.exports = function settingsGuards() {
 			setts.includes("showReactions: true") &&
 			setts.includes('inRaw.toolViewMode === "expanded"') &&
 			tab.includes('key: "appearance", label: "Appearance"') &&
-			tab.includes('private appearance(') &&
-			tab.includes('case "appearance":\n\t\t\tthis.appearance(host);') &&
+			read("src/settings/sections/appearance.ts").includes("export function appearance(") && // moved 2026-08-24 (Phase 5)
+			!tab.includes('private appearance(') &&
+			tab.includes('case "appearance":\n\t\t\tappearanceSection(this.sectionContext(), host);') &&
 			everyKeyHasCase &&
-			tab.includes('setName("Tool calls")') &&
-			tab.includes('setName("Reasoning")') &&
-			tab.includes('setName("Session list density")') &&
-			tab.includes('setName("Intro screen")') &&
-			tab.includes('setName("Reaction buttons")') &&
+			/* v0.1.199 (Phase 5): the five rows live in appearance.ts; the tab must
+			   no longer own them, or a duplicate could drift back in unnoticed. */
+			appearanceMod.includes('setName("Tool calls")') &&
+			appearanceMod.includes('setName("Reasoning")') &&
+			appearanceMod.includes('setName("Session list density")') &&
+			appearanceMod.includes('setName("Intro screen")') &&
+			appearanceMod.includes('setName("Reaction buttons")') &&
+			!tab.includes('setName("Session list density")') &&
 			chat.includes('settings.toolViewMode === "hidden"') &&
 			chat.includes('defaultOpen={settings.toolViewMode === "expanded"}') &&
 			chat.includes("defaultOpen={!settings.reasoningCollapsedByDefault}") &&
@@ -1753,8 +1806,8 @@ module.exports = function settingsGuards() {
 			chat.includes("settings.showReactions && showFeedbackBar(turn)") &&
 			reason.includes("isStreaming && defaultOpen") &&
 			css.includes('.oa-panel.is-compact .oa-panel-row') &&
-			!tab.includes("zoomPercent") &&
-			!tab.includes("translucency");
+			!(tab + appearanceMod).includes("zoomPercent") &&
+			!(tab + appearanceMod).includes("translucency");
 		if (ok) {
 			console.log("✓ v0.1.150: Appearance tab — five self-owned chat-surface controls, Obsidian's theme untouched");
 		} else {
@@ -1768,8 +1821,11 @@ module.exports = function settingsGuards() {
 		const tools = read("src/agent/tools.ts");
 		const toolC = read("src/ui/components/tool.tsx");
 		const chat = read("src/ui/ChatApp.tsx");
-		const adv = region(tab, "private advanced(containerEl", "private notifications(containerEl", { label: "advanced" });
-		const agentSec = region(tab, "private agent(containerEl", "private appearance(containerEl", { label: "agent" });
+		/* v0.1.199 (Phase 5): advanced() is its own module now. agent() stays in
+		   the class but its old end marker (appearance) moved out -- the next
+		   method in the class is profiles(). */
+		const adv = read("src/settings/sections/advanced.ts");
+		const agentSec = region(tab, "private agent(containerEl", "private profiles(", { label: "agent" });
 		const ok =
 			setts.includes("checkpointMaxSnapshots: 30") &&
 			setts.includes("toolOutputMaxChars: 5000") &&
@@ -2130,7 +2186,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts")).match(/markModified\(/g) || []).length === 63 && // 29 tab + 17 memory + 5 command + 4 terminal + 4 workspace + 3 general + 1 mcp (2026-08-24 Phase 4: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts") + read("src/settings/sections/safety.ts") + read("src/settings/sections/appearance.ts") + read("src/settings/sections/advanced.ts") + read("src/settings/sections/notifications.ts")).match(/markModified\(/g) || []).length === 63 && // 15 tab + 17 memory + 5 command + 5 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety + 3 general + 1 mcp (2026-08-24 Phase 5: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

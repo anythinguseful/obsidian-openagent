@@ -1223,8 +1223,13 @@ module.exports = function previewGuards() {
 			sc108.includes("export function createSegmented") &&
 			sc108.includes("export function createSliderInput") &&
 			sc108.includes("radiogroup") &&
-			st108.includes("createSegmented({") &&
+			/* v0.1.199 (Phase 5): the approval rail moved with safety() and one
+			   slider with advanced(); the tab still drives three sliders. Pin every
+			   owner so a lost call site cannot hide behind a surviving one. */
+			read("src/settings/sections/safety.ts").includes("createSegmented({") &&
+			!st108.includes("createSegmented({") &&
 			st108.includes("createSliderInput({") &&
+			read("src/settings/sections/advanced.ts").includes("createSliderInput({") &&
 			!st108.includes("for (const m of modes)") &&
 			!st108.includes("setLimits(-1, 2, 0.05)") &&
 			!st108.includes("String(s.maxTokens)") &&

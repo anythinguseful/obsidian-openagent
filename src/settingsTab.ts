@@ -29,7 +29,7 @@ import { HubSkillPreviewModal } from "./settings/modals/hub";
 import { BlueprintCatalogModal } from "./settings/modals/blueprint-catalog";
 import { GuardFindingsModal } from "./settings/modals/guard-findings";
 import { ExportFileSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
-import { createSegmented, createSliderInput } from "./ui/settings-controls";
+import { createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
 import { stackedTextArea } from "./settings/sections/helpers";
 import { general as generalSection } from "./settings/sections/general";
@@ -38,11 +38,14 @@ import { mcp as mcpSection } from "./settings/sections/mcp";
 import { workspace as workspaceSection } from "./settings/sections/workspace";
 import { command as commandSection } from "./settings/sections/command";
 import { terminalSettings as terminalSection } from "./settings/sections/terminal";
+import { safety as safetySection } from "./settings/sections/safety";
+import { appearance as appearanceSection } from "./settings/sections/appearance";
+import { advanced as advancedSection } from "./settings/sections/advanced";
+import { notifications as notificationsSection } from "./settings/sections/notifications";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
 import { copyText } from "./ui/clipboard";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
 import { getPath, isModified, markModified, setPath } from "./settingsModified";
-import { COMPLETION_SOUND_VARIANTS } from "./completionSound";
 import {
 	CRON_PRESETS,
 	cronExprForDaily,
@@ -101,7 +104,6 @@ import {
 } from "./agent/modelCatalog";
 import {
 	AgentProfile,
-	ApprovalMode,
 	CronTask,
 	OpenAgentSettings,
 	PERSONALITY_OVERLAYS,
@@ -568,7 +570,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			this.agent(host);
 			break;
 		case "appearance":
-			this.appearance(host);
+			appearanceSection(this.sectionContext(), host);
 			break;
 		case "command":
 			commandSection(this.sectionContext(), host);
@@ -583,19 +585,19 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				memorySection(this.sectionContext(), host);
 				break;
 			case "notifications":
-				this.notifications(host);
+				notificationsSection(this.sectionContext(), host);
 				break;
 			case "automations":
 				this.automations(host);
 				break;
 			case "advanced":
-				this.advanced(host);
+				advancedSection(this.sectionContext(), host);
 				break;
 			case "workspace":
 				workspaceSection(this.sectionContext(), host);
 				break;
 			case "safety":
-				this.safety(host);
+				safetySection(this.sectionContext(), host);
 				break;
 			case "about":
 				this.about(host);
@@ -610,76 +612,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   own actionable native-banner and completion-cue controls. */
 
 	/** Add a picked folder to Workspace exclusions (validated + deduped). */
-	private safety(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-		/* v0.1.181: group labels — Approvals up top, Guardrails below. */
-		this.subheading(containerEl, "Approvals", "When the agent must ask before acting.");
-		/* dipindah verbatim dari agent() (v0.1.126) — Hermes safety ⊇
-		   approvals.mode ≡ Approval mode kita (segmented lobe.antd v0.1.108) */
-		const stApprovalMode = new Setting(containerEl)
-			.setName("Approval mode")
-			.setDesc("Manual: approve everything · Cautious: risky actions ask · YOLO: never ask.");
-		stApprovalMode.controlEl.appendChild(
-			createSegmented({
-				ariaLabel: "Approval mode",
-				options: [
-					{ value: "manual", label: "Manual", title: "Approve every tool call" },
-					{ value: "cautious", label: "Cautious", title: "Persistent, destructive, and scheduling actions ask" },
-					{ value: "yolo", label: "YOLO", title: "Never ask (Hermes --yolo)" },
-				],
-				value: s.approvalMode,
-				onPick: (v) => {
-					s.approvalMode = v as ApprovalMode;
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stApprovalMode, this.plugin.settings, "approvalMode");
-
-		/* v0.1.147 (Hermes approvals.timeout): auto-deny a missed approval. */
-		const stApprovalTimeout = new Setting(containerEl)
-			.setName("Approval timeout")
-			.setDesc("Auto-deny an unanswered approval prompt after this many seconds. 0 = wait forever.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "0";
-				t.inputEl.max = "600";
-				t.inputEl.step = "10";
-				t.setValue(String(s.approvalTimeoutSec)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.approvalTimeoutSec = Math.min(600, Math.max(0, n));
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stApprovalTimeout, this.plugin.settings, "approvalTimeoutSec");
-		this.resetButton(stApprovalTimeout, "approvalTimeoutSec");
-
-		this.subheading(containerEl, "Guardrails", "Extra protections for the content the agent sees and the files it changes.");
-
-		const stRedact = new Setting(containerEl)
-			.setName("Redact secrets")
-			.setDesc("Mask detected API keys, tokens, and private keys in web pages and tool results before the model sees them. On by default.")
-			.addToggle((t) =>
-				t.setValue(s.redactSecrets).onChange(async (v) => {
-					s.redactSecrets = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stRedact, this.plugin.settings, "redactSecrets");
-
-		const stCheckpoints = new Setting(containerEl)
-			.setName("Checkpoints")
-			.setDesc("Keep a rollback copy of every note the agent changes. On by default.")
-			.addToggle((t) =>
-				t.setValue(s.checkpointsEnabled).onChange(async (v) => {
-					s.checkpointsEnabled = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stCheckpoints, this.plugin.settings, "checkpointsEnabled");
-	}
-
 	private otherProvidersOpen = false;
 	/* Which provider is being VIEWED/edited (UI-only state; null → the global
 	   default provider). Row clicks only move this — never chat routing
@@ -1618,10 +1550,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		this.resetButton(stMaxSessions, "maxSessions");
 
 		/* v0.1.126: row persetujuan pindah ke tab Safety (Hermes parity) —
-		   block verbatim-nya hidup di private safety() */
+		   block verbatim-nya kini hidup di src/settings/sections/safety.ts */
 		/* v0.1.151: the iteration cap row (= Hermes agent.max_turns) moved to
-		   the Advanced tab (Hermes parity) — its verbatim block lives in
-		   private advanced() */
+		   the Advanced tab (Hermes parity) — its verbatim block now lives in
+		   src/settings/sections/advanced.ts */
 
 		/* v0.1.126: baris folder kerja pindah ke tab Workspace (Hermes parity)
 		   — block verbatim-nya kini hidup di src/settings/sections/workspace.ts */
@@ -1659,81 +1591,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   window scale, glass, backdrop) stays out of scope — here that chrome
 	   belongs to Obsidian's own theme, which our CSS follows via var(--*)
 	   and never overrides. */
-
-	private appearance(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group label for the chat-surface rows. */
-		this.subheading(containerEl, "Chat surface", "How the chat panel looks and behaves.");
-		const stToolView = new Setting(containerEl)
-			.setName("Tool calls")
-			.setDesc("How tool-call cards render in chat. Hidden still keeps source lists.")
-			.addDropdown((d) =>
-				d
-					.addOption("collapsed", "Collapsed (headers only)")
-					.addOption("expanded", "Expanded (open by default)")
-					.addOption("hidden", "Hidden")
-					.setValue(s.toolViewMode)
-					.onChange(async (v) => {
-						s.toolViewMode = v as OpenAgentSettings["toolViewMode"];
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-					})
-			);
-		markModified(stToolView, this.plugin.settings, "toolViewMode");
-
-		const stReasoning = new Setting(containerEl)
-			.setName("Reasoning")
-			.setDesc("Collapse thinking blocks by default.")
-			.addToggle((t) =>
-				t.setValue(s.reasoningCollapsedByDefault).onChange(async (v) => {
-					s.reasoningCollapsedByDefault = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stReasoning, this.plugin.settings, "reasoningCollapsedByDefault");
-
-		const stDensity = new Setting(containerEl)
-			.setName("Session list density")
-			.setDesc("Row spacing in the conversations panel.")
-			.addDropdown((d) =>
-				d
-					.addOption("comfortable", "Comfortable")
-					.addOption("compact", "Compact")
-					.setValue(s.sessionListDensity)
-					.onChange(async (v) => {
-						s.sessionListDensity = v as OpenAgentSettings["sessionListDensity"];
-						await this.plugin.saveSettings();
-						this.plugin.refreshViews();
-					})
-			);
-		markModified(stDensity, this.plugin.settings, "sessionListDensity");
-
-		const stIntro = new Setting(containerEl)
-			.setName("Intro screen")
-			.setDesc("Show the welcome wordmark when a chat is empty.")
-			.addToggle((t) =>
-				t.setValue(s.showIntroScreen).onChange(async (v) => {
-					s.showIntroScreen = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stIntro, this.plugin.settings, "showIntroScreen");
-
-		const stReactions = new Setting(containerEl)
-			.setName("Reaction buttons")
-			.setDesc("Show the helpful / not-helpful buttons under assistant answers.")
-			.addToggle((t) =>
-				t.setValue(s.showReactions).onChange(async (v) => {
-					s.showReactions = v;
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				})
-			);
-		markModified(stReactions, this.plugin.settings, "showReactions");
-	}
 
 	/* ---------------- commands (v0.1.77, Copilot CommandSettings parity) ----
 	   Owner 2026-08-04: mirror Copilot's Commands-settings EXPERIENCE —
@@ -3377,230 +3234,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private advanced(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
-
-		/* v0.1.181: group labels — Limits, then System prompt. */
-		this.subheading(containerEl, "Limits", "Caps that keep runs bounded and reversible.");
-		/* v0.1.151: "Max tool iterations" moved from Chat (Hermes agent.max_turns
-		   lives in Advanced) — block verbatim, same slider + markModified. */
-		const stMaxIterations = new Setting(containerEl)
-			.setName("Max tool iterations")
-			.setDesc("Safety cap on tool-call rounds per user message.");
-		stMaxIterations.controlEl.appendChild(
-			createSliderInput({
-				ariaLabel: "Max tool iterations",
-				min: 1,
-				max: 40,
-				step: 1,
-				value: s.maxIterations,
-				commit: (v) => {
-					s.maxIterations = v;
-					void this.plugin.saveSettings();
-				},
-			}).el
-		);
-		markModified(stMaxIterations, this.plugin.settings, "maxIterations");
-		this.resetButton(stMaxIterations, "maxIterations");
-
-		const stToolOutputLimit = new Setting(containerEl)
-			.setName("Tool output limit")
-			.setDesc("Characters rendered inside a tool-call card before it is sliced for display (the full result stays in history).")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "1000";
-				t.inputEl.max = "50000";
-				t.inputEl.step = "1000";
-				t.setValue(String(s.toolOutputMaxChars)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.toolOutputMaxChars = Math.min(50_000, Math.max(1_000, n));
-					await this.plugin.saveSettings();
-					this.plugin.refreshViews();
-				});
-			});
-		markModified(stToolOutputLimit, this.plugin.settings, "toolOutputMaxChars");
-		this.resetButton(stToolOutputLimit, "toolOutputMaxChars");
-
-		const stCheckpointMax = new Setting(containerEl)
-			.setName("Checkpoint snapshots kept")
-			.setDesc("Rollback snapshots in openagent/checkpoints/ are pruned to the newest N per note. Off disables pruning, not snapshots.")
-			.addText((t) => {
-				t.inputEl.type = "number";
-				t.inputEl.min = "5";
-				t.inputEl.max = "200";
-				t.inputEl.step = "5";
-				t.setValue(String(s.checkpointMaxSnapshots)).onChange(async (v) => {
-					const n = Math.floor(Number(v));
-					if (!Number.isFinite(n)) return;
-					s.checkpointMaxSnapshots = Math.min(200, Math.max(5, n));
-					await this.plugin.saveSettings();
-				});
-			});
-		markModified(stCheckpointMax, this.plugin.settings, "checkpointMaxSnapshots");
-		this.resetButton(stCheckpointMax, "checkpointMaxSnapshots");
-
-		this.subheading(containerEl, "System prompt", "Operator-level instructions appended to every conversation.");
-		const spSetting = new Setting(containerEl)
-			.setName("Custom system prompt")
-			.setDesc("Extra instructions appended to every conversation's system prompt.");
-		stackedTextArea(
-			spSetting,
-			{
-				rows: 6,
-				value: s.customSystemPrompt,
-				placeholder: "e.g. Always answer in Indonesian; cite note titles when you reference them.",
-				ariaLabel: "Custom system prompt",
-			},
-			async (v) => {
-				s.customSystemPrompt = v;
-				await this.plugin.saveSettings();
-			}
-		);
-
-		const stRequestTimeout = new Setting(containerEl)
-			.setName("Request timeout (ms)")
-			.setDesc("Applied to every provider request, chat and model-listing alike.")
-			.addText((t) =>
-				t.setValue(String(s.requestTimeoutMs)).onChange(async (v) => {
-					s.requestTimeoutMs = Math.max(5000, parseInt(v) || 120000);
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stRequestTimeout, this.plugin.settings, "requestTimeoutMs");
-		this.resetButton(stRequestTimeout, "requestTimeoutMs");
-
-		const stDebugMode = new Setting(containerEl)
-			.setName("Debug mode")
-			.setDesc("Log requests and responses to the developer console.")
-			.addToggle((t) =>
-				t.setValue(s.debugMode).onChange(async (v) => {
-					s.debugMode = v;
-					await this.plugin.saveSettings();
-				})
-			);
-		markModified(stDebugMode, this.plugin.settings, "debugMode");
-	}
-
-	private notifications(containerEl: HTMLElement): void {
-		const prefs = this.plugin.settings.notifications;
-		const status = this.plugin.getNativeNotificationStatus();
-		const statusText = !status.supported
-			? status.reason === "mobile"
-				? "Unavailable on mobile. Native banners are desktop-only; Obsidian notices still work."
-				: "Unavailable in this desktop runtime. Obsidian notices still work."
-			: status.permission === "granted"
-				? "Supported · permission granted."
-				: status.permission === "denied"
-					? "Supported · permission denied. Re-enable notifications for Obsidian in system settings."
-					: "Supported · permission not requested. Use the test button to request it from a user gesture.";
-
-		this.subheading(
-			containerEl,
-			"Native desktop notifications",
-			"Optional OS banners layered on top of existing Obsidian notices. Open Agent must be running."
-		);
-		new Setting(containerEl).setName("Native notification status").setDesc(statusText);
-
-		new Setting(containerEl)
-			.setName("Enable native notifications")
-			.setDesc("Master switch. Off by default; individual event choices below are ready when you opt in.")
-			.addToggle((t) =>
-				t.setValue(prefs.nativeEnabled).onChange(async (value) => {
-					prefs.nativeEnabled = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		const nativeKinds: { key: keyof typeof prefs.nativeKinds; name: string; desc: string }[] = [
-			{ key: "turnDone", name: "Chat completed", desc: "Away-only banner after the final interactive turn, including steer/goal continuations." },
-			{ key: "turnError", name: "Chat error", desc: "Away-only generic alert. Stop/abort never counts as an error." },
-			{ key: "approvalRequired", name: "Approval required", desc: "Alerts while away, or while the chat pane is not visible." },
-			{ key: "inputRequired", name: "Input required", desc: "Alerts while away, or while the chat pane is not visible." },
-			{ key: "backgroundDone", name: "Automation completed", desc: "Away-only; also requires that automation's Notify switch and non-silent output." },
-			{ key: "backgroundError", name: "Automation error", desc: "Away-only generic alert, independent of the automation's Notify switch." },
-		];
-		for (const item of nativeKinds) {
-			new Setting(containerEl)
-				.setName(item.name)
-				.setDesc(item.desc)
-				.addToggle((t) =>
-					t.setValue(prefs.nativeKinds[item.key]).onChange(async (value) => {
-						prefs.nativeKinds[item.key] = value;
-						await this.plugin.saveSettings();
-					})
-				);
-		}
-
-		new Setting(containerEl)
-			.setName("Test native notification")
-			.setDesc("Sends a test banner — the only action that may ask for OS permission. Works even while notifications are off.")
-			.addButton((button) => {
-				button.setButtonText(
-					status.permission === "default"
-						? "Request permission & test"
-						: status.permission === "denied"
-							? "Permission denied"
-							: "Send test"
-				);
-				button.setDisabled(!status.supported || status.permission === "denied");
-				button.onClick(async () => {
-					button.setDisabled(true).setButtonText("Sending…");
-					const result = await this.plugin.testNativeNotification();
-					const message =
-						result === "sent"
-							? "Open Agent: test handed to the operating system."
-							: result === "denied"
-								? "Open Agent: notification permission was not granted."
-								: result === "unsupported"
-									? "Open Agent: native notifications are unavailable here."
-									: "Open Agent: the native notification test failed.";
-					new Notice(message, 6000);
-					this.display();
-				});
-			});
-
-		this.subheading(
-			containerEl,
-			"Completion sound",
-			"Independent per-vault app cue for a successful terminal interactive-chat turn. Never plays for errors, approvals, input, Stop, or automations."
-		);
-		new Setting(containerEl)
-			.setName("Play completion sound")
-			.setDesc(
-				this.plugin.isCompletionSoundSupported()
-					? "Off by default. Generated locally with Web Audio; no audio file or network request."
-					: "Web Audio is unavailable in this runtime, so completion cues cannot play."
-			)
-			.addToggle((t) =>
-				t.setValue(prefs.completionSoundEnabled).onChange(async (value) => {
-					prefs.completionSoundEnabled = value;
-					await this.plugin.saveSettings();
-				})
-			);
-
-		const selected = COMPLETION_SOUND_VARIANTS.find((v) => v.id === prefs.completionSoundVariant) ?? COMPLETION_SOUND_VARIANTS[0];
-		new Setting(containerEl)
-			.setName("Completion sound preset")
-			.setDesc(`${selected.description} Preview works even while completion sound is off.`)
-			.addDropdown((dropdown) => {
-				for (const variant of COMPLETION_SOUND_VARIANTS) dropdown.addOption(String(variant.id), variant.name);
-				dropdown.setValue(String(selected.id)).onChange(async (value) => {
-					prefs.completionSoundVariant = Number(value);
-					await this.plugin.saveSettings();
-					this.display();
-				});
-			})
-			.addButton((button) =>
-				button
-					.setButtonText("Preview")
-					.setDisabled(!this.plugin.isCompletionSoundSupported())
-					.onClick(async () => {
-						const result = await this.plugin.previewCompletionSound(prefs.completionSoundVariant);
-						if (result !== "played") new Notice("Open Agent: completion sound could not play in this runtime.", 5000);
-					})
-			);
-	}
 }
 
 /** Delete-profile confirmation with the Hermes keep/trash data choice (default: keep). */

@@ -284,7 +284,54 @@ Each phase is one commit and must pass the full gate before the next begins.
   intact for an `includes()` pin, and a `/*x*/` prefix does not change a count.
   A green mutation indicts the probe before it indicts the guard: mutations must
   destroy the substring, and the harness now asserts the pattern is really gone.
-- **Phase 5** — `notifications`, `advanced`, `appearance`, `safety`.
+- **Phase 5 — DONE** (`notifications`, `advanced`, `appearance`, `safety`).
+  366 lines left the class: `safety` 69, `appearance` 74, `advanced` 104,
+  `notifications` 119. `settingsTab.ts` 3,683 → 3,315 (−368 with the blank
+  separators). New modules: `safety.ts` 90, `appearance.ts` 93,
+  `advanced.ts` 124, `notifications.ts` 137. Unlike Phase 4, **no private
+  helper travelled** — every `this.*` in all four blocks resolved to a
+  `SectionContext` member, so the renderers moved alone.
+  Three orphan imports pruned from the tab (`createSegmented`,
+  `COMPLETION_SOUND_VARIANTS`, `ApprovalMode`); `createSliderInput` and
+  `stackedTextArea` stayed, they still have tab-side callers.
+  Byte-exact roundtrip on all four blocks before the write, and the
+  free-identifier enumeration ran *first* this time — **tsc passed on the
+  first attempt**, which is the Phase 4 lesson paying for itself.
+
+  **14 guards amended** across two files — `settings.cjs` (v0.1.181,
+  settings IA, v0.1.187, v0.1.126, stacked fields, settings copy C1–C16,
+  v0.1.147e, v0.1.150, v0.1.94) and `preview.cjs` (v0.1.108). Only **6 of
+  the 14 were predicted** by the L292 scan; `v0.1.147e`, `v0.1.150`,
+  `v0.1.108`, `v0.1.94`, `stacked fields` and `settings copy` were not.
+  Across Phases 4+5 the prediction has now missed more guards than it
+  caught — **the baseline diff is the authority, the scan is only a hint.**
+
+  Three region markers had to be re-anchored: the `safetySection` region
+  became a module read, `advanced` likewise, and `agent`'s *end* marker
+  (`private appearance(`) moved out, so it now ends at `private profiles(` —
+  the next method still in the class.
+
+  Two stale prose comments in the tab (L1553/L1556) still said the moved
+  blocks lived in `private safety()` / `private advanced()`. They tripped
+  the new `!includes("private safety(")` pin from a *comment*, not code —
+  the recorded trap, hit for real. Updated to name the modules.
+
+  Invariants held: `markModified(` **63** (15 tab + 17 memory + 5 command +
+  5 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety +
+  3 general + 1 mcp) and `resetButton(st` **20** (3 tab + 10 memory +
+  2 workspace + 1 safety + 4 advanced). Both totals are unchanged by the
+  move — that is precisely what they are for.
+
+  Gate: tsc 0 · build 0 · smoke **296 ✓ / 0 ✗** · sorted-✓ diff vs baseline
+  = **one line**, the `v0.1.197` file count 124 → 130 (+2 Phase 4,
+  +4 Phase 5 — a counter, not a regression) · `npm test` **1858 ✓ / 0 ✗** ·
+  `check:docs` 38/0 · red-proof **26/26**.
+
+  Red-proof lesson (new): `String.replace(needle, repl)` mutates only the
+  **first** occurrence. Four probes aborted because the pin survived
+  elsewhere in the same file (`Approval mode` ×3, `markModified(` ×5). The
+  harness caught it loudly instead of reporting a false MISS — mutate with
+  `split(needle).join(repl)` so every occurrence dies.
 
 Phase order is by risk, not by size: the renderer with the fewest dependencies
 goes first so that a failure in Phase 1 is unambiguous.
