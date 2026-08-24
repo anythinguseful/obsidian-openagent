@@ -34,6 +34,7 @@ import { McpCatalogModal } from "./settings/modals/mcp-catalog";
 import { ConfirmResetModal, ExportFileSuggestModal, FolderSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
 import { createSegmented, createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
+import { copyText, exportStamp, stackedTextArea } from "./settings/sections/helpers";
 import { memory as memorySection } from "./settings/sections/memory";
 import { markdownTextareaKeydown } from "./ui/markdown-keys";
 import { buildSettingsIndex, filterSettingsIndex, type SettingsSearchEntry } from "./settingsSearch";
@@ -4545,55 +4546,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 
 /* ── data portability modals (docs/plans/data-portability-plan.md) ─────────────── */
 
-/** `2026-07-20-09-00` — export filename stamp (UTC, per-minute resolution). */
-function exportStamp(): string {
-	return new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "-");
-}
-
-/** Clipboard with a legacy fallback (older webviews). */
-async function copyText(text: string): Promise<void> {
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch {
-		const ta = document.createElement("textarea");
-		ta.value = text;
-		document.body.appendChild(ta);
-		ta.select();
-		document.execCommand("copy");
-		ta.remove();
-	}
-}
-
-/**
- * Long-text field stacked INSIDE its setting-item (info above, textarea
- * taking the full row width below — one coherent card). The single
- * sanctioned way to render multi-line text in settings; control-column
- * textareas (addTextArea) are banned (smoke guard enforces).
- */
-function stackedTextArea(
-	setting: Setting,
-	opts: { rows: number; value: string; placeholder?: string; ariaLabel: string },
-	onChange: (v: string) => void | Promise<void>
-): HTMLTextAreaElement {
-	setting.settingEl.addClass("oa-has-stacked");
-	const ta = setting.settingEl.createEl("textarea", {
-		attr: {
-			rows: String(opts.rows),
-			"aria-label": opts.ariaLabel,
-			...(opts.placeholder ? { placeholder: opts.placeholder } : {}),
-		},
-	});
-	ta.value = opts.value;
-	ta.addEventListener("change", () => void onChange(ta.value));
-	/* v0.1.116: rasa editor markdown di SEMUA stackedTextArea — Tab/Shift+Tab
-	   indentasi multi-baris, Enter melanjutkan list/checkbox/nomor/quote
-	   (item kosong = keluar), auto-tutup pasangan + bungkus seleksi,
-	   skip-over, Backspace pasangan kosong (paket lengkap, pilihan owner). */
-	ta.addEventListener("keydown", (e) => {
-		markdownTextareaKeydown(e, ta, { newlineOnShiftEnter: false });
-	});
-	return ta;
-}
 
 /**
  * Generic full-width stacked control row inside a setting-item (info above,

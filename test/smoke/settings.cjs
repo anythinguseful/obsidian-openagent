@@ -884,14 +884,23 @@ module.exports = function settingsGuards() {
 	}
 	{
 		const st = read("src/settingsTab.ts");
+		const helpers = read("src/settings/sections/helpers.ts");
 		const css = read("styles.css");
 		if (
 			st.includes('"Custom system prompt"') &&
-			st.includes("function stackedTextArea(") &&
+			/* Phase 2 amended: stackedTextArea moved to the shared helpers module
+			   because both moved (mcp, advanced) and retained (cronForm) renderers
+			   call it; stackedControl stays in the tab (only retained callers). */
+			helpers.includes("export function stackedTextArea(") &&
+			!st.includes("function stackedTextArea(") &&
+			/* Phase 2 finding: the CSS pins below only prove the rule exists. Pin the
+			   TS side too, or the helper could stop tagging the row and stay green. */
+			helpers.includes('addClass("oa-has-stacked")') &&
 			st.includes("function stackedControl(") &&
 			/* v0.1.182 amended: row variant added for provider+model pairs */
 			st.includes("stackedControl(pickSetting, { row: true })") &&
-			!st.includes("addTextArea(") &&
+			/* negative pin spans both files now that the helper moved */
+			!(st + helpers).includes("addTextArea(") &&
 			css.includes(".oa-settings .setting-item.oa-has-stacked textarea") &&
 			css.includes(".oa-stacked-control select.dropdown") &&
 			!css.includes(".oa-snippet-modal-text") // retired control-column hack

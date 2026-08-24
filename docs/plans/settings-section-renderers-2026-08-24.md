@@ -129,8 +129,31 @@ Each phase is one commit and must pass the full gate before the next begins.
      "Compression" row from `auxModelRow`, so two v0.1.175 pins were passing on
      the wrong lines. Pins repointed; the duplicate itself is left untouched and
      recorded under Open questions rather than fixed inside a refactor commit.
-- **Phase 2** — the shared file-local helpers (`copyText`, `exportStamp`,
-  `stackedTextArea`), needed before any renderer that uses them can move.
+- **Phase 2 — DONE (2026-08-24).** `src/settings/sections/helpers.ts` (71
+  lines) now owns `exportStamp`, `copyText` and `stackedTextArea`, needed before
+  any renderer that uses them can move. The three bodies are byte-identical to
+  `git show 0ca2ff0:src/settingsTab.ts` L4548-4596 modulo the added `export`,
+  verified mechanically. `settingsTab.ts` 4,665 → 4,617 lines.
+
+  Scope was settled by an AST caller survey (`/tmp/helpers.cjs`), not grep: the
+  file has **five** module-level helpers, and only these three are shared with
+  renderers that move. `baseUrlDesc` is called by `providers` alone and
+  `stackedControl` by `model` / `moaSection` / `auxModelRow` alone — all
+  retained, so both stay in `settingsTab.ts`. That also resolved the worry
+  logged in Phase 1 that the `stacked fields` guard would be split across two
+  files: only the `stackedTextArea` pin moved.
+
+  One guard broke, exactly as predicted — `stacked fields`. It was amended on
+  four arms (helper ownership in the module, absence from the tab, the
+  `addTextArea(` negative pin evaluated against `st + helpers`, and the
+  `oa-has-stacked` class), each individually red-proofed. 289 `✓`, baseline diff
+  empty.
+
+  One finding, written up as Lesson 190: the red-proof turned up a **hole in the
+  original guard**. Renaming the `oa-has-stacked` class in the TS helper left
+  smoke fully green, because the block only pinned the CSS rule that consumes
+  the class, never the code that applies it. A CSS-only pin cannot prove the
+  markup still opts in. Added the missing arm.
 - **Phase 3** — `general`, `mcp`, `terminalSettings`.
 - **Phase 4** — `workspace` + `addWorkspaceExclusion`, `command` +
   `renderCommandRows`. Moved in pairs: each private helper has exactly one
