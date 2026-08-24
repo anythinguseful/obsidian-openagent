@@ -15,7 +15,7 @@
  * knowable path uses the repo-root read() from the harness instead.
  */
 
-const { ROOT, read, region, regionFrom, fs, path, plugin } = require("./harness.cjs");
+const { ROOT, read, region, regionFrom, fs, path, plugin, obsidianMock } = require("./harness.cjs");
 
 // The monolith's __dirname. Only for dynamically composed paths -- prefer
 // read() whenever the path is a literal, so check-docs guard 1 can see it.
@@ -438,6 +438,210 @@ module.exports = async function miscGuards() {
 			console.log("\u2713 v0.1.199 behavioural: revealLeaf fire-and-forget survives BOTH contracts \u2014 legacy void return and a rejecting promise");
 		} else {
 			console.error(`\u2717 v0.1.199 revealLeaf handling regressed (legacyOk=${legacyOk}, rejectingOk=${rejectingOk}, thrown=${thrown && thrown.message})`);
+			failed++;
+		}
+	}
+
+	{
+		/* v0.1.200 behavioural: settings writes have TWO contracts, and the
+		   split is the whole fix. saveSettings() must keep rejecting, because
+		   ten call sites (MCP/terminal consent, chat message transactions) roll
+		   their in-memory state back when the write fails -- swallowing there
+		   would record consent as granted while nothing reached disk.
+		   saveSettingsSafe() is for the ~129 Obsidian control callbacks that
+		   THROW AWAY the promise they are handed: before the fix a failed write
+		   vanished silently, the toggle stayed flipped, and the setting was gone
+		   on the next restart. The rejection arm is only meaningful because
+		   test/fail-on-unhandled.cjs turns an escaped rejection into a failure. */
+		const savedSaveData = plugin.saveData;
+		const savedNotice = obsidianMock.Notice;
+		const savedError = console.error;
+		const notices = [];
+		const errors = [];
+		obsidianMock.Notice = class {
+			constructor(msg) {
+				notices.push(String(msg));
+			}
+		};
+		plugin.saveData = async () => {
+			throw new Error("disk full");
+		};
+
+		let stillRejects = false;
+		let safeThrew = null;
+		let safeReturned = "not-called";
+		try {
+			await plugin.saveSettings();
+		} catch (e) {
+			stillRejects = e instanceof Error && e.message === "disk full";
+		}
+		console.error = (...a) => {
+			errors.push(a.map((x) => (x instanceof Error ? x.message : String(x))).join(" "));
+		};
+		try {
+			safeReturned = plugin.saveSettingsSafe();
+		} catch (e) {
+			safeThrew = e;
+		}
+		/* the catch runs on a microtask, so let it land before scoring */
+		await new Promise((r) => setTimeout(r, 10));
+		console.error = savedError;
+
+		plugin.saveData = savedSaveData;
+		obsidianMock.Notice = savedNotice;
+
+		const toldUser = notices.some((n) => n.includes("could not save settings") && n.includes("disk full"));
+		const logged = errors.some((e) => e.includes("failed to save settings"));
+		const isVoid = safeReturned === undefined;
+
+		if (stillRejects && safeThrew === null && isVoid && toldUser && logged) {
+			console.log("\u2713 v0.1.200 behavioural: saveSettings() still rejects for rollback callers; saveSettingsSafe() swallows, notifies and logs instead of losing the write");
+		} else {
+			console.error(`\u2717 v0.1.200 save-contract regressed (stillRejects=${stillRejects}, safeThrew=${safeThrew && safeThrew.message}, void=${isVoid}, notice=${toldUser}, logged=${logged})`);
+			failed++;
+		}
+	}
+
+	{
+		/* v0.1.200 behavioural: the unhandled-rejection net is a REPORTER, so it
+		   must never be the thing that breaks startup -- onload() aborts on a
+		   throw and the entire plugin dies. It is called before loadSettings(),
+		   and non-DOM hosts (this harness, any headless runner) expose a window
+		   with no addEventListener at all. It also must filter on our own stack:
+		   Obsidian shares one window across plugins, so an unfiltered handler
+		   would blame us for another plugin's rejection. */
+		const savedWindow = global.window;
+		let domlessThrew = null;
+		try {
+			global.window = {};
+			plugin.installRejectionNet();
+			global.window = undefined;
+			plugin.installRejectionNet();
+		} catch (e) {
+			domlessThrew = e;
+		}
+
+		const added = [];
+		const removed = [];
+		let handler = null;
+		global.window = {
+			addEventListener: (ev, fn) => {
+				added.push(ev);
+				handler = fn;
+			},
+			removeEventListener: (ev) => removed.push(ev),
+		};
+		const savedRegister = plugin.register;
+		const teardowns = [];
+		plugin.register = (fn) => teardowns.push(fn);
+		let wiredThrew = null;
+		try {
+			plugin.installRejectionNet();
+		} catch (e) {
+			wiredThrew = e;
+		}
+
+		const savedNotice2 = obsidianMock.Notice;
+		const savedError2 = console.error;
+		const seen = [];
+		obsidianMock.Notice = class {
+			constructor(msg) {
+				seen.push(String(msg));
+			}
+		};
+		console.error = () => {};
+		let prevented = false;
+		if (handler) {
+			/* another plugin's rejection: no stack of ours -> stay silent */
+			const foreign = new Error("someone else exploded");
+			foreign.stack = "Error: someone else exploded\n    at other-plugin/main.js:1:1";
+			handler({ reason: foreign, preventDefault: () => { prevented = true; } });
+			/* ours: the bundle path carries the plugin id */
+			const ours = new Error("our async task exploded");
+			ours.stack = `Error: our async task exploded\n    at x (/vault/.obsidian/plugins/${plugin.manifest.id}/main.js:1:1)`;
+			handler({ reason: ours, preventDefault: () => { prevented = true; } });
+		}
+		console.error = savedError2;
+		obsidianMock.Notice = savedNotice2;
+
+		for (const fn of teardowns) fn();
+		plugin.register = savedRegister;
+		global.window = savedWindow;
+
+		const domless = domlessThrew === null;
+		const wired = wiredThrew === null && added.length === 1 && added[0] === "unhandledrejection";
+		const tornDown = removed.length === 1 && removed[0] === "unhandledrejection";
+		const filtered = seen.length === 1 && seen[0].includes("our async task exploded");
+
+		if (domless && wired && tornDown && filtered && !prevented) {
+			console.log("\u2713 v0.1.200 behavioural: rejection net survives a DOM-less host, wires+unwires once, reports only our own stack, and never preventDefault()s");
+		} else {
+			console.error(`\u2717 v0.1.200 rejection net regressed (domless=${domless}, wired=${wired}, tornDown=${tornDown}, filtered=${filtered} [${seen.join(" | ")}], prevented=${prevented})`);
+			failed++;
+		}
+	}
+
+	{
+		/* v0.1.200 static: ban the exact shape that caused the silent data loss
+		   -- a bare `await x.saveSettings();` as the LAST statement of a UI
+		   callback. The callback discards the returned promise, so the rejection
+		   had nowhere to go. Sites inside a try are exempt: those handle the
+		   failure themselves and must keep awaiting. */
+		const ts = require("typescript");
+		const HOOKS = new Set(["onChange", "onClick", "onSubmit", "onClose", "onSelect"]);
+		const srcFiles = [];
+		(function walk(dir) {
+			for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+				const full = path.join(dir, e.name);
+				if (e.isDirectory()) walk(full);
+				else if (/\.tsx?$/.test(e.name)) srcFiles.push(full);
+			}
+		})(path.join(ROOT, "src"));
+
+		const offenders = [];
+		for (const file of srcFiles) {
+			const text = fs.readFileSync(file, "utf8");
+			const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+			(function visit(node) {
+				if (
+					ts.isCallExpression(node) &&
+					ts.isPropertyAccessExpression(node.expression) &&
+					node.expression.name.text === "saveSettings"
+				) {
+					const stmt = node.parent && ts.isAwaitExpression(node.parent) ? node.parent.parent : null;
+					if (stmt && ts.isExpressionStatement(stmt)) {
+						let inTry = false;
+						for (let c = node.parent; c; c = c.parent) {
+							if (ts.isTryStatement(c) && c.tryBlock.getStart(sf) <= node.getStart(sf) && node.getEnd() <= c.tryBlock.getEnd()) inTry = true;
+						}
+						const fn = stmt.parent;
+						const isLast =
+							fn &&
+							ts.isBlock(fn) &&
+							fn.statements.length > 0 &&
+							fn.statements[fn.statements.length - 1] === stmt;
+						const owner = isLast ? fn.parent : null;
+						const isCallback =
+							owner &&
+							(ts.isArrowFunction(owner) || ts.isFunctionExpression(owner)) &&
+							owner.parent &&
+							ts.isCallExpression(owner.parent) &&
+							owner.parent.arguments.includes(owner) &&
+							ts.isPropertyAccessExpression(owner.parent.expression) &&
+							HOOKS.has(owner.parent.expression.name.text);
+						if (!inTry && isCallback) {
+							offenders.push(`${path.relative(ROOT, file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`);
+						}
+					}
+				}
+				ts.forEachChild(node, visit);
+			})(sf);
+		}
+
+		if (offenders.length === 0 && srcFiles.length > 100) {
+			console.log(`\u2713 v0.1.200 static: ${srcFiles.length} source files scanned, no fire-and-forget "await x.saveSettings()" left tail-position in a UI callback (use saveSettingsSafe)`);
+		} else {
+			console.error(`\u2717 v0.1.200 discarded settings-save promise in a UI callback (files=${srcFiles.length}): ${offenders.join(", ")}`);
 			failed++;
 		}
 	}

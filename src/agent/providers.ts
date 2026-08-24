@@ -618,6 +618,9 @@ async function streamingCompletion(
 	}
 	let timedOut = false;
 	let timer = 0;
+	/* Held so the finally block can cancel an in-flight read; see the teardown
+	   comment there. */
+	let activeReader: { cancel: () => Promise<void> } | null = null;
 	const armTimer = () => {
 		if (timer) window.clearTimeout(timer);
 		timer = window.setTimeout(() => {
@@ -654,6 +657,7 @@ async function streamingCompletion(
 		}
 
 		const reader = resp.body.getReader();
+		activeReader = reader;
 		const decoder = new TextDecoder();
 		let buffer = "";
 		let content = "";
@@ -771,5 +775,19 @@ async function streamingCompletion(
 	} finally {
 		if (timer) window.clearTimeout(timer);
 		cb.signal?.removeEventListener("abort", onCallerAbort);
+		/* Tear the wire down on EVERY exit path (v0.1.152). Clearing the timer
+		   and dropping the listener above frees our own bookkeeping but leaves
+		   the HTTP connection open and the body locked: a stream that ends in a
+		   throw (protocol error, caller abort) would otherwise leak one socket
+		   per failed reply for the life of the session. Cancelling the reader
+		   first unlocks the body; abort() then closes the connection. Both are
+		   best-effort — a stream already closed or errored rejects here, and
+		   that must never mask the real error being propagated. */
+		try {
+			void activeReader?.cancel().catch(() => {});
+		} catch {
+			/* reader already released */
+		}
+		ctl.abort();
 	}
 }

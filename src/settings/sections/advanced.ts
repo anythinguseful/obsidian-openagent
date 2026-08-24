@@ -74,7 +74,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 				const n = Math.floor(Number(v));
 				if (!Number.isFinite(n)) return;
 				s.checkpointMaxSnapshots = Math.min(200, Math.max(5, n));
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			});
 		});
 	markModified(stCheckpointMax, ctx.plugin.settings, "checkpointMaxSnapshots");
@@ -94,7 +94,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 		},
 		async (v) => {
 			s.customSystemPrompt = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		}
 	);
 
@@ -104,7 +104,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addText((t) =>
 			t.setValue(String(s.requestTimeoutMs)).onChange(async (v) => {
 				s.requestTimeoutMs = Math.max(5000, parseInt(v) || 120000);
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stRequestTimeout, ctx.plugin.settings, "requestTimeoutMs");
@@ -116,7 +116,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.debugMode).onChange(async (v) => {
 				s.debugMode = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stDebugMode, ctx.plugin.settings, "debugMode");

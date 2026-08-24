@@ -51,7 +51,7 @@ export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement):
 				return;
 			}
 			s.toolsets.terminal = true;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		}));
 	markModified(enabled, ctx.plugin.settings, "toolsets.terminal");
 
@@ -84,7 +84,7 @@ export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement):
 						return;
 					}
 					s.terminal.dockerImage = next;
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				}));
 		markModified(image, ctx.plugin.settings, "terminal.dockerImage");
 	} else {
@@ -93,7 +93,7 @@ export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement):
 			.setDesc("Required separately. Local is refused in YOLO and Strict Workspace, is foreground-only, and can reach anything Obsidian can.")
 			.addToggle((toggle) => toggle.setValue(s.terminal.localExpertEnabled).onChange(async (value) => {
 				s.terminal.localExpertEnabled = value;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			}));
 		markModified(expert, ctx.plugin.settings, "terminal.localExpertEnabled");
 	}

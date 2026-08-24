@@ -263,6 +263,9 @@ export interface ChatAppProps {
 	runner: AgentRunner;
 	sessions: SessionStore;
 	saveSettings: () => Promise<void>;
+	/** Fire-and-forget save: reports its own failure, never rejects. Use
+	    this unless the caller rolls state back on failure. */
+	saveSettingsSafe: () => void;
 	openSettings: (section?: string) => void;
 	applyProfile: (id: string) => Promise<void>;
 	renderComponent: Component;
@@ -3997,7 +4000,7 @@ nudgeCounterRef.current = 0;
 			setModels(withCurrentModel(catalogOf(getActiveProvider(settings)), m));
 			/* a normal-model pick leaves the Mixture of Agents virtual provider */
 			if (settings.moa?.active_preset) settings.moa = setActiveMoaPreset(settings.moa, "");
-			await props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);
@@ -4034,7 +4037,7 @@ nudgeCounterRef.current = 0;
 			if (!settings.moa) return;
 			settings.moa = setActiveMoaPreset(settings.moa, name);
 			bumpSettingsRev();
-			await props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);

@@ -57,7 +57,7 @@ export function safety(ctx: SectionContext, containerEl: HTMLElement): void {
 				const n = Math.floor(Number(v));
 				if (!Number.isFinite(n)) return;
 				s.approvalTimeoutSec = Math.min(600, Math.max(0, n));
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			});
 		});
 	markModified(stApprovalTimeout, ctx.plugin.settings, "approvalTimeoutSec");
@@ -71,7 +71,7 @@ export function safety(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.redactSecrets).onChange(async (v) => {
 				s.redactSecrets = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stRedact, ctx.plugin.settings, "redactSecrets");
@@ -82,7 +82,7 @@ export function safety(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.checkpointsEnabled).onChange(async (v) => {
 				s.checkpointsEnabled = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stCheckpoints, ctx.plugin.settings, "checkpointsEnabled");

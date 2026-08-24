@@ -774,7 +774,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(viewed.baseUrl)
 					.onChange(async (v) => {
 						viewed.baseUrl = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					})
 			);
 
@@ -789,7 +789,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(viewed.apiKey)
 					.onChange(async (v) => {
 						viewed.apiKey = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					});
 			})
 			.addExtraButton((b) => {
@@ -1047,7 +1047,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				for (const e of efforts) d.addOption(e, e);
 				d.setValue(s.reasoningEffort).onChange(async (v) => {
 					s.reasoningEffort = v as ReasoningEffort;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				});
 			});
 		markModified(stReasoningEffort, this.plugin.settings, "reasoningEffort");
@@ -1100,7 +1100,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.streaming).onChange(async (v) => {
 					s.streaming = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stStreaming, this.plugin.settings, "streaming");
@@ -1118,7 +1118,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.titleGenerationEnabled).onChange(async (v) => {
 					s.titleGenerationEnabled = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stTitleGen, this.plugin.settings, "titleGenerationEnabled");
@@ -1171,7 +1171,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				fbModelDd.selectEl.setAttribute("aria-label", `Fallback ${idx + 1} model`);
 				fbModelDd.setValue(entry.model).onChange(async (v) => {
 					entry.model = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				});
 			} else {
 				const fbModelText = new TextComponent(rowCtl)
@@ -1179,7 +1179,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(entry.model)
 					.onChange(async (v) => {
 						entry.model = v.trim();
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 					});
 				fbModelText.inputEl.setAttribute("aria-label", `Fallback ${idx + 1} model id`);
 			}
@@ -1524,7 +1524,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		const stSaveSessions = new Setting(containerEl).setName("Save sessions").addToggle((t) =>
 			t.setValue(s.saveSessions).onChange(async (v) => {
 				s.saveSessions = v;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			})
 		);
 		markModified(stSaveSessions, this.plugin.settings, "saveSessions");
@@ -2437,7 +2437,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			const stToolsetsX = new Setting(containerEl).setName(set.label).setDesc(set.desc).addToggle((t) =>
 				t.setValue(s.toolsets[set.key]).onChange(async (v) => {
 					s.toolsets[set.key] = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 			markModified(stToolsetsX, this.plugin.settings, `toolsets.${set.key}`);
@@ -2473,7 +2473,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.setDesc("Free tier at brave.com/search/api/. Stored in settings and redacted from exports.")
 			.addText((t) => t.setPlaceholder("BSA…").setValue(s.webSearch.braveKey).onChange(async (v) => {
 				s.webSearch.braveKey = v.trim();
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(brave, this.plugin.settings, "webSearch.braveKey");
 
@@ -2482,7 +2482,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.setDesc("tavily.com. Stored in settings and redacted from exports.")
 			.addText((t) => t.setPlaceholder("tvly-…").setValue(s.webSearch.tavilyKey).onChange(async (v) => {
 				s.webSearch.tavilyKey = v.trim();
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(tavily, this.plugin.settings, "webSearch.tavilyKey");
 
@@ -2492,7 +2492,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addText((t) => t.setPlaceholder("http://localhost:8080").setValue(s.webSearch.searxngUrl).onChange(async (v) => {
 				const raw = v.trim();
 				s.webSearch.searxngUrl = /^https?:\/\//i.test(raw) ? raw : "";
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			}));
 		markModified(searxng, this.plugin.settings, "webSearch.searxngUrl");
 	}
@@ -2503,7 +2503,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		const stSkillsEnabled = new Setting(containerEl).setName("Enable skills").addToggle((t) =>
 			t.setValue(s.skillsEnabled).onChange(async (v) => {
 				s.skillsEnabled = v;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 			})
 		);
 		markModified(stSkillsEnabled, this.plugin.settings, "skillsEnabled");
@@ -2530,7 +2530,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(s.autoCreateSkills).onChange(async (v) => {
 					s.autoCreateSkills = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				})
 			);
 		markModified(stAutoCreateSkills, this.plugin.settings, "autoCreateSkills");

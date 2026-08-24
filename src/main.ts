@@ -141,6 +141,7 @@ export default class OpenAgentPlugin extends Plugin {
 		/* build identity line — obsidian caches require(), so "did the new
 		   build actually load?" should be answerable from the console */
 		console.info(`[Open Agent] build ${BUILD_STAMP}`);
+		this.installRejectionNet();
 		await this.loadSettings();
 
 		/* Notifications v0.1.142: both channels are per-vault and opt-in.
@@ -353,6 +354,57 @@ export default class OpenAgentPlugin extends Plugin {
 
 		// plugin can't run while Obsidian is closed → offer to catch up
 		this.announceMissedCronRuns();
+	}
+
+	/**
+	 * Last-resort net for promise rejections that escaped their call site
+	 * (v0.1.152).
+	 *
+	 * `saveSettingsSafe()` fixes the known category; this catches the ones we
+	 * have not found yet, so a background failure surfaces as a notice instead
+	 * of a console line nobody reads.
+	 *
+	 * Obsidian gives every plugin the same `window`, so this handler sees
+	 * rejections from the app and from other plugins too. Claiming those would
+	 * put our name on someone else's bug, so an event is only surfaced when the
+	 * stack points back into this plugin. The event is never
+	 * `preventDefault()`ed — the console record stays intact either way.
+	 */
+	private installRejectionNet(): void {
+		const onRejection = (event: PromiseRejectionEvent): void => {
+			const reason: unknown = event.reason;
+			const stack = reason instanceof Error ? `${reason.stack ?? ""}` : "";
+			/* esbuild stamps the bundle path into stack frames; the plugin id is
+			   the stable part of it across vaults and platforms. */
+			if (!stack.includes(this.manifest.id)) return;
+			const detail = reason instanceof Error ? reason.message : String(reason);
+			console.error("[Open Agent] unhandled promise rejection", reason);
+			new Notice(`Open Agent: background task failed — ${detail}`, 8000);
+		};
+		/* A reporter must never be the thing that breaks startup: onload() aborts
+		   on a throw and the whole plugin dies. Non-DOM hosts (the smoke harness,
+		   any headless runner) have no window.addEventListener at all. */
+		const target: unknown = typeof window === "undefined" ? undefined : window;
+		if (
+			!target ||
+			typeof (target as Window).addEventListener !== "function" ||
+			typeof (target as Window).removeEventListener !== "function"
+		) {
+			return;
+		}
+		const host = target as Window;
+		try {
+			host.addEventListener("unhandledrejection", onRejection);
+		} catch {
+			return;
+		}
+		this.register(() => {
+			try {
+				host.removeEventListener("unhandledrejection", onRejection);
+			} catch {
+				/* teardown is best-effort; a failure here must not block unload */
+			}
+		});
 	}
 
 	onunload(): void {
@@ -720,6 +772,28 @@ export default class OpenAgentPlugin extends Plugin {
 		/* A backend/consent/approval/Workspace change invalidates prepared
 		   approvals and terminates work started under the old security identity. */
 		if (this.runner) await this.runner.reconcileTerminal(this.effectiveSettings());
+	}
+
+	/**
+	 * Fire-and-forget settings save for UI callbacks (v0.1.152).
+	 *
+	 * `saveSettings()` deliberately keeps throwing: ten call sites (MCP and
+	 * terminal consent, chat message transactions) roll their in-memory state
+	 * back when the write fails, and swallowing the error there would leave
+	 * consent recorded as granted while nothing reached disk.
+	 *
+	 * The other ~129 call sites are Obsidian control callbacks — `onChange`,
+	 * `onClick`, `onSubmit`. Those discard the promise they are handed, so a
+	 * rejected write vanished silently: the toggle stayed flipped, no notice
+	 * appeared, and the setting was gone on the next restart. Anything that
+	 * only needs "save it, tell the user if that failed" belongs here.
+	 */
+	saveSettingsSafe(): void {
+		void this.saveSettings().catch((err) => {
+			const detail = err instanceof Error ? err.message : String(err);
+			console.error("[Open Agent] failed to save settings", err);
+			new Notice(`Open Agent: could not save settings — ${detail}`, 8000);
+		});
 	}
 
 	/* ---------------- data portability & reset ----------------

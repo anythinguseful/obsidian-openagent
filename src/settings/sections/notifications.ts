@@ -41,7 +41,7 @@ export function notifications(ctx: SectionContext, containerEl: HTMLElement): vo
 		.addToggle((t) =>
 			t.setValue(prefs.nativeEnabled).onChange(async (value) => {
 				prefs.nativeEnabled = value;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 
@@ -60,7 +60,7 @@ export function notifications(ctx: SectionContext, containerEl: HTMLElement): vo
 			.addToggle((t) =>
 				t.setValue(prefs.nativeKinds[item.key]).onChange(async (value) => {
 					prefs.nativeKinds[item.key] = value;
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				})
 			);
 	}
@@ -108,7 +108,7 @@ export function notifications(ctx: SectionContext, containerEl: HTMLElement): vo
 		.addToggle((t) =>
 			t.setValue(prefs.completionSoundEnabled).onChange(async (value) => {
 				prefs.completionSoundEnabled = value;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 

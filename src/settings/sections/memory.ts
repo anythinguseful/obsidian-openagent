@@ -23,7 +23,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	const stMemoryEnabled = new Setting(containerEl).setName("Enable long-term memory").addToggle((t) =>
 		t.setValue(s.memoryEnabled).onChange(async (v) => {
 			s.memoryEnabled = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		})
 	);
 	markModified(stMemoryEnabled, ctx.plugin.settings, "memoryEnabled");
@@ -47,7 +47,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.userProfileEnabled).onChange(async (v) => {
 				s.userProfileEnabled = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stUserProfileEnabled, ctx.plugin.settings, "userProfileEnabled");
@@ -65,7 +65,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 				if (!Number.isFinite(n)) return;
 				s.memoryCharLimit = Math.min(20_000, Math.max(500, n));
 				ctx.plugin.memoryStore.setLimits(s.memoryCharLimit, s.userCharLimit);
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			});
 		});
 	markModified(stMemoryCharLimit, ctx.plugin.settings, "memoryCharLimit");
@@ -84,7 +84,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 				if (!Number.isFinite(n)) return;
 				s.userCharLimit = Math.min(20_000, Math.max(500, n));
 				ctx.plugin.memoryStore.setLimits(s.memoryCharLimit, s.userCharLimit);
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			});
 		});
 	markModified(stUserCharLimit, ctx.plugin.settings, "userCharLimit");
@@ -127,7 +127,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.memoryEngineEnabled).onChange(async (v) => {
 				s.memoryEngineEnabled = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stMemoryEngineEnabled, ctx.plugin.settings, "memoryEngineEnabled");
@@ -186,7 +186,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			d.selectEl.setAttribute("aria-label", "Embedding model");
 			d.setValue(s.memoryEngineEmbedModel).onChange(async (v) => {
 				s.memoryEngineEmbedModel = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			});
 		});
 	markModified(stMemoryEngineEmbedModel, ctx.plugin.settings, "memoryEngineEmbedModel");
@@ -206,7 +206,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 				.setValue(s.contextFile)
 				.onChange(async (v) => {
 					s.contextFile = v.trim();
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				})
 		);
 	markModified(stContextFile, ctx.plugin.settings, "contextFile");
@@ -218,7 +218,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.includeActiveNote).onChange(async (v) => {
 				s.includeActiveNote = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stIncludeActiveNote, ctx.plugin.settings, "includeActiveNote");
@@ -252,7 +252,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 				.setValue(s.modelContextLength > 0 ? String(s.modelContextLength) : "")
 				.onChange(async (v) => {
 					s.modelContextLength = Math.max(0, Math.floor(Number(v.trim()) || 0));
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				});
 			t.inputEl.setAttribute("aria-label", "Context window");
 		});
@@ -265,7 +265,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.compressionEnabled).onChange(async (v) => {
 				s.compressionEnabled = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stCompressionEnabled, ctx.plugin.settings, "compressionEnabled");

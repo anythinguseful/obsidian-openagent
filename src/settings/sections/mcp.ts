@@ -58,7 +58,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 					return;
 				}
 				s.mcpEnabled = true;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stMcpEnabled, ctx.plugin.settings, "mcpEnabled");
@@ -83,7 +83,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 			.addToggle((t) =>
 				t.setValue(srv.enabled).onChange(async (v) => {
 					srv.enabled = v;
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				})
 			)
 			.addExtraButton((b) =>
@@ -103,7 +103,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				.addText((t) =>
 					t.setValue(srv.url ?? "").onChange(async (v) => {
 						srv.url = v.trim();
-						await ctx.plugin.saveSettings();
+						ctx.plugin.saveSettingsSafe();
 					})
 				);
 			const headersSetting = new Setting(card)
@@ -114,7 +114,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				{ rows: 4, value: kvToLines(srv.headers), placeholder: "Authorization=Bearer …", ariaLabel: "Headers" },
 				async (v) => {
 					srv.headers = linesToKv(v);
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				}
 			);
 		} else {
@@ -124,7 +124,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				.addText((t) =>
 					t.setValue(srv.command ?? "").onChange(async (v) => {
 						srv.command = v.trim();
-						await ctx.plugin.saveSettings();
+						ctx.plugin.saveSettingsSafe();
 					})
 				);
 			new Setting(card)
@@ -133,7 +133,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				.addText((t) =>
 					t.setValue((srv.args ?? []).join(" ")).onChange(async (v) => {
 						srv.args = v.split(/\s+/).filter(Boolean);
-						await ctx.plugin.saveSettings();
+						ctx.plugin.saveSettingsSafe();
 					})
 				);
 			const envSetting = new Setting(card).setName("Environment").setDesc("KEY=VALUE pairs, one per line.");
@@ -142,7 +142,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				{ rows: 4, value: kvToLines(srv.env), placeholder: "DEBUG=true", ariaLabel: "Environment variables" },
 				async (v) => {
 					srv.env = linesToKv(v);
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 				}
 			);
 		}

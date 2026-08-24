@@ -35,28 +35,28 @@ export function command(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.editorContextMenu).onChange(async (v) => {
 				s.editorContextMenu = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stEditorContextMenu, ctx.plugin.settings, "editorContextMenu");
 	const stEditorContextMenuAdd = new Setting(containerEl).setName("Context menu: Add selection to chat").addToggle((t) =>
 		t.setValue(s.editorContextMenuAdd).onChange(async (v) => {
 			s.editorContextMenuAdd = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		})
 	);
 	markModified(stEditorContextMenuAdd, ctx.plugin.settings, "editorContextMenuAdd");
 	const stEditorContextMenuAsk = new Setting(containerEl).setName("Context menu: Ask about selection").addToggle((t) =>
 		t.setValue(s.editorContextMenuAsk).onChange(async (v) => {
 			s.editorContextMenuAsk = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		})
 	);
 	markModified(stEditorContextMenuAsk, ctx.plugin.settings, "editorContextMenuAsk");
 	const stEditorContextMenuSkill = new Setting(containerEl).setName("Context menu: Run skill on selection").addToggle((t) =>
 		t.setValue(s.editorContextMenuSkill).onChange(async (v) => {
 			s.editorContextMenuSkill = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 		})
 	);
 	markModified(stEditorContextMenuSkill, ctx.plugin.settings, "editorContextMenuSkill");
@@ -68,7 +68,7 @@ export function command(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.editorContextMenuQuickAsk).onChange(async (v) => {
 				s.editorContextMenuQuickAsk = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			})
 		);
 	markModified(stEditorContextMenuQuickAsk, ctx.plugin.settings, "editorContextMenuQuickAsk");
