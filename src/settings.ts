@@ -760,6 +760,11 @@ export interface OpenAgentSettings {
 	memoryEngineRecallMax: number;
 	/** v0.1.178 optional embedding model name (semantic recall); "" = off */
 	memoryEngineEmbedModel: string;
+	/** v0.1.152 provider the embedding model runs on; "" = follow the chat provider.
+	 *  Embedding is its OWN pair (owner 2026-08-24: "ada main model dan embedding
+	 *  model") because an embedding endpoint is usually a different, local server
+	 *  than the chat model. */
+	memoryEngineEmbedProviderId: string;
 
 	// ── Sessions ─────────────────────────────────────────────
 	saveSessions: boolean;
@@ -976,6 +981,7 @@ export const DEFAULT_SETTINGS: OpenAgentSettings = {
 	memoryEngineRetainEveryN: 1,
 	memoryEngineRecallMax: 8,
 	memoryEngineEmbedModel: "",
+	memoryEngineEmbedProviderId: "",
 
 	saveSessions: true,
 	sessionsFolder: "openagent/openagent-sessions",
@@ -1270,6 +1276,15 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 	}
 	s.titleGenerationEnabled = s.titleGenerationEnabled !== false;
 	s.auxModels = sanitizeAuxModels(inRaw.auxModels, s.providers);
+	/* v0.1.152 embedding pin: same stale-pin hygiene as the aux slots — it
+	   survives only while its provider still exists WITH a base URL, else it
+	   falls back to the chat provider. This MUST sit after the preset merge
+	   above: run any earlier and `s.providers` is still the default list, so
+	   every user-added provider id would look dangling and be wiped. */
+	{
+		const embProv = typeof inRaw.memoryEngineEmbedProviderId === "string" ? inRaw.memoryEngineEmbedProviderId.trim() : "";
+		s.memoryEngineEmbedProviderId = s.providers.some((p) => p.id === embProv && p.baseUrl.trim()) ? embProv : "";
+	}
 	/* MoA (v0.1.29): tolerate hand-edited data.json — a present but junk
 	   config normalizes to the default preset; absent/null stays null so
 	   the virtual provider only appears once the user has SAVED a preset

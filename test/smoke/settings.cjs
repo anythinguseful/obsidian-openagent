@@ -33,17 +33,20 @@ module.exports = function settingsGuards() {
 	// the embedding model is a DROPDOWN seeded from the active provider's
 	// catalog, not a hand-typed text field — consistent with the Model tab.
 	{
-		// 2026-08-24: the Memory & Context renderer moved to
-		// src/settings/sections/memory.ts, so the subject is read from there.
-		// The negative moves WITH it — left on settingsTab.ts it would be
-		// trivially true and would stop protecting anything.
+		// 2026-08-24 (v0.1.152, owner "ada main model dan embedding model"): the
+		// row moved AGAIN — from src/settings/sections/memory.ts to the Model
+		// tab, where it is a provider + model pair like the main model. Both
+		// negatives travel with the subject: left pointing at memory.ts they
+		// would be trivially true and would protect nothing (Lesson 189).
+		const tab = read("src/settingsTab.ts");
 		const mem = read("src/settings/sections/memory.ts");
 		const ok =
-			mem.includes('setName("Embedding model")') &&
-			mem.includes("withCurrentModel(catalogOf(activeProvider), s.memoryEngineEmbedModel)") &&
-			mem.includes('"off (keyword recall only)"') &&
-			mem.includes('aria-label", "Embedding model"') &&
-			!mem.includes('setName("Embedding model").addText');
+			tab.includes('setName("Embedding model")') &&
+			tab.includes('aria-label", "Embedding model"') &&
+			tab.includes('embedModelDd.addOption("", "off (keyword recall only)")') &&
+			!tab.includes('setName("Embedding model").addText') &&
+			// the pick must be GONE from Memory & Context — one owner, no twin
+			!mem.includes('setName("Embedding model")');
 		if (ok) {
 			console.log("✓ v0.1.179: embedding model — catalog dropdown with off option (no manual typing)");
 		} else {
@@ -75,7 +78,7 @@ module.exports = function settingsGuards() {
 			tab.includes('this.subheading(containerEl, "Scheduled tasks"') &&
 			read("src/settings/sections/workspace.ts").includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") && // moved 2026-08-24 (Phase 4)
 			!tab.includes("Whole vault: everything visible. Preferred: route to a folder. Strict: hard boundary.") &&
-			read("src/settings/sections/memory.ts").includes("Pick a model to enable semantic recall"); // moved 2026-08-24
+			read("src/settingsTab.ts").includes("Pick a model to enable semantic recall"); // moved to the Model tab 2026-08-24 (v0.1.152)
 		if (ok) {
 			console.log("✓ v0.1.181: settings layout — group labels on every tab + trimmed descriptions (real-DOM: rows back to 79px)");
 		} else {
@@ -1958,7 +1961,7 @@ module.exports = function settingsGuards() {
 		const eng = read("src/agent/memoryEngine.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const setts = read("src/settings.ts");
-		const mem178 = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
+		const mem178 = read("src/settingsTab.ts"); // baris embedding pindah ke tab Model 2026-08-24 (v0.1.152)
 		const ok =
 			prov.includes("export async function embedTexts") &&
 			prov.includes("/embeddings") &&
@@ -1967,12 +1970,12 @@ module.exports = function settingsGuards() {
 			eng.includes("export function rankObservations") &&
 			eng.includes("async searchObservations") &&
 			eng.includes("Consolidated observations:") &&
-			chat.includes("embedTexts(provider, embedModel, texts)") &&
+			chat.includes("embedTexts(embedProvider, embedModel, texts)") && // v0.1.152: embedding punya provider sendiri
 			chat.includes("engine.searchObservations(q, 4, embed)") &&
 			chat.includes("setRecalledCount(facts.length + obs.length)") &&
 			setts.includes("memoryEngineEmbedModel") &&
 			mem178.includes('"Embedding model"') &&
-			mem178.includes("markModified(stMemoryEngineEmbedModel");
+			mem178.includes('markModified(embedSetting, this.plugin.settings, "memoryEngineEmbedModel")');
 		if (ok) {
 			console.log("✓ v0.1.178: semantic recall — embedTexts + cosine fusion + observations in recall (optional, no server)");
 		} else {

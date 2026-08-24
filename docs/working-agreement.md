@@ -1969,3 +1969,46 @@ berikutnya, sering di fungsi lain.
    asinkron tidak bisa ditangkap `try/catch` pemanggil dan menjadi uncaught
    exception. Bug yang sama bentuknya bisa jauh lebih parah tergantung
    konteks pemanggilnya.
+
+## Lesson 210 — Red-proof yang lolos adalah kegagalan tes, bukan konfirmasi kode
+
+Konteks: memindahkan pemilih model embedding ke tab Model menambah field baru
+`memoryEngineEmbedProviderId`. Sanitasinya harus berjalan **setelah** merge
+`PROVIDER_PRESETS`, karena sebelum merge `s.providers` masih array mentah dari
+`data.json`.
+
+Yang terjadi: tiga tes normalisasi ditulis, semuanya hijau. Red-proof-nya —
+memindahkan blok sanitasi ke posisi buggy (sebelum merge) — **tetap hijau**.
+Tes itu tidak membuktikan apa pun tentang urutan yang justru jadi alasan
+komentar panjang di kode.
+
+Sebabnya: fixture-nya `{ id: "lmstudio", baseUrl: "http://localhost:1234/v1" }`.
+Menulis `baseUrl` secara eksplisit membuat data uji melewati satu-satunya hal
+yang disediakan merge, sehingga kedua urutan memberi hasil sama. `data.json`
+asli hanya menyimpan key yang benar-benar disentuh pengguna, jadi entri
+provider lazim datang **tanpa** `baseUrl`. Dengan fixture realistis
+`{ id: "lmstudio", apiKey: "x" }`, urutan benar → pin bertahan; urutan buggy →
+`TypeError: Cannot read properties of undefined (reading 'trim')`.
+
+Aturan:
+
+1. Red-proof adalah bagian dari penulisan tes, bukan formalitas setelahnya.
+   Tes yang belum pernah dilihat merah belum diketahui menguji apa pun.
+2. Kalau red-proof lolos, **tes yang salah**, bukan mutasinya yang "kurang
+   parah". Jangan ganti mutasi agar merah — perbaiki fixture-nya.
+3. Fixture harus meniru bentuk data nyata. Mengisi field yang di dunia nyata
+   kosong diam-diam mem-bypass langkah kode yang sedang diuji. Untuk data
+   tersimpan, tanya: key mana yang benar-benar ditulis pengguna?
+4. Setiap invarian yang ditulis sebagai komentar ("ini harus jalan setelah X")
+   butuh tes yang gagal kalau invarian itu dilanggar. Komentar tanpa tes hanya
+   niat.
+5. Untuk invarian urutan, kasus pembeda selalu input yang bergantung pada efek
+   langkah sebelumnya. Cari input yang tidak lengkap tanpa langkah itu.
+
+6. Jangan bersihkan mutasi red-proof dengan `git checkout -- <file>` kalau
+   file itu memuat kerja yang belum di-commit. Perintah itu mengembalikan
+   file ke HEAD dan diam-diam membuang perubahan yang sedang diuji. Sesi ini
+   kena persis: pembersihan setelah red-proof di `src/settings/sections/`
+   `memory.ts` membatalkan penghapusan baris embedding, dan hanya ketahuan
+   lewat `grep` susulan. Pakai salinan `/tmp` lalu `cp` kembali, atau balikkan
+   mutasinya dengan pengganti `python3` ber-assert.

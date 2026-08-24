@@ -153,6 +153,40 @@ check(normalizeLoadedSettings({ memoryEngineEmbedModel: "  embedding-gemma-300m 
 check(normalizeLoadedSettings({ memoryEngineEmbedModel: 42 }).memoryEngineEmbedModel === "", "normalize: non-string embedding model → empty");
 check(normalizeLoadedSettings({ memoryEngineRecallMax: 99 }).memoryEngineRecallMax === 20, "normalize: recall budget clamped to 20");
 
+/* v0.1.152 (owner 2026-08-24 "ada main model dan embedding model"): embedding
+   now carries its OWN provider pin, so a local embedding server can serve
+   recall while chat runs elsewhere. The pin must obey the same stale-pin
+   hygiene as the aux slots, and — the trap this caught during development —
+   it must be sanitized AFTER the preset merge builds s.providers. Sanitized
+   any earlier, every real provider id looks dangling and gets wiped. */
+check(normDefault.memoryEngineEmbedProviderId === "", "normalize({}): embedding provider defaults empty (follow chat provider)");
+{
+	/* A real data.json stores only the keys the user actually touched, so a
+	   provider entry routinely arrives with NO baseUrl — the preset merge is
+	   what supplies it. Pinning such a provider is therefore the case that
+	   proves the sanitize runs after that merge: before it, s.providers is
+	   still the raw loaded array and p.baseUrl is undefined. */
+	const pinned = normalizeLoadedSettings({
+		providers: [{ id: "lmstudio", apiKey: "x" }],
+		memoryEngineEmbedProviderId: "lmstudio",
+	});
+	check(pinned.memoryEngineEmbedProviderId === "lmstudio", "normalize: embedding pin SURVIVES a provider whose base URL comes from the preset merge");
+}
+{
+	const dangling = normalizeLoadedSettings({ memoryEngineEmbedProviderId: "no-such-provider" });
+	check(dangling.memoryEngineEmbedProviderId === "", "normalize: embedding pin to an unknown provider falls back to the chat provider");
+}
+{
+	/* a provider with no base URL cannot answer /v1/embeddings — keeping the
+	   pin would send recall to a dead endpoint instead of degrading to keyword */
+	const noUrl = normalizeLoadedSettings({
+		providers: [{ id: "lmstudio", baseUrl: "" }],
+		memoryEngineEmbedProviderId: "lmstudio",
+	});
+	check(noUrl.memoryEngineEmbedProviderId === "", "normalize: embedding pin dropped when the provider has no base URL");
+}
+check(normalizeLoadedSettings({ memoryEngineEmbedProviderId: 42 }).memoryEngineEmbedProviderId === "", "normalize: non-string embedding provider → empty");
+
 /* v0.1.175: compression target_ratio default + out-of-range → fallback
    (same reject+fallback pattern as the sibling compressionThreshold) */
 check(normDefault.compressionTargetRatio === 0.2, "normalize({}): compression target_ratio defaults to 0.20");

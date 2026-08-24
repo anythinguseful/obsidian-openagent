@@ -624,6 +624,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 	   current live value; provider changes clear the model draft */
 	private modelPickProviderId: string | null = null;
 	private modelPickModel: string | null = null;
+	/* v0.1.152 (owner 2026-08-24: "ada main model dan embedding model"): the
+	   embedding pair gets its own draft, identical in shape to the main one. */
+	private embedPickProviderId: string | null = null;
+	private embedPickModel: string | null = null;
 	/* auxiliary-model slot editor (Hermes Desktop parity 2026-07-31): which row
 	   is open + its draft — "Change" reveals inline provider/model selects */
 	private auxEditingKey: AuxSlotKey | null = null;
@@ -1113,6 +1117,87 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				})
 			);
 		markModified(stStreaming, this.plugin.settings, "streaming");
+
+		/* ── Embedding model (owner 2026-08-24: "ada main model dan embedding
+		   model, biar lebih rapi. cara settingnya sama seperti model utama").
+		   Moved here from Memory & Context, where it was the last model PICK
+		   still living among behaviour knobs — the same rule that already sent
+		   the compression model slot to this tab.
+
+		   Two deliberate differences from an aux slot: the default is OFF, not
+		   "auto (use main)", because a chat model answering /v1/embeddings just
+		   fails; and it carries its own provider, because the embedding server
+		   is usually a separate local one. */
+		this.subheading(
+			containerEl,
+			"Embedding model",
+			"Powers semantic recall — finding memories whose wording differs from your question. Off means keyword recall only."
+		);
+
+		const embedSaved = s.memoryEngineEmbedModel.trim();
+		const embedSavedProvider = s.providers.find((p) => p.id === s.memoryEngineEmbedProviderId) ?? null;
+		const embedStatus = embedSaved
+			? `${embedSavedProvider ? embedSavedProvider.name : "chat provider"} · ${embedSaved}`
+			: "off (keyword recall only)";
+
+		const embedPickProvider = s.providers.some((p) => p.id === this.embedPickProviderId)
+			? (this.embedPickProviderId as string)
+			: s.memoryEngineEmbedProviderId || s.activeProviderId;
+		const embedPickModel = this.embedPickModel ?? embedSaved;
+
+		const embedSetting = new Setting(containerEl)
+			.setName("Embedding model")
+			.setDesc(`Pick a model to enable semantic recall — currently ${embedStatus}. Providers are set up in the Providers tab.`);
+		const embedCtl = stackedControl(embedSetting, { row: true });
+
+		const usableEmbedProviders = s.providers.filter((p) => providerUsable(p));
+		const embedProvDd = new DropdownComponent(embedCtl);
+		if (usableEmbedProviders.length === 0) embedProvDd.addOption("", "(configure a provider first)");
+		for (const p of usableEmbedProviders) embedProvDd.addOption(p.id, p.name);
+		if (embedPickProvider && !usableEmbedProviders.some((p) => p.id === embedPickProvider)) {
+			embedProvDd.addOption(embedPickProvider, embedPickProvider);
+		}
+		embedProvDd.selectEl.setAttribute("aria-label", "Embedding provider");
+		embedProvDd.setValue(embedPickProvider).onChange((v) => {
+			this.embedPickProviderId = v;
+			this.embedPickModel = ""; // same slot semantics as the main pair: a provider change clears the model draft
+			this.display();
+		});
+
+		/* the saved id stays visible even when it is off-catalog, so a working
+		   configuration is never silently dropped from the list (Lesson 163) */
+		const embedCatalog = withCurrentModel(catalogOf(s.providers.find((p) => p.id === embedPickProvider)), embedPickModel);
+		const embedModelDd = new DropdownComponent(embedCtl);
+		embedModelDd.addOption("", "off (keyword recall only)");
+		for (const m of embedCatalog) {
+			if (m) embedModelDd.addOption(m, m);
+		}
+		embedModelDd.selectEl.setAttribute("aria-label", "Embedding model");
+		embedModelDd.setValue(embedPickModel);
+
+		const applyEmbed = new ButtonComponent(embedCtl);
+		applyEmbed
+			.setButtonText("Apply")
+			.setCta()
+			.onClick(async () => {
+				/* read the LIVE draft, never the render-time snapshot above —
+				   that closure hazard is what probe F14 caught on the main pair */
+				const prov = s.providers.some((p) => p.id === this.embedPickProviderId)
+					? (this.embedPickProviderId as string)
+					: embedPickProvider;
+				const model = (this.embedPickModel ?? embedPickModel).trim();
+				s.memoryEngineEmbedModel = model;
+				s.memoryEngineEmbedProviderId = model ? prov : ""; // off clears the pin too — no orphan provider
+				this.embedPickProviderId = null;
+				this.embedPickModel = null;
+				this.plugin.saveSettingsSafe();
+				this.plugin.refreshViews();
+				this.display();
+			});
+		embedModelDd.onChange((v) => {
+			this.embedPickModel = v;
+		});
+		markModified(embedSetting, this.plugin.settings, "memoryEngineEmbedModel");
 
 		/* ── Auxiliary models (Hermes Desktop: small side-tasks on a different
 		   model; "auto (use main)" when un-pinned) ── */

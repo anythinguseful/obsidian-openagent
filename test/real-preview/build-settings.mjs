@@ -645,20 +645,35 @@ async function main() {
 
 		/* F44 — v0.1.179 embedding model picker: a DROPDOWN (not a text input),
 		   seeded from the active provider's catalog, with an "off" option and
-		   the current value kept visible. */
+		   the current value kept visible.
+		   2026-08-24 (v0.1.152, owner "ada main model dan embedding model"): the
+		   row lives in the MODEL tab now and carries its own provider dropdown,
+		   so the page opened here moves with it. */
 		{
-			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory");
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "model"), "model");
 			const emb = await page.evaluate(() => {
 				const row = [...document.querySelectorAll(".setting-item")].find(
 					(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Embedding model"
 				);
-				const sel = row?.querySelector("select");
+				const sel = [...(row?.querySelectorAll("select") ?? [])].find(
+					(x) => x.getAttribute("aria-label") === "Embedding model"
+				);
+				const provSel = [...(row?.querySelectorAll("select") ?? [])].find(
+					(x) => x.getAttribute("aria-label") === "Embedding provider"
+				);
 				const textInput = row?.querySelector("input[type=text], input:not([type])");
 				return {
 					present: !!sel,
 					isTextInput: !!textInput,
 					value: sel?.value ?? null,
 					options: sel ? [...sel.options].map((o) => o.text) : [],
+					/* v0.1.152: the pair half — a provider dropdown beside the model,
+					   exactly like the main model pick */
+					providerPresent: !!provSel,
+					providerOptions: provSel ? [...provSel.options].map((o) => o.text) : [],
+					applyPresent: [...(row?.querySelectorAll("button") ?? [])].some(
+						(b) => (b.textContent ?? "").trim() === "Apply"
+					),
 					desc: (row?.querySelector(".setting-item-description")?.textContent ?? "").trim(),
 				};
 			});
@@ -670,6 +685,8 @@ async function main() {
 					emb.value === "" &&
 					emb.options.includes("off (keyword recall only)") &&
 					emb.options.includes("gemma-4-e4b-uncensored-hauway-qat-4b") &&
+					emb.providerPresent === true &&
+					emb.applyPresent === true &&
 					emb.desc.includes("Pick a model"),
 				...emb,
 			};

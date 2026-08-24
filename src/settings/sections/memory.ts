@@ -11,7 +11,6 @@
  */
 
 import { Notice, Setting } from "obsidian";
-import { catalogOf, withCurrentModel } from "../../agent/modelCatalog";
 import { canonicalVaultPath } from "../../agent/workspacePolicy";
 import { markModified } from "../../settingsModified";
 import { createSliderInput } from "../../ui/settings-controls";
@@ -170,26 +169,9 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	markModified(stMemoryEngineRecallMax, ctx.plugin.settings, "memoryEngineRecallMax");
 	ctx.resetButton(stMemoryEngineRecallMax, "memoryEngineRecallMax");
 
-	const stMemoryEngineEmbedModel = new Setting(containerEl)
-		.setName("Embedding model")
-		.setDesc("Pick a model to enable semantic recall (finds memories whose wording differs) — off = keyword recall only.")
-		.addDropdown((d) => {
-			/* v0.1.179: a picker like the Model tab — the active provider's
-			   catalog plus the current value (kept visible even off-catalog,
-			   so a saved id is never silently dropped). */
-			const activeProvider = s.providers.find((p) => p.id === s.activeProviderId);
-			const catalog = withCurrentModel(catalogOf(activeProvider), s.memoryEngineEmbedModel);
-			d.addOption("", "off (keyword recall only)");
-			for (const m of catalog) {
-				if (m) d.addOption(m, m);
-			}
-			d.selectEl.setAttribute("aria-label", "Embedding model");
-			d.setValue(s.memoryEngineEmbedModel).onChange(async (v) => {
-				s.memoryEngineEmbedModel = v;
-				ctx.plugin.saveSettingsSafe();
-			});
-		});
-	markModified(stMemoryEngineEmbedModel, ctx.plugin.settings, "memoryEngineEmbedModel");
+	/* v0.1.152 (owner 2026-08-24): the "Embedding model" row moved to the Model
+	   tab, where it is now a provider + model pair beside the main model. Only
+	   a model PICK left; the recall knobs above stay here. */
 
 	/* Context (owner directive 2026-07-30, Hermes Desktop parity — official
 	   groups context.* under "Memory & Context"): what gets injected into

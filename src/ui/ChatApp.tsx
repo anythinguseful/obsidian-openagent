@@ -2596,8 +2596,15 @@ nudgeCounterRef.current = 0;
 							   optional and must never break the run. */
 							let embed: ((texts: string[]) => Promise<(number[] | null)[] | null>) | undefined;
 							const embedModel = runSettings.memoryEngineEmbedModel.trim();
-							if (embedModel && provider?.baseUrl.trim()) {
-								embed = (texts) => embedTexts(provider, embedModel, texts);
+							/* v0.1.152 (owner 2026-08-24): embedding carries its OWN provider
+							   pin, so a local embedding server can serve recall while chat runs
+							   on a cloud model. Empty pin = follow the chat provider, which is
+							   exactly the pre-v0.1.152 behaviour. */
+							const embedProvider = runSettings.memoryEngineEmbedProviderId
+								? runSettings.providers.find((p) => p.id === runSettings.memoryEngineEmbedProviderId) ?? provider
+								: provider;
+							if (embedModel && embedProvider?.baseUrl.trim()) {
+								embed = (texts) => embedTexts(embedProvider, embedModel, texts);
 							}
 							const [facts, obs] = await Promise.all([
 								engine.search(q, runSettings.memoryEngineRecallMax, embed),
