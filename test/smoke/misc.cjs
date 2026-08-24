@@ -396,5 +396,51 @@ module.exports = async function miscGuards() {
 		}
 	}
 
+	{
+		/* v0.1.199 behavioural: focusing a leaf is fire-and-forget, but it must
+		   neither throw nor leak an unhandled rejection. Obsidian's typings say
+		   revealLeaf returns Promise<void>; older desktop builds returned plain
+		   void. A bare `.catch` on the result crashes on the legacy shape, and a
+		   bare call loses the rejection on the modern one — so both are tested.
+		   The rejecting arm is only meaningful because test/fail-on-unhandled.cjs
+		   turns an escaped rejection into a lane failure. */
+		const ws = plugin.app.workspace;
+		const savedLeaves = ws.getLeavesOfType;
+		const savedReveal = ws.revealLeaf;
+		const savedLeft = ws.getLeftLeaf;
+		ws.getLeavesOfType = () => [];
+		ws.getLeftLeaf = () => ({ setViewState: async () => {} });
+		plugin.settings.chatLeafLocation = "left";
+
+		let legacyOk = false;
+		let rejectingOk = false;
+		let thrown = null;
+		try {
+			/* legacy desktop: returns undefined, so .catch must not be assumed */
+			ws.revealLeaf = () => undefined;
+			await plugin.activateView();
+			legacyOk = true;
+			/* modern: returns a promise, and it rejects */
+			ws.revealLeaf = () => Promise.reject(new Error("reveal blew up"));
+			await plugin.activateView();
+			rejectingOk = true;
+		} catch (e) {
+			thrown = e;
+		}
+		/* give an unhandled rejection a tick to surface before we score it */
+		await new Promise((r) => setTimeout(r, 10));
+
+		ws.getLeavesOfType = savedLeaves;
+		ws.revealLeaf = savedReveal;
+		ws.getLeftLeaf = savedLeft;
+
+		if (legacyOk && rejectingOk) {
+			console.log("\u2713 v0.1.199 behavioural: revealLeaf fire-and-forget survives BOTH contracts \u2014 legacy void return and a rejecting promise");
+		} else {
+			console.error(`\u2717 v0.1.199 revealLeaf handling regressed (legacyOk=${legacyOk}, rejectingOk=${rejectingOk}, thrown=${thrown && thrown.message})`);
+			failed++;
+		}
+	}
+
 	return failed;
 };

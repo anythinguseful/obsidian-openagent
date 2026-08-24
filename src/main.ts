@@ -9,6 +9,7 @@
  */
 
 import { Notice, MarkdownView, Platform, Plugin, TFile, WorkspaceLeaf, normalizePath, requestUrl } from "obsidian";
+import type { Workspace } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
 	CRON_MONITOR_CONTENT_STORE_MAX,
@@ -99,6 +100,19 @@ import {
 import { CompletionSoundPlayer, type CompletionSoundResult } from "./completionSound";
 
 const noop = (): void => {};
+
+/* Focusing a leaf is cosmetic: a failure is never worth surfacing, but a bare
+   call leaves the rejection unhandled (silent in an Electron renderer, fatal
+   under Node's default in tests). `revealLeaf` is typed `Promise<void>` on
+   current Obsidian yet returned plain `void` on older desktop builds — and the
+   smoke harness models exactly that. Chaining `.catch` unconditionally would
+   throw "revealLeaf(...).catch is not a function", so probe for a thenable. */
+function revealQuietly(workspace: Workspace, leaf: WorkspaceLeaf): void {
+	const result: unknown = workspace.revealLeaf(leaf);
+	if (result && typeof (result as Promise<void>).catch === "function") {
+		void (result as Promise<void>).catch(noop);
+	}
+}
 
 export default class OpenAgentPlugin extends Plugin {
 	settings: OpenAgentSettings;
@@ -410,7 +424,7 @@ export default class OpenAgentPlugin extends Plugin {
 		if (leaves.length === 0) {
 			const target = this.targetLeafFor(this.settings.chatLeafLocation);
 			await target?.setViewState({ type: CHAT_VIEW_TYPE, active: true });
-			if (target) workspace.revealLeaf(target);
+			if (target) revealQuietly(workspace, target);
 			return;
 		}
 		await this.moveChatViewToConfiguredLocation();
@@ -429,7 +443,7 @@ export default class OpenAgentPlugin extends Plugin {
 		const loc = this.settings.chatLeafLocation;
 		const target = this.targetLeafFor(loc);
 		if (!target || this.leafRegion(leaf) === loc) {
-			workspace.revealLeaf(leaf);
+			revealQuietly(workspace, leaf);
 			return;
 		}
 		/* capture the conversation before the old view unmounts */
@@ -438,7 +452,7 @@ export default class OpenAgentPlugin extends Plugin {
 		const state = leaf.getViewState();
 		leaf.detach();
 		await target.setViewState(state);
-		workspace.revealLeaf(target);
+		revealQuietly(workspace, target);
 	}
 
 	/** v0.1.163: hand the pending session id to a freshly-mounted ChatView and

@@ -3751,10 +3751,19 @@ nudgeCounterRef.current = 0;
 		const head = queue.find((e) => e.id !== queueEditId); // the entry being edited is skipped (desktop)
 		if (!head) return;
 		queueDrainingRef.current = true;
-		void sendQueued(head).finally(() => {
-			queueDrainingRef.current = false;
-		});
-	}, [running, queue, queueParked, queueEditId, sendQueued]);
+		/* `.finally` re-throws, so it alone leaves the rejection unhandled; the
+		   `.catch` both releases the drain lock and reports the loss. */
+		void sendQueued(head)
+			.catch((e: unknown) => {
+				pushLocalNoticeTurn(
+					`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+					"error"
+				);
+			})
+			.finally(() => {
+				queueDrainingRef.current = false;
+			});
+	}, [running, queue, queueParked, queueEditId, sendQueued, pushLocalNoticeTurn]);
 
 	/* per-row "send": idle = dispatch that entry now (a manual drain — lifts
 	   any park, desktop); busy = promote to head, un-park, interrupt — the
@@ -3784,9 +3793,14 @@ nudgeCounterRef.current = 0;
 				}
 				unparkQueue(sessionId);
 				setQueueParked(false);
-				void sendQueued(entry);
+				void sendQueued(entry).catch((e: unknown) => {
+					pushLocalNoticeTurn(
+						`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+						"error"
+					);
+				});
 			},
-			[running, queueEditId, sessionId, sessionPartitionKey, persistQueue, props.sessions, sendQueued, stopAgent]
+			[running, queueEditId, sessionId, sessionPartitionKey, persistQueue, props.sessions, sendQueued, stopAgent, pushLocalNoticeTurn]
 		);
 
 	const beginQueueEdit = useCallback(
@@ -3893,7 +3907,16 @@ nudgeCounterRef.current = 0;
 			if (head) {
 				unparkQueue(sessionId);
 				setQueueParked(false);
-				sendQueued(head);
+				/* The dispatch claim already removed this entry from the queue, so a
+				   rejection here would drop the prompt silently (and, in an Electron
+				   renderer, without even a crash). Surface it instead. `.finally` does
+				   NOT handle a rejection — only an explicit `.catch` does. */
+				void sendQueued(head).catch((e: unknown) => {
+					pushLocalNoticeTurn(
+						`Queued prompt could not be sent — ${e instanceof Error ? e.message : String(e)}`,
+						"error"
+					);
+				});
 			}
 			return;
 		}

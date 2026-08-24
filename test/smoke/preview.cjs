@@ -378,7 +378,7 @@ module.exports = function previewGuards() {
 			buildm.includes("__oaHlCheck") &&
 			buildm.includes("[md] highlight:") &&
 			hltest.includes("round-trip lossless") &&
-			pkg.includes("node test/highlight.test.cjs")
+			/node (?:--require \S+ )?test\/highlight\.test\.cjs/.test(pkg)
 		) {
 			console.log("✓ mini syntax highlighting: tokenizer + --code-* colors + no-Shiki contract, md harness check wired");
 		} else {

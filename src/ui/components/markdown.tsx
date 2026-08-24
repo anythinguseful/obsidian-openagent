@@ -52,7 +52,11 @@ export function Markdown({
 		// required for Obsidian's markdown typography (paragraph/heading spacing)
 		el.addClass("markdown-rendered");
 		const processed = resolveVaultImages(guardAssistantRemoteMedia(preprocessAIResponse(children ?? "")), app, sourcePath);
-		MarkdownRenderer.render(app, processed, el, sourcePath, component);
+		/* A rejected render would otherwise leave a silently blank message
+		   bubble; fall back to plain text so the content is never lost. */
+		void MarkdownRenderer.render(app, processed, el, sourcePath, component).catch(() => {
+			el.setText(processed);
+		});
 		/* chat panes live outside the workspace link handler — wire clicks
 		   ourselves: [[wikilinks]] open the note, http(s) opens the browser */
 		el.onclick = (ev) => {

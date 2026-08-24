@@ -34,7 +34,7 @@ lemah daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya.
 | # | Dimensi | Hit mentah | Nyata | Catatan |
 |---|---|---|---|---|
 | A | `tsc --strictNullChecks` | 9 | **2** | + 1 celah laten keamanan; triase awal "0 nyata" **dikoreksi** — lihat Dimensi A |
-| B | Floating promise (`.then` tanpa `.catch`) | 37 | **2** | → temuan T1 |
+| B | Floating promise (`.then` tanpa `.catch`) | 37 | **7** | grep meremehkan: AST menemukan 6 situs + 1 regresi `revealLeaf`; **SELESAI**, lihat Dimensi B |
 | C | `JSON.parse` tanpa try/catch | 15 | 0 | 13 idiom deep-clone; 2 sisanya dibungkus pemanggil |
 | D | `catch {}` menelan error | 58 | 0 | semuanya berkomentar justifikasi; 0 tanpa penjelasan |
 | E | Kerentanan dependensi (runtime) | 0 | 0 | 1 moderate di esbuild, dev-only |
@@ -173,3 +173,38 @@ Filter yang menentukan di beberapa dimensi:
   justifikasi. Setelah dibedakan, angkanya jatuh dari 58 ke 0.
 - Dimensi B: `.catch` dicari dalam jendela 9 baris, karena rantai promise di
   repo ini kerap dipecah multi-baris.
+
+## Dimensi B — floating promise: dari grep ke type-checker — **SELESAI**
+
+Sapuan awal memakai grep dan melaporkan 2 temuan nyata. Itu meremehkan: **grep
+tidak bisa mendeteksi floating promise**, karena yang menentukan adalah *tipe*
+sebuah expression statement, bukan bentuk teksnya. Penggantinya adalah gate
+berbasis type-checker, `scripts/check-floating-promises.mjs`.
+
+Enam situs diperbaiki:
+
+| Situs | Perbaikan |
+|---|---|
+| `ChatApp.tsx` manual-drain `sendQueued(head)` | `.catch` → `pushLocalNoticeTurn(..., "error")` |
+| `ChatApp.tsx` auto-drain (effect) | `.catch` **sebelum** `.finally` yang sudah ada (`.finally` melempar ulang) |
+| `ChatApp.tsx` `sendQueuedNow` cabang idle | `.catch` → notice yang sama |
+| `main.ts` ×3 `revealLeaf` | helper `revealQuietly` — sengaja senyap, tahan dua kontrak |
+| `markdown.tsx` `MarkdownRenderer.render` | `.catch(() => el.setText(processed))` |
+| `mcp/http.ts` `send()` | `this.chain.catch(() => {}).then(...)`; probe naik 1 → 3 dari 3 POST |
+
+Dua hal yang hanya muncul saat dikerjakan, bukan saat disapu:
+
+1. **Detektornya sendiri buta.** Versi pertama lulus bersih sambil melewatkan
+   setiap statement ber-`void`, karena `getTypeAtLocation` pada `VoidExpression`
+   mengembalikan `void`. Harness mutasi 6 lengan yang membongkarnya; angka
+   sebenarnya **96**, bukan 5. Gate sekarang memisahkan **tanpa penanda = gagal
+   keras** dari **ber-`void` = ratchet `VOID_BUDGET = 96`**.
+2. **Perbaikan `revealLeaf` sempat menimbulkan regresi.** `.catch` tanpa syarat
+   melempar `TypeError` pada build Obsidian lama yang mengembalikan `void` —
+   ditangkap trap runtime baru, bukan oleh `tsc`.
+
+Penjagaan yang ditambahkan: gate statis di atas (terpasang di `npm run verify`
+dan CI), trap runtime `test/fail-on-unhandled.cjs` yang di-preload ke 40 lane
+sehingga unhandled rejection menjadi kegagalan lane, dan lane perilaku
+`v0.1.199` yang menguji **kedua** kontrak `revealLeaf` termasuk promise yang
+menolak. Pelajaran 201 mencatat sebabnya.
