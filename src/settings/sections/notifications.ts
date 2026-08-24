@@ -120,7 +120,7 @@ export function notifications(ctx: SectionContext, containerEl: HTMLElement): vo
 			for (const variant of COMPLETION_SOUND_VARIANTS) dropdown.addOption(String(variant.id), variant.name);
 			dropdown.setValue(String(selected.id)).onChange(async (value) => {
 				prefs.completionSoundVariant = Number(value);
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.display();
 			});
 		})

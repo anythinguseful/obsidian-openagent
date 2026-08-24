@@ -30,7 +30,7 @@ export function general(ctx: SectionContext, containerEl: HTMLElement): void {
 		.addToggle((t) =>
 			t.setValue(s.enterToSend).onChange(async (v) => {
 				s.enterToSend = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 			})
 		);
@@ -39,7 +39,7 @@ export function general(ctx: SectionContext, containerEl: HTMLElement): void {
 	const stShowTimestamps = new Setting(containerEl).setName("Show message timestamps").addToggle((t) =>
 		t.setValue(s.showTimestamps).onChange(async (v) => {
 			s.showTimestamps = v;
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 			ctx.plugin.refreshViews();
 		})
 	);
@@ -56,7 +56,7 @@ export function general(ctx: SectionContext, containerEl: HTMLElement): void {
 				.setValue(s.chatLeafLocation)
 				.onChange(async (v) => {
 					s.chatLeafLocation = v === "left" || v === "main" ? v : "right";
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					/* v0.1.163: relocate an already-open chat immediately —
 					   no ribbon click needed. */
 					await ctx.plugin.moveChatViewToConfiguredLocation();

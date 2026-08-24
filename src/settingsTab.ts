@@ -807,7 +807,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setTooltip("Clear key")
 					.onClick(async () => {
 						viewed.apiKey = "";
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -994,7 +994,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				s.model = model; // …the explicit choice is authoritative (custom/off-catalog ids allowed)
 				this.modelPickProviderId = null;
 				this.modelPickModel = null;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.plugin.refreshViews();
 				this.display();
 			});
@@ -1066,7 +1066,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				value: s.temperature,
 				commit: (v) => {
 					s.temperature = v;
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -1087,7 +1087,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				value: s.maxTokens,
 				commit: (v) => {
 					s.maxTokens = Math.round(v);
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -1142,7 +1142,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setTooltip("Remove fallback")
 					.onClick(async () => {
 						s.fallbackProviders.splice(idx, 1);
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -1157,7 +1157,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				.onChange(async (v) => {
 					entry.providerId = v;
 					entry.model = ""; // Hermes Desktop: changing a row's provider resets its model
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display(); // model options follow the chosen provider
 				});
 			/* per-provider catalog (Hermes Desktop fallback field): each row's
@@ -1193,7 +1193,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		new Setting(containerEl).addButton((b) =>
 			b.setButtonText("Add fallback").onClick(async () => {
 				s.fallbackProviders.push({ providerId: usable[0]?.id ?? "", model: "" });
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.display();
 			})
 		);
@@ -1420,7 +1420,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		if (problems.length === 0 && moaConfigComplete(draft)) {
 			this.moaProblems = [];
 			this.plugin.settings.moa = normalizeMoaConfig(draft);
-			void this.plugin.saveSettings();
+			this.plugin.saveSettingsSafe();
 		} else if (mode === "explicit") {
 			this.moaProblems = problems.length > 0 ? problems : ["Every reference and the aggregator need a provider and a model."];
 		}
@@ -1447,7 +1447,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						s.auxModels[key] = null;
 						this.auxEditingKey = null;
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.plugin.refreshViews();
 						this.display();
 					})
@@ -1506,7 +1506,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.auxEditingKey = null;
 				this.auxDraftProviderId = null;
 				this.auxDraftModel = null;
-				await this.plugin.saveSettings();
+				this.plugin.saveSettingsSafe();
 				this.plugin.refreshViews();
 				this.display();
 			});
@@ -1542,7 +1542,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				commit: (v) => {
 					s.maxSessions = v;
 					this.plugin.sessionStore.setMaxSessions(v);
-					void this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 				},
 			}).el
 		);
@@ -1571,7 +1571,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				for (const key of Object.keys(PERSONALITY_OVERLAYS)) d.addOption(key, key);
 				d.setValue(isOverlayKey(s.personality) ? s.personality : "none").onChange(async (v) => {
 					s.personality = v;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.plugin.refreshViews();
 				});
 			});
@@ -1698,7 +1698,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			.addButton((b) =>
 				b.setButtonText("Create blank").onClick(async () => {
 					await store.create(nameInput || "Profile");
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 			);
@@ -2308,7 +2308,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				.setTooltip("Reset to default")
 				.onClick(async () => {
 					setPath(s as unknown as Record<string, unknown>, path, JSON.parse(JSON.stringify(getPath(DEFAULT_SETTINGS, path))));
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.plugin.refreshViews();
 					new Notice(`Open Agent: “${setting.nameEl.textContent?.trim() ?? path}” reset to default.`);
 					this.display();
@@ -2462,7 +2462,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					.setValue(s.webSearch.backend)
 					.onChange(async (v) => {
 						s.webSearch.backend = v as "ddgs" | "brave" | "tavily" | "searxng";
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -2780,7 +2780,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				t.setValue(task.enabled).onChange(async (v) => {
 					task.enabled = v;
 					if (v) task.nextRun = nextCronRun(task.schedule.expr, Date.now()) ?? 0;
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 			)
@@ -2817,7 +2817,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						s.cronTasks = s.cronTasks.filter((t) => t.id !== task.id);
 						if (this.editingCronId === task.id) this.editingCronId = null;
 						this.cronHistoryOpen.delete(task.id);
-						await this.plugin.saveSettings();
+						this.plugin.saveSettingsSafe();
 						this.display();
 					})
 			);
@@ -3220,7 +3220,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 						s.cronTasks.push(task);
 						new Notice(`Open Agent: automation \u201c${task.name}\u201d added \u2014 next run ${formatRelative(task.nextRun)}.`);
 					}
-					await this.plugin.saveSettings();
+					this.plugin.saveSettingsSafe();
 					this.display();
 				})
 		);

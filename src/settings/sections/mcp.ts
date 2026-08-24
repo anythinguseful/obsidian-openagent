@@ -46,7 +46,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 			t.setValue(s.mcpEnabled).onChange(async (v) => {
 				if (!v) {
 					s.mcpEnabled = false;
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					return;
 				}
 				if (s.mcpConsent.consentVersion !== 1) {
@@ -92,7 +92,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 					.setTooltip("Remove server")
 					.onClick(async () => {
 						delete s.mcpServers[name];
-						await ctx.plugin.saveSettings();
+						ctx.plugin.saveSettingsSafe();
 						ctx.display();
 					})
 			);
@@ -161,7 +161,7 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 					args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
 					enabled: true,
 				};
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.display();
 			})
 	);

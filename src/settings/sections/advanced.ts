@@ -36,7 +36,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.maxIterations,
 			commit: (v) => {
 				s.maxIterations = v;
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -55,7 +55,7 @@ export function advanced(ctx: SectionContext, containerEl: HTMLElement): void {
 				const n = Math.floor(Number(v));
 				if (!Number.isFinite(n)) return;
 				s.toolOutputMaxChars = Math.min(50_000, Math.max(1_000, n));
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 			});
 		});

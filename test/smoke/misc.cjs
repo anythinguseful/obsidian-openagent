@@ -582,11 +582,22 @@ module.exports = async function miscGuards() {
 	}
 
 	{
-		/* v0.1.200 static: ban the exact shape that caused the silent data loss
-		   -- a bare `await x.saveSettings();` as the LAST statement of a UI
-		   callback. The callback discards the returned promise, so the rejection
-		   had nowhere to go. Sites inside a try are exempt: those handle the
-		   failure themselves and must keep awaiting. */
+		/* v0.1.201 static: ban EVERY shape that discards the settings-write
+		   promise, not just the one that was found first.
+
+		   Three shapes lose the rejection identically:
+		     1. `await x.saveSettings();` in the tail of a UI callback -- the
+		        callback throws the promise away, so the rejection has nowhere
+		        to go (the original bug).
+		     2. `void x.saveSettings();` -- `void` discards the promise AND its
+		        rejection outright. 16 of these existed.
+		     3. `x.saveSettings().then(...)` with no `.catch` -- the rejection
+		        still escapes, and the .then body (usually a UI refresh) is
+		        skipped precisely when the write failed.
+
+		   Sites inside a try are exempt: those handle the failure themselves
+		   and must keep awaiting. saveSettingsSafe()'s own body is exempt --
+		   it is the sanctioned wrapper. */
 		const ts = require("typescript");
 		const HOOKS = new Set(["onChange", "onClick", "onSubmit", "onClose", "onSelect"]);
 		const srcFiles = [];
@@ -608,30 +619,51 @@ module.exports = async function miscGuards() {
 					ts.isPropertyAccessExpression(node.expression) &&
 					node.expression.name.text === "saveSettings"
 				) {
-					const stmt = node.parent && ts.isAwaitExpression(node.parent) ? node.parent.parent : null;
-					if (stmt && ts.isExpressionStatement(stmt)) {
-						let inTry = false;
+					let inSafeWrapper = false;
+					for (let c = node.parent; c; c = c.parent) {
+						if (ts.isMethodDeclaration(c) && c.name.getText(sf) === "saveSettingsSafe") inSafeWrapper = true;
+					}
+					let inTryBlock = false;
+					for (let c = node.parent; c; c = c.parent) {
+						if (ts.isTryStatement(c) && c.tryBlock.getStart(sf) <= node.getStart(sf) && node.getEnd() <= c.tryBlock.getEnd()) inTryBlock = true;
+					}
+					const at = () => `${path.relative(ROOT, file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`;
+
+					/* shape 2: void discards the promise and its rejection */
+					if (!inSafeWrapper && !inTryBlock && ts.isVoidExpression(node.parent)) offenders.push(`${at()} (void)`);
+
+					/* shape 3: .then(...) with no .catch anywhere in the chain */
+					if (!inSafeWrapper && !inTryBlock && ts.isPropertyAccessExpression(node.parent) && node.parent.name.text === "then") {
+						let chain = node.parent.parent;
+						let handled = false;
+						while (chain && ts.isCallExpression(chain)) {
+							const next = chain.parent;
+							if (next && ts.isPropertyAccessExpression(next) && next.name.text === "catch") handled = true;
+							chain = next && ts.isPropertyAccessExpression(next) ? next.parent : null;
+						}
+						if (!handled) offenders.push(`${at()} (.then without .catch)`);
+					}
+
+					/* shape 1: awaited anywhere inside a UI callback -- position in
+					   the body is irrelevant, the callback discards the promise
+					   either way, so a nested `if`/`case` branch loses it too. */
+					if (!inSafeWrapper && !inTryBlock && ts.isAwaitExpression(node.parent)) {
+						let fn = null;
 						for (let c = node.parent; c; c = c.parent) {
-							if (ts.isTryStatement(c) && c.tryBlock.getStart(sf) <= node.getStart(sf) && node.getEnd() <= c.tryBlock.getEnd()) inTry = true;
+							if (ts.isFunctionLike(c)) {
+								fn = c;
+								break;
+							}
 						}
-						const fn = stmt.parent;
-						const isLast =
-							fn &&
-							ts.isBlock(fn) &&
-							fn.statements.length > 0 &&
-							fn.statements[fn.statements.length - 1] === stmt;
-						const owner = isLast ? fn.parent : null;
 						const isCallback =
-							owner &&
-							(ts.isArrowFunction(owner) || ts.isFunctionExpression(owner)) &&
-							owner.parent &&
-							ts.isCallExpression(owner.parent) &&
-							owner.parent.arguments.includes(owner) &&
-							ts.isPropertyAccessExpression(owner.parent.expression) &&
-							HOOKS.has(owner.parent.expression.name.text);
-						if (!inTry && isCallback) {
-							offenders.push(`${path.relative(ROOT, file)}:${sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1}`);
-						}
+							fn &&
+							(ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) &&
+							fn.parent &&
+							ts.isCallExpression(fn.parent) &&
+							fn.parent.arguments.includes(fn) &&
+							ts.isPropertyAccessExpression(fn.parent.expression) &&
+							HOOKS.has(fn.parent.expression.name.text);
+						if (isCallback) offenders.push(`${at()} (awaited in a UI callback)`);
 					}
 				}
 				ts.forEachChild(node, visit);
@@ -639,9 +671,9 @@ module.exports = async function miscGuards() {
 		}
 
 		if (offenders.length === 0 && srcFiles.length > 100) {
-			console.log(`\u2713 v0.1.200 static: ${srcFiles.length} source files scanned, no fire-and-forget "await x.saveSettings()" left tail-position in a UI callback (use saveSettingsSafe)`);
+			console.log(`\u2713 v0.1.201 static: ${srcFiles.length} source files scanned, no discarded settings-write promise left (await-in-callback, void, or .then without .catch \u2014 use saveSettingsSafe)`);
 		} else {
-			console.error(`\u2717 v0.1.200 discarded settings-save promise in a UI callback (files=${srcFiles.length}): ${offenders.join(", ")}`);
+			console.error(`\u2717 v0.1.201 discarded settings-save promise (files=${srcFiles.length}): ${offenders.join(", ")}`);
 			failed++;
 		}
 	}

@@ -240,14 +240,14 @@ export default class OpenAgentPlugin extends Plugin {
 			onRefreshModels: () => this.refreshQuickAskModels(),
 			onSetVisibleModels: (next) => {
 				this.settings.visibleModels = next;
-				void this.saveSettings();
+				this.saveSettingsSafe();
 			},
 			onToggleCollapsed: (slug) => {
 				const st = this.settings;
 				st.collapsedMenuProviders = st.collapsedMenuProviders.includes(slug)
 					? st.collapsedMenuProviders.filter((x) => x !== slug)
 					: [...st.collapsedMenuProviders, slug];
-				void this.saveSettings();
+				this.saveSettingsSafe();
 			},
 			onOpenSettings: () => this.openSettings(),
 			/* v0.1.85 — live getter: toggle a snippet's Quick Ask flag in

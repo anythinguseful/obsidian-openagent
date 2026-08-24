@@ -38,7 +38,7 @@ export function safety(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.approvalMode,
 			onPick: (v) => {
 				s.approvalMode = v as ApprovalMode;
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);

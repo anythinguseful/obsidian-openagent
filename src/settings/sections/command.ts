@@ -104,7 +104,7 @@ export function command(ctx: SectionContext, containerEl: HTMLElement): void {
 				added++;
 			}
 			new Notice(added > 0 ? `Open Agent: restored ${added} default command(s).` : "Open Agent: defaults are all present already.");
-			await ctx.plugin.saveSettings();
+			ctx.plugin.saveSettingsSafe();
 			renderCommandRows(ctx, list);
 		})
 	);

@@ -4012,7 +4012,7 @@ nudgeCounterRef.current = 0;
 		(next: string[]) => {
 			settings.visibleModels = next;
 			bumpSettingsRev();
-			void props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);
@@ -4022,7 +4022,7 @@ nudgeCounterRef.current = 0;
 				? settings.collapsedMenuProviders.filter((s) => s !== slug)
 				: [...settings.collapsedMenuProviders, slug];
 			bumpSettingsRev();
-			void props.saveSettings();
+			props.saveSettingsSafe();
 		},
 		[settings, props]
 	);

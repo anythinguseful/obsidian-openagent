@@ -36,7 +36,7 @@ export function workspace(ctx: SectionContext, containerEl: HTMLElement): void {
 				.setValue(s.workspaceMode)
 				.onChange(async (v) => {
 					s.workspaceMode = v as WorkspaceMode;
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					ctx.plugin.refreshViews();
 					ctx.display();
 				})
@@ -72,10 +72,12 @@ export function workspace(ctx: SectionContext, containerEl: HTMLElement): void {
 			   also switch managed memory/skills/session partitions. */
 			t.inputEl.addEventListener("change", () => {
 				s.workspaceFolder = t.getValue().trim().normalize("NFC");
-				void ctx.plugin.saveSettings().then(() => {
-					ctx.plugin.refreshViews();
-					updateStatus();
-				});
+				ctx.plugin.saveSettingsSafe();
+				/* Both reads come from memory, so they are correct even when the
+				   write fails -- and the old .then() skipped them in exactly that
+				   case, leaving the UI showing the pre-edit folder. */
+				ctx.plugin.refreshViews();
+				updateStatus();
 			});
 		});
 	markModified(stWorkspaceFolder, ctx.plugin.settings, "workspaceFolder");
@@ -112,7 +114,7 @@ export function workspace(ctx: SectionContext, containerEl: HTMLElement): void {
 				.setTooltip(`Remove ${path}`)
 				.onClick(async () => {
 					s.workspaceExcludedFolders = s.workspaceExcludedFolders.filter((p) => p !== path);
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					ctx.plugin.refreshViews();
 					ctx.display();
 				})
@@ -131,7 +133,7 @@ export function workspace(ctx: SectionContext, containerEl: HTMLElement): void {
 				const n = Math.floor(Number(v));
 				if (!Number.isFinite(n)) return;
 				s.fileReadMaxChars = Math.min(20_000, Math.max(1_000, n));
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 				updateStatus();
 			});

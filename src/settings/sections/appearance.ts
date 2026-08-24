@@ -32,7 +32,7 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 				.setValue(s.toolViewMode)
 				.onChange(async (v) => {
 					s.toolViewMode = v as OpenAgentSettings["toolViewMode"];
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					ctx.plugin.refreshViews();
 				})
 		);
@@ -44,7 +44,7 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 		.addToggle((t) =>
 			t.setValue(s.reasoningCollapsedByDefault).onChange(async (v) => {
 				s.reasoningCollapsedByDefault = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 			})
 		);
@@ -60,7 +60,7 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 				.setValue(s.sessionListDensity)
 				.onChange(async (v) => {
 					s.sessionListDensity = v as OpenAgentSettings["sessionListDensity"];
-					await ctx.plugin.saveSettings();
+					ctx.plugin.saveSettingsSafe();
 					ctx.plugin.refreshViews();
 				})
 		);
@@ -72,7 +72,7 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 		.addToggle((t) =>
 			t.setValue(s.showIntroScreen).onChange(async (v) => {
 				s.showIntroScreen = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 			})
 		);
@@ -84,7 +84,7 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 		.addToggle((t) =>
 			t.setValue(s.showReactions).onChange(async (v) => {
 				s.showReactions = v;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.plugin.refreshViews();
 			})
 		);

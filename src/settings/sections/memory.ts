@@ -102,7 +102,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.memoryNudgeInterval,
 			commit: (v) => {
 				s.memoryNudgeInterval = v;
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -144,7 +144,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.memoryEngineRetainEveryN,
 			commit: (v) => {
 				s.memoryEngineRetainEveryN = Math.min(10, Math.max(1, v));
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -163,7 +163,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.memoryEngineRecallMax,
 			commit: (v) => {
 				s.memoryEngineRecallMax = Math.min(20, Math.max(3, v));
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -284,7 +284,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			unit: "%",
 			commit: (v) => {
 				s.compressionThreshold = Math.min(0.99, Math.max(0.1, v / 100));
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -305,7 +305,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			unit: "%",
 			commit: (v) => {
 				s.compressionTargetRatio = Math.min(0.5, Math.max(0.05, v / 100));
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);
@@ -324,7 +324,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 			value: s.compressionProtectLastN,
 			commit: (v) => {
 				s.compressionProtectLastN = Math.min(24, Math.max(0, v));
-				void ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 			},
 		}).el
 	);

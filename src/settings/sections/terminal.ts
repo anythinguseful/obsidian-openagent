@@ -37,7 +37,7 @@ export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement):
 		.addToggle((toggle) => toggle.setValue(s.toolsets.terminal).onChange(async (value) => {
 			if (!value) {
 				s.toolsets.terminal = false;
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				return;
 			}
 			if (s.terminal.consentVersion !== 1) {
@@ -64,7 +64,7 @@ export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement):
 			.setValue(s.terminal.backend)
 			.onChange(async (value) => {
 				s.terminal.backend = value === "local" ? "local" : "docker";
-				await ctx.plugin.saveSettings();
+				ctx.plugin.saveSettingsSafe();
 				ctx.display();
 			}));
 	markModified(backend, ctx.plugin.settings, "terminal.backend");
