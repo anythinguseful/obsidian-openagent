@@ -1958,5 +1958,14 @@ berikutnya, sering di fungsi lain.
    bukan cuma "crash", tapi "crash lewat jalur yang salah".
 3. Hitungan dari alat (grep/AST) adalah petunjuk pencarian, bukan temuan.
    Angka "26 mentah → 1 nyata" bertahan sampai 12 lokasi dibaca satu per satu,
-   lalu berubah jadi 3. Tulis angka hanya setelah membaca, dan koreksi angka
-   lama secara eksplisit ketika salah — jangan diam-diam menimpanya.
+   lalu jadi 3; setelah 14 sisanya ikut dibaca, jadi 4. Tulis angka hanya
+   setelah membaca, dan koreksi angka lama secara eksplisit ketika salah —
+   jangan diam-diam menimpanya.
+4. Kalau satu jenis bug ketemu, sisir **semua** lokasi sejenis sampai habis.
+   Menemukan 2 bug dari 12 lokasi berarti 14 lokasi sisanya terlalu berisiko
+   untuk dibiarkan — dan memang menyimpan satu lagi (`mcp/client.ts`).
+5. Perhatikan **di mana** lemparan terjadi, bukan cuma apakah terjadi. Bug
+   `mcp/client.ts` hidup di dalam handler `stdout.on("data")`: lemparan
+   asinkron tidak bisa ditangkap `try/catch` pemanggil dan menjadi uncaught
+   exception. Bug yang sama bentuknya bisa jauh lebih parah tergantung
+   konteks pemanggilnya.

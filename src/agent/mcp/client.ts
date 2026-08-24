@@ -145,7 +145,13 @@ export class McpClient {
 		if (!trimmed) return;
 		let msg: JsonRpcResponse;
 		try {
-			msg = JSON.parse(trimmed) as JsonRpcResponse;
+			const parsed: unknown = JSON.parse(trimmed);
+			/* `null` / `7` / `"hi"` / `[]` are valid JSON but not JSON-RPC frames,
+			   so the catch above never fires for them. Reading .id off null threw
+			   from inside a stdout "data" handler — asynchronous, so no caller
+			   try/catch can see it and the whole process goes down. */
+			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+			msg = parsed as JsonRpcResponse;
 		} catch {
 			return; // ignore non-JSON noise on stdout
 		}

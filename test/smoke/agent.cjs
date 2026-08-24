@@ -203,16 +203,19 @@ module.exports = function agentGuards() {
 		   read. Both must degrade, not crash. */
 		const prov = read("src/agent/providers.ts");
 		const loop = read("src/agent/agentLoop.ts");
+		const mcp = read("src/agent/mcp/client.ts");
 		const ok =
 			prov.includes('if (!json || typeof json !== "object" || Array.isArray(json)) {') &&
 			prov.includes("malformedEvents++") &&
 			loop.includes("const parsed = argsJson ? JSON.parse(argsJson) : {};") &&
 			loop.includes('if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed;') &&
-			!loop.includes("args = argsJson ? JSON.parse(argsJson) : {};");
+			!loop.includes("args = argsJson ? JSON.parse(argsJson) : {};") &&
+			mcp.includes('if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;') &&
+			!mcp.includes("msg = JSON.parse(trimmed) as JsonRpcResponse;");
 		if (ok) {
-			console.log("\u2713 v0.1.152: non-object JSON degrades \u2014 `data: null` counts as a malformed SSE frame, null tool args fall back to {}");
+			console.log("\u2713 v0.1.152: non-object JSON degrades \u2014 `data: null` counts as a malformed SSE frame, null tool args fall back to {}, null JSON-RPC frames are dropped");
 		} else {
-			console.error("\u2717 v0.1.152 non-object JSON guard drifted (SSE frame or tool args accept a non-object again)");
+			console.error("\u2717 v0.1.152 non-object JSON guard drifted (SSE frame, tool args or JSON-RPC frame accepts a non-object again)");
 			failed++;
 		}
 	}
