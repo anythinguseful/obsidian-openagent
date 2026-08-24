@@ -1,7 +1,7 @@
 ---
 title: "Settings grouping visual system"
 type: plan
-status: active
+status: done
 date: 2026-08-25
 tags: [openagent, plan, ui, settings, aesthetics]
 ---
@@ -115,11 +115,12 @@ Phases 1 and 2 are implemented in this branch:
 - A smoke guard and real-DOM probe `F49settingsGroups` cover the ownership,
   structure, and computed-card contract.
 
-`npm run typecheck`, `npm run build`, `npm test`, and `npm run check:docs` pass.
-The plan remains `active` because its real-DOM Settings witness cannot run in
-this workspace: Chromium installation fails when the sandbox cannot reach the
-Debian package mirrors. The new F49 probe must pass in CI or a Chromium-enabled
-environment before this plan can honestly be marked `done`.
+`npm run verify` passes. The real-DOM Settings witness runs locally with
+HeadlessChrome 149 and `F49settingsGroups` passes: all six Capabilities
+subsections are grouped, no subsection is left loose, MCP is inside its group
+with a 1 px border and 8 px radius, and cron tasks retain the same 1 px / 8 px
+object-card contract. The tracked witness records the result, so this plan is
+`done`.
 
 ## GWT
 

@@ -147,7 +147,7 @@ module.exports = async function miscGuards() {
 			!cfg.includes("es.drop") && !cfg.includes("\tdrop:") && // jalur debugMode menjaga console.* nya — opsi pelempar-log tak boleh masuk
 			size > 100000 &&
 			size < 1200000 && // v0.1.145 Workspace enforcement adds policy/provenance guards; keep the minified bundle below 1.2 MB
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.128: production minify aktif · main.js terjepit < 2,3 MB (dry-run 1,93 MB dari 5,40 MB) · console debugMode tidak di-drop");
 		} else {
@@ -167,7 +167,7 @@ module.exports = async function miscGuards() {
 			css.includes("QUICK ASK FIELD RESET") && // komentar sumber bertahan = repo styles.css TIDAK ikut terminify
 			css.includes(".oa-selbar .oa-selbar-btn {") && // aturan selbar asli tetap di selector nyata (v0.1.102)
 			css.includes("\n") && // layout multi-baris utuh
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.131: styles.css zip-only minify + sentinel verify · repo tetap readable · audit CSS 43/43 tuntas false-positive");
 		} else {

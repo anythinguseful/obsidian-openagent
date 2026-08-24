@@ -36,10 +36,11 @@ visual availability of row actions.
   messages, approval, reasoning, and composer-adjacent surfaces.
 - Compared the result with the completed [UI contract audit](ui-contract-audit-2026-08-20.md)
   and [UI audit](ui-audit.md).
-- Chromium is unavailable in this workspace, so no new pixel comparison was
-  possible. Findings labelled visual-system are source-backed; any future
-  aesthetic change still requires real-DOM proof in light and dark themes and
-  at narrow pane widths.
+- Chromium was unavailable during this initial audit, so its findings were
+  source-backed. The follow-up [Settings grouping visual system](../plans/settings-grouping-visual-system-2026-08-25.md)
+  later ran its real-DOM witness with HeadlessChrome 149; future aesthetic
+  changes still require the same proof in light and dark themes and at narrow
+  pane widths.
 
 ## Current visual system
 
