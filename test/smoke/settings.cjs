@@ -262,6 +262,11 @@ module.exports = function settingsGuards() {
 		const tab = read("src/settingsTab.ts");
 		const wired = [
 			{
+				what: "general",
+				imp: 'import { general as generalSection } from "./settings/sections/general";',
+				call: "generalSection(this.sectionContext(), host);",
+			},
+			{
 				what: "memory",
 				imp: 'import { memory as memorySection } from "./settings/sections/memory";',
 				call: "memorySection(this.sectionContext(), host);",
@@ -277,12 +282,14 @@ module.exports = function settingsGuards() {
 			/* method privat lamanya benar-benar hilang, bukan disisakan mati */
 			!tab.includes("private terminalSettings(") &&
 			!tab.includes("private memory(") &&
+			!tab.includes("private general(") &&
 			/* Terminal tetap hidup di dalam Capabilities, di bawah subheading-nya */
 			tab.indexOf('this.subheading(containerEl, "Terminal & Processes"') <
 				tab.indexOf("terminalSection(this.sectionContext(), containerEl);") &&
 			/* dan modulnya memang mengekspor fungsi yang diimpor itu */
 			read("src/settings/sections/terminal.ts").includes("export function terminalSettings(ctx: SectionContext, containerEl: HTMLElement): void") &&
-			read("src/settings/sections/memory.ts").includes("export function memory(ctx: SectionContext, containerEl: HTMLElement): void");
+			read("src/settings/sections/memory.ts").includes("export function memory(ctx: SectionContext, containerEl: HTMLElement): void") &&
+			read("src/settings/sections/general.ts").includes("export function general(ctx: SectionContext, containerEl: HTMLElement): void");
 		if (ok) {
 			console.log("✓ v0.1.194: extracted section renderers stay wired (import + sectionContext call + subheading order)");
 		} else {
@@ -684,11 +691,29 @@ module.exports = function settingsGuards() {
 	// 2026-08-02 v0.1.50: General tab groups (owner directive) — Backup &
 	// Restore holds keys-toggle/export/import; Danger Zone holds both resets;
 	// headings must keep this exact order (declaration-level positions).
+	// 2026-08-24 (Phase 3): renderer `general` pindah ke modul sendiri, jadi
+	// posisi deklarasi kini dibaca dari src/settings/sections/general.ts.
+	// Urutannya tetap load-bearing — yang berubah cuma FILE tempat ia diukur.
+	// Pin negatif ditambah: heading-heading ini tidak boleh tumbuh kembali di
+	// settingsTab.ts (kalau iya, berarti ada salinan kedua).
 	{
 		const fs = require("fs");
 		const path = require("path");
-		const st = read("src/settingsTab.ts");
+		const stRaw = read("src/settings/sections/general.ts");
+		const tabG = read("src/settingsTab.ts");
 		const css = read("styles.css");
+		/* Posisi diukur atas KODE saja. Modul ini punya doc-comment yang
+		   menyebut "Backup & Restore" dan "Danger Zone" untuk menjelaskan
+		   urutannya — indexOf mentah menemukan komentar itu lebih dulu dan
+		   melaporkan urutan yang salah. Kelemahan yang sama sudah ada waktu
+		   subjeknya settingsTab.ts; komentar tidak boleh bisa memuaskan
+		   ATAU menjatuhkan guard posisi. Blok /* *\/ dan baris // dibuang;
+		   baris (bukan komentar) yang memuat URL tetap utuh. */
+		const st = stRaw
+			.replace(/\/\*[\s\S]*?\*\//g, "")
+			.split("\n")
+			.filter((l) => !/^\s*(\/\/|\*)/.test(l))
+			.join("\n");
 		const p = (n) => st.indexOf(n);
 		const order =
 			p('"Backup & Restore"') >= 0 &&
@@ -701,6 +726,11 @@ module.exports = function settingsGuards() {
 		if (
 			order &&
 			!st.includes('"Data & danger zone"') &&
+			/* satu pemilik: tab tidak boleh merender ulang grup yang sama */
+			!tabG.includes('setName("Include API keys in exports")') &&
+			!tabG.includes('setName("Reset everything")') &&
+			/* hazard tint dipasang lewat ctx.subheading(...).addClass(...) */
+			st.includes('.addClass("oa-danger-zone")') &&
 			/\.oa-settings \.oa-subsection\.oa-danger-zone \.oa-subsection-title/.test(css)
 		) {
 			console.log("✓ general groups: Backup & Restore + Danger Zone — order + hazard tint");
@@ -982,7 +1012,9 @@ module.exports = function settingsGuards() {
 	}
 	{
 		const bundle = read("main.js");
-		const st = read("src/settingsTab.ts");
+		/* 2026-08-24 (Phase 3): UI portability rows hidup di modul general;
+		   pipeline-nya tetap di settings.ts/main.ts. */
+		const st = read("src/settings/sections/general.ts");
 		const ss = read("src/settings.ts");
 		const mn = read("src/main.ts");
 		const vc = read("src/agent/vaultCompat.ts");
@@ -1133,7 +1165,17 @@ module.exports = function settingsGuards() {
 		// settings copy band (owner-approved 2026-07-25, C1–C16 + K1 "trim
 		// decorative Hermes references"): guards the refreshed descriptions
 		// against drift; lesson 20 — flip these strings when copy changes again
-		const stabC = read("src/settingsTab.ts");
+		/* 2026-08-24 (Phase 3): band ini mengukur COPY, bukan lokasi. Dua
+		   kalimatnya ("Resets to Off each time you open this tab." dan
+		   deskripsi custom-header) kini tinggal di modul general, jadi
+		   subjeknya = tab + modul yang sudah diekstrak. Pin negatifnya juga
+		   harus melihat gabungan itu, kalau tidak frasa Hermes yang sudah
+		   dipensiunkan bisa hidup lagi di modul tanpa ketahuan. */
+		const stabC =
+			read("src/settingsTab.ts") +
+			read("src/settings/sections/general.ts") +
+			read("src/settings/sections/memory.ts") +
+			read("src/settings/sections/terminal.ts");
 		const ok =
 			stabC.includes("Thinking budget — sent to providers that support it, ignored elsewhere.") &&
 			stabC.includes("Named identities: persona + optional provider/model pin") &&
@@ -1872,6 +1914,7 @@ module.exports = function settingsGuards() {
 	{
 		const setts = read("src/settings.ts");
 		const tab = read("src/settingsTab.ts");
+		const gen = read("src/settings/sections/general.ts");
 		const main = read("src/main.ts");
 		const chatView = read("src/ui/ChatView.tsx");
 		const chat = read("src/ui/ChatApp.tsx");
@@ -1879,13 +1922,17 @@ module.exports = function settingsGuards() {
 			setts.includes('chatLeafLocation: "left" | "main" | "right"') &&
 			setts.includes('chatLeafLocation: "right"') &&
 			setts.includes('inRaw.chatLeafLocation === "left" || inRaw.chatLeafLocation === "main"') &&
-			tab.includes('setName("Chat panel location")') &&
-			tab.includes('addOption("left", "Left sidebar")') &&
-			tab.includes('addOption("main", "Main workspace (tab)")') &&
-			tab.includes('addOption("right", "Right sidebar")') &&
-			tab.includes('markModified(stChatLeafLocation') &&
-			tab.includes('moves an open panel there right away') &&
-			tab.includes('this.plugin.moveChatViewToConfiguredLocation()') &&
+			/* 2026-08-24 (Phase 3): baris UI-nya pindah ke modul general,
+			   pemanggilan jadi ctx.plugin.*; logika pindah-leaf tetap di
+			   main.ts dan tetap dipin di bawah. */
+			gen.includes('setName("Chat panel location")') &&
+			gen.includes('addOption("left", "Left sidebar")') &&
+			gen.includes('addOption("main", "Main workspace (tab)")') &&
+			gen.includes('addOption("right", "Right sidebar")') &&
+			gen.includes('markModified(stChatLeafLocation') &&
+			gen.includes('moves an open panel there right away') &&
+			gen.includes('ctx.plugin.moveChatViewToConfiguredLocation()') &&
+			!tab.includes('setName("Chat panel location")') &&
 			main.includes('async moveChatViewToConfiguredLocation') &&
 			main.includes('const loc = this.settings.chatLeafLocation') &&
 			main.includes('workspace.getLeftLeaf(false)') &&
@@ -2034,7 +2081,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts")).match(/markModified\(/g) || []).length === 63 && // 42 di settingsTab + 17 di modul memory + 4 di modul terminal (2026-08-24 Phase 3: terminalSettings pindah modul, −4 di tab / +4 di modul — TOTALNYA tetap 63, itu buktinya ekstraksi tidak menghapus satu dot pun)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts")).match(/markModified\(/g) || []).length === 63 && // 39 tab + 17 memory + 4 terminal + 3 general (2026-08-24 Phase 3: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

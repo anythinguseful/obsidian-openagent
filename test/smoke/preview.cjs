@@ -1423,7 +1423,10 @@ module.exports = function previewGuards() {
 		const pi = read("src/ui/components/prompt-input.tsx");
 		const mk = read("src/ui/markdown-keys.ts");
 		const st = read("src/settings.ts");
-		const tab = read("src/settingsTab.ts");
+		/* 2026-08-24 (Phase 3): row "Enter sends message" pindah ke modul
+		   general — yang dijaga di sini copy penjelas chord-nya, jadi
+		   subjeknya ikut pindah file. */
+		const tab = read("src/settings/sections/general.ts");
 		const app = read("src/ui/ChatApp.tsx");
 		const ent = read("test/real-preview/chat-entry.tsx");
 		const bld = read("test/real-preview/build.mjs");

@@ -189,6 +189,33 @@ Each phase is one commit and must pass the full gate before the next begins.
   `private <name>(` in the tab). Six arms, all six red-proofed. **Rule for the
   remaining extractions: the wiring guard ships in the same commit as the
   move.**
+  `general` **DONE** (2026-08-24). 190 lines out (4,449 → 4,259) into
+  `src/settings/sections/general.ts`; call site in `display()` became
+  `generalSection(this.sectionContext(), host)`. Unlike `terminal`, this one
+  owns its two `subheading` calls and chains `.addClass("oa-danger-zone")` on
+  the returned element — which the `SectionContext` already supports, since
+  `subheading` returns `HTMLElement`. Four imports went orphan
+  (`buildSettingsExport`, `exportStamp`, `copyText`, `ConfirmResetModal`) while
+  `JsonImportModal` / `ExportFileSuggestModal` stayed live for other callers.
+
+  The move itself was verified by **byte-exact roundtrip**, not by re-reading:
+  the body was sliced programmatically, de-indented, `this.*` → `ctx.*` applied
+  by regex, then reversed and compared `==` against the original. Identical.
+
+  Six guards broke; a literal-matching predictor had called five. The miss was
+  the `C1–C16` copy band, which pins a *substring* of a longer `setDesc` — whole
+  literal against whole literal never matches that. All six amended by
+  repointing the subject at the module and adding negative pins so a duplicate
+  row cannot grow back in the tab; `markModified` stays **63** (39 + 17 + 4 + 3).
+
+  Lesson 194 records the real find: the v0.1.50 heading-order guard measured
+  `indexOf` over raw source, so the new module's own doc comment — which names
+  both groups while explaining their order — was found first and failed the
+  guard on correct code. The weakness pre-dated the extraction (a comment in
+  `settingsTab.ts` would have done the same). Fixed by stripping comments before
+  measuring, and red-proofed **in both directions**: seven mutations must go
+  red, and an injected comment listing the groups in reverse order must leave it
+  green.
 - **Phase 4** — `workspace` + `addWorkspaceExclusion`, `command` +
   `renderCommandRows`. Moved in pairs: each private helper has exactly one
   caller, both in the moving set.
