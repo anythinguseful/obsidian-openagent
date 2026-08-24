@@ -1037,7 +1037,7 @@ module.exports = function settingsGuards() {
 			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
 			bs126.includes("workspaceMovedOut") &&
-			read("manifest.json").includes('"version": "0.1.151"');
+			read("manifest.json").includes('"version": "0.1.152"');
 		if (ok) {
 			console.log("✓ Notifications IA: native/sound tab is in tabs/search; Appearance present after Chat; About last tab with renderer; Workspace/Safety and audited sliders remain");
 		} else {
@@ -2236,7 +2236,7 @@ module.exports = function settingsGuards() {
 			st2.includes("clarify: true,") && st2.includes("todo: true,") &&
 			tb.includes('key: "todo"') &&
 			tp.includes("todo dedupe: last occurrence wins") &&
-			read("manifest.json").includes('"version": "0.1.151"');
+			read("manifest.json").includes('"version": "0.1.152"');
 		if (ok) {
 			console.log("✓ v0.1.133: todo tool (port Hermes 1:1) — ride session file · injeksi lintas kompresi hanya item aktif · ephemeral di headless/quick-ask · 18 cek unit hijau");
 		} else {
@@ -2268,7 +2268,7 @@ module.exports = function settingsGuards() {
 			cm.includes('"webExtract" | "vision"') &&
 			tp.includes("vision source: vault path") &&
 			al.includes("vision: provider request carries pixels inside the tool message") &&
-			read("manifest.json").includes('"version": "0.1.151"');
+			read("manifest.json").includes('"version": "0.1.152"');
 		if (ok) {
 			console.log("✓ v0.1.134: vision_analyze — native pixels ride tool result (bypass 20k clipper) · legacy aux+template mereka · magic-byte detect · witness wire-level hijau");
 		} else {
@@ -2304,7 +2304,7 @@ module.exports = function settingsGuards() {
 			tp.includes("runPooled(3, workers)") &&
 			al.includes("delegation: consolidated batch result lands on the wire") &&
 			plan.includes("DELEGATE_BLOCKED_TOOLS") &&
-			read("manifest.json").includes('"version": "0.1.151"');
+			read("manifest.json").includes('"version": "0.1.152"');
 		if (ok) {
 			console.log("✓ v0.1.135+: delegate_task — child/headless fail-closed allowlists · pool 3 · consolidated index-sorted · orchestrator/output_schema ditolak jujur · gap 🟡 TUNTAS SEMUA");
 		} else {
