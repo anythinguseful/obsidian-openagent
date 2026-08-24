@@ -226,15 +226,41 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	/* Compression (v0.1.175, Hermes Desktop parity — official groups
 	   compression.* under "Memory & Context"): the four knobs desktop
 	   exposes. Three already lived in settings but had no UI; target_ratio
-	   is new (token-sized verbatim tail, complementing the message floor). */
+	   is new (token-sized verbatim tail, complementing the message floor).
+
+	   2026-08-24: the Model tab carried a second, older copy of three of
+	   these rows plus "Context window" (a duplicate dating to v0.1.17, noted
+	   in Lesson 172). That block is gone; "Context window" moved here as the
+	   first row because the threshold below is a percentage OF it — owner
+	   decision, a deliberate deviation from Hermes, which keeps
+	   model_context_length in its Model section.
+
+	   Labels follow Hermes FIELD_LABELS (apps/desktop/src/app/settings/
+	   constants.ts, verified 2026-08-24) but re-cased: Obsidian's plugin
+	   guidelines mandate sentence case, Hermes uses Title Case. */
 	ctx.subheading(
 		containerEl,
 		"Compression",
 		"What happens when a long conversation nears the context limit."
 	);
 
+	const stContextWindow = new Setting(containerEl)
+		.setName("Context window")
+		.setDesc("Tokens the model can see at once. 0 = auto-detect (falls back to 256000).")
+		.addText((t) => {
+			t.setPlaceholder("0 = auto")
+				.setValue(s.modelContextLength > 0 ? String(s.modelContextLength) : "")
+				.onChange(async (v) => {
+					s.modelContextLength = Math.max(0, Math.floor(Number(v.trim()) || 0));
+					await ctx.plugin.saveSettings();
+				});
+			t.inputEl.setAttribute("aria-label", "Context window");
+		});
+	markModified(stContextWindow, ctx.plugin.settings, "modelContextLength");
+	ctx.resetButton(stContextWindow, "modelContextLength");
+
 	const stCompressionEnabled = new Setting(containerEl)
-		.setName("Compression")
+		.setName("Auto-compression")
 		.setDesc("Summarize older context when conversations get large.")
 		.addToggle((t) =>
 			t.setValue(s.compressionEnabled).onChange(async (v) => {
@@ -245,11 +271,11 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	markModified(stCompressionEnabled, ctx.plugin.settings, "compressionEnabled");
 
 	const stCompressionThreshold = new Setting(containerEl)
-		.setName("Compress when above")
+		.setName("Compression threshold")
 		.setDesc("Start compacting once the conversation fills this share of the context window.");
 	stCompressionThreshold.controlEl.appendChild(
 		createSliderInput({
-			ariaLabel: "Compress when above",
+			ariaLabel: "Compression threshold",
 			min: 10,
 			max: 99,
 			step: 1,
@@ -266,11 +292,11 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	ctx.resetButton(stCompressionThreshold, "compressionThreshold");
 
 	const stCompressionTargetRatio = new Setting(containerEl)
-		.setName("Preserve recent tail")
+		.setName("Compression target")
 		.setDesc("Keep this share of the most recent messages untouched when compressing.");
 	stCompressionTargetRatio.controlEl.appendChild(
 		createSliderInput({
-			ariaLabel: "Preserve recent tail",
+			ariaLabel: "Compression target",
 			min: 5,
 			max: 50,
 			step: 1,
@@ -287,11 +313,11 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	ctx.resetButton(stCompressionTargetRatio, "compressionTargetRatio");
 
 	const stCompressionProtectLastN = new Setting(containerEl)
-		.setName("Keep last N messages")
+		.setName("Protected recent messages")
 		.setDesc("Minimum recent messages never folded into the summary.");
 	stCompressionProtectLastN.controlEl.appendChild(
 		createSliderInput({
-			ariaLabel: "Keep last N messages",
+			ariaLabel: "Protected recent messages",
 			min: 0,
 			max: 24,
 			step: 1,

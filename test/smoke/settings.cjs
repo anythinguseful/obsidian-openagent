@@ -80,10 +80,16 @@ module.exports = function settingsGuards() {
 	// slot renamed "Title model" (was a confusing duplicate of the toggle).
 	{
 		const tab = read("src/settingsTab.ts");
+		const mem183 = read("src/settings/sections/memory.ts");
 		const ok =
 			tab.includes('auxModelRow(containerEl, "titleGeneration", "Title model"') &&
 			tab.includes('.setName("Title generation")') &&
-			tab.includes('.setName("Enable compression")');
+			/* the compression TOGGLE is the third distinct label in this family
+			   (aux slot "Compression" vs toggle). It moved to the Memory module
+			   and was renamed to Hermes' "Auto-Compression" (sentence-cased) on
+			   2026-08-24, which also kills the last name clash with the aux row. */
+			mem183.includes('.setName("Auto-compression")') &&
+			!tab.includes('.setName("Enable compression")');
 		if (ok) {
 			console.log("✓ v0.1.183: duplicate label fixed — \"Title generation\" (toggle) vs \"Title model\" (aux slot)");
 		} else {
@@ -176,6 +182,64 @@ module.exports = function settingsGuards() {
 			console.log("✓ v0.1.192: personality prompts — 14 Hermes built-ins verbatim (personality.py @261a4ef) + 4 vault extras, old mode copy retired");
 		} else {
 			console.error("✗ v0.1.192 personality prompt parity drifted");
+			failed++;
+		}
+	}
+
+	// ---- v0.1.193 — satu pemilik untuk knob konteks & kompresi (owner
+	// 2026-08-24: "kenapa ada 2 setingan yang sama? ... pindahkan saja ke
+	// Memory & Context"). Sejak v0.1.17 tab Model punya blok "Context &
+	// compression" sendiri, lalu v0.1.175 menambah blok Compression di modul
+	// Memory tanpa menghapus yang lama: tiga baris menulis KEY YANG SAMA dari
+	// dua tempat, jadi mengubah satu tidak memperbarui tampilan satunya
+	// (Lesson 172, kini ditutup). Guard ini mengunci hasil dedupe:
+	//   * kelima row hidup HANYA di src/settings/sections/memory.ts,
+	//   * settingsTab.ts hanya menyimpan SLOT MODEL kompresi (auxModelRow),
+	//   * nama row = Hermes FIELD_LABELS di-sentence-case (pedoman Obsidian:
+	//     "only the first word ... should be capitalized"), jadi tidak ada
+	//     Title Case yang menyelinap balik saat seseorang menyalin upstream.
+	{
+		const mem = read("src/settings/sections/memory.ts");
+		const tab = read("src/settingsTab.ts");
+		const names = [
+			"Context window",
+			"Auto-compression",
+			"Compression threshold",
+			"Compression target",
+			"Protected recent messages",
+		];
+		/* aria-label harus ikut berubah bersama setName: real-preview menanyakan
+		   kontrolnya lewat [aria-label], bukan lewat teks baris. */
+		const arias = [
+			"Context window",
+			"Compression threshold",
+			"Compression target",
+			"Protected recent messages",
+		];
+		const ok =
+			names.every((n) => mem.includes(`.setName("${n}")`)) &&
+			names.every((n) => !tab.includes(`.setName("${n}")`)) &&
+			arias.every((a) => mem.includes(`"${a}"`)) &&
+			/* Title Case dari upstream tidak boleh bocor ke UI */
+			!mem.includes("Auto-Compression") &&
+			!mem.includes("Compression Threshold") &&
+			!mem.includes("Protected Recent Messages") &&
+			/* satu-satunya sisa kompresi di tab Model = pemilih model */
+			tab.includes('auxModelRow(containerEl, "compression"') &&
+			/* dan tidak ada lagi yang menulis key-nya dari settingsTab */
+			!tab.includes("s.modelContextLength =") &&
+			!tab.includes("s.compressionThreshold =") &&
+			!tab.includes("s.compressionProtectLastN =") &&
+			!tab.includes("s.compressionEnabled =") &&
+			/* Context window jadi baris PERTAMA grup Compression (keputusan
+			   owner; Hermes menaruhnya di section Model) — subheading harus
+			   muncul sebelum row-nya. */
+			mem.indexOf('"Compression",') < mem.indexOf('.setName("Context window")') &&
+			mem.indexOf('.setName("Context window")') < mem.indexOf('.setName("Auto-compression")');
+		if (ok) {
+			console.log("✓ v0.1.193: context/compression knobs have one owner (Memory & Context), aux model slot stays, sentence-case labels");
+		} else {
+			console.error("✗ v0.1.193 context/compression dedupe drifted (duplicate row, stray writer, or Title Case label)");
 			failed++;
 		}
 	}
@@ -445,17 +509,27 @@ module.exports = function settingsGuards() {
 	{
 		const setts = read("src/settings.ts");
 		const mem = read("src/settings/sections/memory.ts"); // renderer pindah 2026-08-24
+		const tab175 = read("src/settingsTab.ts");
 		const cm = read("src/agent/contextManager.ts");
 		const chat = read("src/ui/ChatApp.tsx");
 		const ok =
 			setts.includes("compressionTargetRatio") &&
-			/* NB: settingsTab.ts juga memuat "Compression" milik auxModelRow di tab
-			   Model, dan sebuah toggle compressionEnabled kedua. Subjek guard ini
-			   adalah blok Memory & Context, jadi pin harus ke modulnya. */
-			mem.includes('"Compression"') &&
-			mem.includes('"Compress when above"') &&
-			mem.includes('"Preserve recent tail"') &&
-			mem.includes('"Keep last N messages"') &&
+			/* NB: settingsTab.ts MASIH memuat "Compression" milik auxModelRow di
+			   tab Model (slot model kompresi — sengaja tinggal). Subjek guard ini
+			   adalah blok Memory & Context, jadi pin positif harus ke modulnya;
+			   pin negatif memastikan duplikat lama tidak hidup lagi. */
+			/* 2026-08-24: labels re-pointed at Hermes FIELD_LABELS (verified in
+			   apps/desktop/src/app/settings/constants.ts), sentence-cased for
+			   Obsidian. "Context window" joined this group as its first row and
+			   the duplicate Model-tab block was deleted. */
+			mem.includes('"Auto-compression"') &&
+			mem.includes('"Compression threshold"') &&
+			mem.includes('"Compression target"') &&
+			mem.includes('"Protected recent messages"') &&
+			mem.includes('.setName("Context window")') &&
+			!tab175.includes('.setName("Context window")') &&
+			!tab175.includes('.setName("Compression threshold")') &&
+			!tab175.includes('.setName("Protected tail messages")') &&
 			mem.includes("markModified(stCompressionEnabled") &&
 			mem.includes("markModified(stCompressionTargetRatio") &&
 			cm.includes("export function pickTokenTailStart") &&
@@ -483,7 +557,10 @@ module.exports = function settingsGuards() {
 			tab.includes('setIcon("rotate-ccw")') &&
 			tab.includes('setTooltip("Reset to default")') &&
 			tab.includes("this.resetButton(stMaxTokens, \"maxTokens\")") &&
-			tab.includes("this.resetButton(stContextWindow, \"modelContextLength\")") &&
+			/* 2026-08-24: Context window pindah ke Memory & Context (baris pertama
+			   grup Compression) — pemilik reset-nya ikut pindah ke modul. */
+			mem187.includes("ctx.resetButton(stContextWindow, \"modelContextLength\")") &&
+			!tab.includes("this.resetButton(stContextWindow") &&
 			tab.includes("this.resetButton(stRequestTimeout, \"requestTimeoutMs\")") &&
 			tab.includes("this.resetButton(stTemperature, \"temperature\")") &&
 			mem187.includes("ctx.resetButton(stMemoryCharLimit, \"memoryCharLimit\")") &&
@@ -497,10 +574,13 @@ module.exports = function settingsGuards() {
 			/* 2026-08-24: hitung CALL SITE nyata di kedua pemilik. Argumen pertama
 			   selalu variabel `st…`, jadi pola ini melewatkan baris delegasi di
 			   sectionContext() — kalau tidak jumlahnya 23 dan guard hijau karena
-			   sebab yang salah. 13 di settingsTab + 9 di modul memory. */
-			((tab + mem187).match(/resetButton\(st/g) || []).length === 22;
+			   sebab yang salah. 2026-08-24: blok Context & compression duplikat di
+			   tab Model dihapus (−3: stContextWindow/Threshold/ProtectLastN) dan
+			   stContextWindow lahir kembali di modul (+1). 10 di settingsTab +
+			   10 di modul memory. */
+			((tab + mem187).match(/resetButton\(st/g) || []).length === 20;
 		if (ok) {
-			console.log("✓ v0.1.187: ↺ reset-to-default on numeric/text fields (22 sites, toggles/enums/objects/lists excluded)");
+			console.log("✓ v0.1.187: ↺ reset-to-default on numeric/text fields (20 sites, toggles/enums/objects/lists excluded)");
 		} else {
 			console.error("✗ v0.1.187 reset-button wiring drifted");
 			failed++;
@@ -1225,7 +1305,13 @@ module.exports = function settingsGuards() {
 			sess.includes("compression?: CompressionCache") &&
 			prov.includes("fetchAdvertisedContextLength") && prov.includes("contextLength") &&
 			tab.includes("auxModelRow") && tab.includes("Set to main") &&
-			tab.includes("Context & compression") && tab.includes("Auxiliary models") &&
+			/* 2026-08-24: subheading "Context & compression" DIHAPUS dari tab Model
+			   (duplikat); knob-nya hidup di modul Memory & Context, slot model
+			   kompresi tetap di "Auxiliary models". */
+			!tab.includes("Context & compression") && tab.includes("Auxiliary models") &&
+			/\bctx\.subheading\(\s*containerEl,\s*"Compression"/.test(
+				read("src/settings/sections/memory.ts")
+			) &&
 			!loop.includes("contextManager");
 		if (ok) {
 			console.log("✓ v0.1.17: compression engine + aux slots + title generation wired (engine pre-loop, loop stays clean)");
@@ -1901,7 +1987,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts")).match(/markModified\(/g) || []).length === 66 && // 50 di settingsTab + 16 di modul memory (v0.1.175/176/178/187 tak berubah)
+			((tab21 + read("src/settings/sections/memory.ts")).match(/markModified\(/g) || []).length === 63 && // 46 di settingsTab + 17 di modul memory (2026-08-24: blok duplikat Context & compression dihapus −4, stContextWindow lahir kembali di modul +1)
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&
@@ -1910,7 +1996,7 @@ module.exports = function settingsGuards() {
 			!/border-radius:\s*4px;/.test(tail21) &&
 			!bareHex21;
 		if (ok) {
-			console.log("✓ v0.1.94: settings search (harvest/jump/flash/guards) · modified dots ×66 · CSS block hygiene");
+			console.log("✓ v0.1.94: settings search (harvest/jump/flash/guards) · modified dots ×63 · CSS block hygiene");
 		} else {
 			console.error("✗ v0.1.94 settings search/dot guards drifted");
 			failed++;

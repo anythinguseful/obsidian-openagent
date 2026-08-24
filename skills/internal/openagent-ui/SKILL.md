@@ -41,6 +41,7 @@ AI-generated *right now* — never emit them, whatever other skills suggest:
 
 - Interface copy in English (user chats with me in Indonesian, but UI strings are English).
 - Sentence case buttons and labels; verbs that say exactly what happens ("Save changes", "Run all now"). Errors say what happened + how to fix, next to the field, red via `.oa-field-error` / `--color-red`.
+- **Sentence case survives upstream parity.** Obsidian's plugin guidelines are explicit: "only the first word in a sentence, and proper nouns, should be capitalized." Hermes Desktop's `FIELD_LABELS` are Title Case because they are schema-driven form labels — copy the *term* ("Compression threshold"), never the casing ("Compression Threshold"). Known inherited violations still to fix: "Memory Budget", "Profile Budget" in `src/settings/sections/memory.ts`.
 - Compact meta lines use ` · ` separators and relative times ("next in 3h").
 
 ### Settings descriptions (2026-08-22 — owner: "singkat, padat, jelas, mudah dipahami; menerangkan kegunaan utama")

@@ -250,9 +250,20 @@ guard goes red, restore.
 - Should the retained stateful renderers (`model`, `providers`, `cronForm`)
   eventually move behind a state-passing contract, or stay with the class
   permanently? — deferred; not needed for this batch.
-- **Duplicate `compressionEnabled` toggle (found in Phase 1).** The Model tab
-  renders "Enable compression" (`settingsTab.ts` L1532) and the Memory & Context
-  section renders "Compression" — two toggles writing the same setting, present
-  since before this refactor (`git show HEAD:src/settingsTab.ts` L1530/L3961).
-  Which one is the owner is a product decision, so it is not being settled
-  inside an extraction commit. Needs an owner answer before either is removed.
+- ~~**Duplicate `compressionEnabled` toggle (found in Phase 1).**~~ **RESOLVED
+  2026-08-24, before Phase 3** (owner: "kenapa ada 2 setingan yang sama? …
+  pindahkan saja ke Memory & Context"). The investigation found the duplication
+  was wider than the toggle: the Model tab's "Context & compression" block
+  (`settingsTab.ts` L1510-1574, from v0.1.17) rendered *three* rows that write
+  the same keys as the Memory & Context block added in v0.1.175
+  (`compressionEnabled`, `compressionThreshold`, `compressionProtectLastN`) plus
+  one row with no counterpart (`modelContextLength`). Two writers on one key
+  means editing either side leaves the other showing a stale value until the tab
+  re-renders. Settled as: the whole Model-tab block is deleted; "Context window"
+  is re-created as the FIRST row of the Memory & Context "Compression" group
+  (owner's placement call — the threshold is a percentage *of* the window, so
+  they belong together; Hermes Desktop instead keeps `model_context_length` in
+  its Model section); the compression *model* slot (`auxModelRow(…,
+  "compression", …)`) deliberately stays under "Auxiliary models". Guard:
+  smoke `v0.1.193` (single ownership + sentence case), with `v0.1.17`, `v0.1.94`,
+  `v0.1.175`, `v0.1.183`, `v0.1.187` amended in the same commit.

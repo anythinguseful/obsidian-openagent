@@ -160,6 +160,23 @@ check(normalizeLoadedSettings({ compressionTargetRatio: 0.9 }).compressionTarget
 check(normalizeLoadedSettings({ compressionTargetRatio: 0.01 }).compressionTargetRatio === 0.2, "normalize: target_ratio < 0.05 falls back to 0.20");
 check(normalizeLoadedSettings({ compressionTargetRatio: "junk" }).compressionTargetRatio === 0.2, "normalize: malformed target_ratio falls back to 0.20");
 
+/* v0.1.193: threshold/protect_last_n realigned to Hermes config_defaults
+   (compression.threshold 0.50, compression.protect_last_n 20; verified
+   2026-08-24). At the old 0.8/4 a chat compacted very late and kept almost
+   nothing, so a long session could overflow the provider window mid-tool-call.
+   Both the default AND the sanitize fallback must land on the new value —
+   they used to be two separate literals, which is exactly how they drift. */
+check(normDefault.compressionThreshold === 0.5, "normalize({}): compression threshold defaults to 0.50 (Hermes)");
+check(normDefault.compressionProtectLastN === 20, "normalize({}): protect_last_n defaults to 20 (Hermes)");
+check(normalizeLoadedSettings({ compressionThreshold: 1.5 }).compressionThreshold === 0.5, "normalize: out-of-range threshold falls back to 0.50");
+check(normalizeLoadedSettings({ compressionThreshold: "junk" }).compressionThreshold === 0.5, "normalize: malformed threshold falls back to 0.50");
+check(normalizeLoadedSettings({ compressionProtectLastN: 99 }).compressionProtectLastN === 20, "normalize: out-of-range protect_last_n falls back to 20");
+check(normalizeLoadedSettings({ compressionProtectLastN: "junk" }).compressionProtectLastN === 20, "normalize: malformed protect_last_n falls back to 20");
+/* a vault that already saved a legal value keeps it — this is a default
+   change, not a forced migration */
+check(normalizeLoadedSettings({ compressionThreshold: 0.8 }).compressionThreshold === 0.8, "normalize: saved threshold 0.80 survives the default change");
+check(normalizeLoadedSettings({ compressionProtectLastN: 4 }).compressionProtectLastN === 4, "normalize: saved protect_last_n 4 survives the default change");
+
 /* v0.1.150 appearance: enums fall back to defaults, default-ON toggles keep
    current behaviour when absent, default-OFF toggles fail closed. */
 check(

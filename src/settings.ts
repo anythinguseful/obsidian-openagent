@@ -886,8 +886,12 @@ export const DEFAULT_SETTINGS: OpenAgentSettings = {
 
 	modelContextLength: 0,
 	compressionEnabled: true,
-	compressionThreshold: 0.8,
-	compressionProtectLastN: 4,
+	/* Hermes parity (config_defaults compression.*): threshold 0.50 and
+	   protect_last_n 20. Verified 2026-08-24 against the upstream docs table.
+	   Saved vaults keep whatever they already persisted — only fresh installs
+	   and an explicit ↺ reset land on these. */
+	compressionThreshold: 0.5,
+	compressionProtectLastN: 20,
 	compressionTargetRatio: 0.2,
 	auxModels: {},
 	moa: null,
@@ -1246,17 +1250,23 @@ export function normalizeLoadedSettings(raw: any): OpenAgentSettings {
 	/* context & compression (v0.1.17): clamps + stale aux pins return to auto */
 	s.modelContextLength = Math.max(0, Math.floor(Number(s.modelContextLength) || 0));
 	s.compressionEnabled = s.compressionEnabled !== false;
+	/* fallbacks read DEFAULT_SETTINGS rather than repeating the literal, so a
+	   default change (e.g. the 2026-08-24 Hermes alignment 0.8→0.5, 4→20)
+	   cannot leave the reject path pointing at the retired value. */
 	{
 		const t = Number(s.compressionThreshold);
-		s.compressionThreshold = Number.isFinite(t) && t >= 0.1 && t <= 0.99 ? t : 0.8;
+		s.compressionThreshold =
+			Number.isFinite(t) && t >= 0.1 && t <= 0.99 ? t : DEFAULT_SETTINGS.compressionThreshold;
 	}
 	{
 		const n = Math.floor(Number(s.compressionProtectLastN));
-		s.compressionProtectLastN = Number.isFinite(n) && n >= 0 && n <= 24 ? n : 4;
+		s.compressionProtectLastN =
+			Number.isFinite(n) && n >= 0 && n <= 24 ? n : DEFAULT_SETTINGS.compressionProtectLastN;
 	}
 	{
 		const r = Number(s.compressionTargetRatio);
-		s.compressionTargetRatio = Number.isFinite(r) && r >= 0.05 && r <= 0.5 ? r : 0.2;
+		s.compressionTargetRatio =
+			Number.isFinite(r) && r >= 0.05 && r <= 0.5 ? r : DEFAULT_SETTINGS.compressionTargetRatio;
 	}
 	s.titleGenerationEnabled = s.titleGenerationEnabled !== false;
 	s.auxModels = sanitizeAuxModels(inRaw.auxModels, s.providers);
