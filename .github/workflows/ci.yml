@@ -53,3 +53,26 @@ jobs:
 
       - name: Production dependency audit
         run: npm audit --omit=dev --audit-level=low
+
+      - name: Development skills integrity
+        run: npm run check:skills
+
+      - name: Chat preview (real-DOM)
+        shell: bash
+        run: node test/build-preview.mjs
+
+      - name: Settings preview (real-DOM, probes as read-only)
+        shell: bash
+        env:
+          OA_RELEASE_WITNESS: readonly
+        run: node test/real-preview/build-settings.mjs
+
+      - name: Assert clean tracked tree after preview steps
+        shell: bash
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "✗ tracked tree is dirty after preview steps"
+            git status --porcelain
+            exit 1
+          fi
+          echo "✓ tracked tree still clean after preview steps"        
