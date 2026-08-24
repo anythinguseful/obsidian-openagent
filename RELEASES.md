@@ -16,6 +16,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 - **MCP servers and scheduled tasks now belong to that same system.** They remain stronger managed-object cards, but share the group border, radius, spacing, and divider language.
 - **No settings behavior changed.** Names, order, controls, data, search harvesting, and security behavior remain the same.
 - **Real-DOM proof added.** `F49settingsGroups` verifies the grouped structure and computed 1 px / 8 px card geometry for Capabilities and Automations.
+- **Consecutive tool calls now read as one activity.** A single outer card contains independently expandable tool rows separated by hairlines, so repeated tool calls no longer form a wall of nested cards.
 
 ---
 

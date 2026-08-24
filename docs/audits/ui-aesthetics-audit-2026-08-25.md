@@ -120,9 +120,9 @@ and Delete as sibling buttons, and reveal the action cluster on `:focus-within`
 as well as `:hover`. A later owner decision is needed for the destructive action:
 confirmation or a short-lived Undo path.
 
-### F3 — Current card variants should be reviewed as a family before any visual change
+### F3 — Consecutive tool cards formed a visual wall
 
-**Status: visual-system follow-up, not a proven inconsistency.**
+**Status: resolved 2026-08-25.**
 
 The existing card roles deliberately have different weight:
 
@@ -132,11 +132,13 @@ The existing card roles deliberately have different weight:
 - Cards with lists have capped inner scrolling, so a long result does not bury
   the composer.
 
-These differences are justified by role in source. They should not be flattened
-into one universal card style without screenshot comparison. The useful next
-audit frame is a dense transcript containing a completed tool, an error tool,
-changed files, a system notice, and an approval card. It can then answer whether
-card weight is genuinely inconsistent or merely role-specific.
+The issue was narrower than a universal-card inconsistency: consecutive tool
+calls repeated the same outer border and radius for every row. The completed
+[Chat tool activity grouping](../plans/chat-tool-activity-grouping-2026-08-25.md)
+keeps role differences intact while turning each chronological tool block into
+one outer card with independently expandable rows and hairline separators. Its
+HeadlessChrome 149 fixture proves four rows, three separators, and the open
+error detail remaining attached to its owning row.
 
 ### F4 — Settings grouping should be audited by density, not by decoration
 
@@ -171,8 +173,9 @@ specific group boundary.
 
 ## Next action
 
-No CSS or markup change follows from this audit automatically. Before an
-esthetic change, capture the real-DOM frames listed in F3/F4 and compare them
-at the same viewport in light and dark themes. The owner can then choose one
-narrow, evidence-backed visual direction rather than approving a generic
-"card + row + divider" treatment.
+The Settings grouping and consecutive-tool findings are resolved. Before a
+future aesthetic change, capture a dense transcript that combines changed files,
+system notice, and approval alongside tool activity, or capture the dense
+Settings frames listed in F4. Compare them at the same viewport in light and
+dark themes, then choose one narrow, evidence-backed direction rather than a
+generic "card + row + divider" treatment.

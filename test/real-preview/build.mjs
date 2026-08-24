@@ -742,12 +742,27 @@ export async function buildRealFrames({ shots = true } = {}) {
 				return { svg: !!svg, w: Math.round(r.width), color: getComputedStyle(ic).color, spin: svg ? getComputedStyle(svg).animationName : "NO-SVG", dur: svg ? getComputedStyle(svg).animationDuration : "" };
 			};
 			const [streaming, ready, done, error] = [0, 1, 2, 3].map(iconOf);
+			const group = document.querySelector(".oa-tools-list");
+			const rows = group ? [...group.querySelectorAll(":scope > .oa-tool")] : [];
+			const gc = group ? getComputedStyle(group) : null;
+			const separators = rows.slice(1).filter((row) => getComputedStyle(row).borderTopWidth !== "0px").length;
+			const errorBody = rows[3]?.querySelector(".oa-tool-content");
+			const grouped = {
+				outerBorder: gc?.borderTopWidth ?? null,
+				outerRadius: gc?.borderTopLeftRadius ?? null,
+				rows: rows.length,
+				separators,
+				errorAttached: errorBody?.closest(".oa-tool") === rows[3],
+			};
 			const chk = (name, s, f) => { if (!(s && f(s))) why.push(`${name}=${JSON.stringify(s)}`); };
 			chk("streaming", streaming, (s) => s.svg && s.w === 16 && s.spin === "oa-spin" && listen(s.color)[2] > 140);
 			chk("ready", ready, (s) => s.svg && s.w === 16 && (([r, g]) => r > 150 && g > 60 && g < 190)(listen(s.color)));
 			chk("done", done, (s) => s.svg && s.w === 16 && listen(s.color)[1] > 130);
 			chk("error", error, (s) => s.svg && s.w === 16 && listen(s.color)[0] > 160);
-			return { why, gap, streaming, ready, done, error };
+			if (grouped.outerBorder === "0px" || grouped.outerRadius === "0px" || grouped.rows !== 4 || grouped.separators !== 3 || !grouped.errorAttached) {
+				why.push(`grouped=${JSON.stringify(grouped)}`);
+			}
+			return { why, gap, streaming, ready, done, error, grouped };
 		});
 		if (ts.why.length) throw new Error(`toolstate lane failed (GEJALA OWNER): ${JSON.stringify(ts.why)}`);
 		console.log("  [toolstate] thinking stop: right-flush + dotted, tanpa pill/chevron ✓ · state glyphs 16px: spinner arc oa-spin biru ✓ · ready oranye ✓ · done hijau ✓ · error merah ✓");

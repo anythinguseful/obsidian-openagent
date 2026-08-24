@@ -72,6 +72,7 @@ Feature plans and port designs, with their implementation status.
 | [Smoke/harness split](plans/smoke-harness-split-2026-08-24.md) | done | Stage 6 target, completed 2026-08-24: `test/smoke.test.cjs` split from 7,012 to 1,296 lines across eleven phases into a shared harness plus seven domain guard modules, with all 289 `✓` preserved at every step. |
 | [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | done | Stage 6 target #2 completed: twelve self-contained renderer members moved into `src/settings/sections/`, while the class retains data, persistence, navigation, search indexing, and stateful renderers. |
 | [Settings grouping visual system](plans/settings-grouping-visual-system-2026-08-25.md) | done | Group shells now unify native rows with MCP-server and cron-task object cards; behavior is unchanged and the real-DOM witness passes. |
+| [Chat tool activity grouping](plans/chat-tool-activity-grouping-2026-08-25.md) | done | Consecutive tool calls now share one activity card with independently expandable rows, hairline separators, and a real-DOM witness. |
 
 ## Studies (`studies/`)
 

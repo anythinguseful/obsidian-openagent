@@ -3876,8 +3876,12 @@
 .oa-app .oa-tools-list {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 0;
 	margin: 6px 0;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m, 8px);
+	background: var(--background-primary);
+	overflow: hidden;
 }
 .oa-app .oa-tool-state-icon {
 	display: inline-flex;
@@ -6651,4 +6655,17 @@
 	.oa-settings .oa-cron-task {
 		margin-inline: 8px;
 	}
+}
+
+/* ── 2026-08-25: consecutive tool calls are one activity card ───────
+   ChatApp already groups chronological tool parts in .oa-tools-list. The list
+   owns the only outer chrome; each Tool keeps its own header, state, and
+   disclosure body as a row separated by a hairline. */
+.oa-app .oa-tools-list > .oa-tool {
+	border: none;
+	border-radius: 0;
+	background: transparent;
+}
+.oa-app .oa-tools-list > .oa-tool + .oa-tool {
+	border-top: 1px solid var(--background-modifier-border);
 }

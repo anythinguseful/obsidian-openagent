@@ -246,12 +246,14 @@ module.exports = function chatGuards() {
 			!chat.includes('from "./components/steps"') &&
 			chat.includes("oa-tools-list") &&
 			chat.includes("toToolPart(") &&
-			css.includes(".oa-tools-list") &&
+			css.includes(".oa-app .oa-tools-list {") &&
+			css.includes(".oa-app .oa-tools-list > .oa-tool {") &&
+			css.includes(".oa-app .oa-tools-list > .oa-tool + .oa-tool {") &&
 			css.includes(".oa-tool-badge-processing");
 		if (ok) {
-			console.log("✓ tool calls: faithful prompt-kit Tool cards (v5 states, per-invocation)");
+			console.log("✓ tool calls: one activity card with independently expandable prompt-kit rows (v5 states)");
 		} else {
-			console.error("✗ tool-card fidelity drifted (Steps crept back into tool rendering?)");
+			console.error("✗ tool-activity grouping drifted (outer card, row separator, or disclosure semantics lost)");
 			failed++;
 		}
 	}
