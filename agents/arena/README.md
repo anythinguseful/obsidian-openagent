@@ -14,3 +14,54 @@ The portable workflow is therefore:
 The tracked `skills/` directory is for developing this plugin. It is separate
 from runtime skills that the Open Agent plugin can install into an end user's
 Obsidian vault.
+
+## Chromium bootstrap for Arena workspaces
+
+**Arena-only environment procedure (verified 2026-08-25).** Some Arena
+workspaces cannot install Playwright Chromium through its CDN or `apt`: Debian
+package mirrors may be unreachable, while `registry.npmjs.org` remains
+reachable. This is an environment limitation, not a project dependency or a
+reason to skip browser proof.
+
+Use the following procedure before `test/real-preview/build-settings.mjs`,
+`npm run test:pdf-security`, or `npm run release` when Playwright reports that
+its executable is missing:
+
+```bash
+# node_modules can disappear between Arena messages; restore it first when absent.
+test -d node_modules || npm ci
+
+rm -rf /tmp/chromium-pkg
+mkdir -p /tmp/chromium-pkg
+npm pack @sparticuz/chromium@149.0.0 --pack-destination /tmp/chromium-pkg
+tar -xzf /tmp/chromium-pkg/sparticuz-chromium-149.0.0.tgz -C /tmp/chromium-pkg
+
+# Resolve the Playwright revision installed by this checkout; do not hardcode
+# its cache path in the command.
+export PLAYWRIGHT_BIN="$(node -e "const { chromium } = require('playwright'); console.log(chromium.executablePath())")"
+mkdir -p "$(dirname "$PLAYWRIGHT_BIN")" /tmp/chromium-pkg/nss
+
+node - <<'NODE'
+const fs = require('fs');
+const zlib = require('zlib');
+const base = '/tmp/chromium-pkg/package/bin';
+fs.writeFileSync(process.env.PLAYWRIGHT_BIN, zlib.brotliDecompressSync(fs.readFileSync(`${base}/chromium.br`)));
+fs.writeFileSync('/tmp/chromium-pkg/al2023.tar', zlib.brotliDecompressSync(fs.readFileSync(`${base}/al2023.tar.br`)));
+NODE
+chmod +x "$PLAYWRIGHT_BIN"
+tar -xf /tmp/chromium-pkg/al2023.tar -C /tmp/chromium-pkg/nss
+```
+
+Run every Playwright command with the NSS libraries:
+
+```bash
+LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib node -e "const { chromium } = require('playwright'); (async () => { const b = await chromium.launch(); const p = await b.newPage(); console.log(await p.evaluate('navigator.userAgent')); await b.close(); })()"
+LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib node test/real-preview/build-settings.mjs
+LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib npm run release
+```
+
+The first command must print `HeadlessChrome/149` before treating browser proof
+as available. The unpacked binary, NSS libraries, Playwright cache, browser
+shots, and release artifacts are intentionally outside tracked source (or
+ignored): Arena can reset them between messages. Recreate them as needed; never
+commit them and do not add an `.arena/` contract.

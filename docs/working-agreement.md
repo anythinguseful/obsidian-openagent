@@ -2081,3 +2081,25 @@ Aturan:
 2. **Shim contract-complete.** Setelah menambah method ke `OpenAgentPlugin` asli (`saveSettingsSafe`, Lesson 204), kedua mock sim (`settings-entry.tsx` dan `chat-entry.tsx`) ikut diperbarui di commit yang sama — jangan tunggu crash detik pertama di CI. Mock yang kehilangan method yang dipakai kode produksi adalah "mock lembut" kelas Lesson 45/47.
 3. **Probe scoping.** Probe yang memindai tombol dengan `buttons.includes("X")` di seluruh halaman (global `document.querySelectorAll`) rentan positif-palsu dari tombol row lain. Scope ke elemen induk yang relevan (assignment row, route card). Kegagalan probe pertama dengan Chromium asli bukan bukti bug plugin — bisa bug harness.
 4. **Settings browser never executed before.** Semua probe settings-audit (F1–F49) belum pernah dijalankan dengan browser nyata sejak diluncurkan. Perubahan settings yang mengubah DOM baris bisa mematahkan probe tanpa sepengetahuan. Guard: setelah mengubah baris settings, rebut settings preview di CI yang punya Chromium, baru merge.
+
+## Lesson 214 — Arena-only Chromium bootstrap: browser proof remains mandatory when CDN and apt are unavailable
+
+Arena workspaces can lose both `node_modules` and `~/.cache/ms-playwright`
+between messages. In some sandboxes, Playwright's CDN and Debian package mirrors
+are unreachable even though `registry.npmjs.org` works. This is an environment
+limitation, **not** permission to skip the required real-DOM or browser-security
+proof.
+
+For Arena only, the durable procedure lives in
+[`agents/arena/README.md`](../agents/arena/README.md#chromium-bootstrap-for-arena-workspaces):
+`npm pack @sparticuz/chromium@149.0.0` into `/tmp`, brotli-decompress
+`chromium.br` into the cache path reported by `chromium.executablePath()`,
+extract `al2023.tar.br` for NSS, and run browser commands with
+`LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib`. First prove
+`chromium.launch()` prints `HeadlessChrome/149`; only then run the settings
+preview, PDF browser test, or release pipeline.
+
+The workaround is intentionally Arena-scoped: `/tmp`, Playwright cache,
+`node_modules`, browser screenshots, and release staging are ephemeral or
+ignored. Do not add them to Git, do not add `.arena/`, and do not change project
+runtime dependencies to accommodate the sandbox.
