@@ -8,6 +8,19 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.152 — Fix release: harness saveSettingsSafe, CI crash, & preflight 🔧
+
+**Release archive:** akan diterbitkan di GitHub Releases setelah CI main hijau.
+
+- **Fix penyebab kegagalan run 32758294248.** Settings-preview harness (`settings-entry.tsx`) tidak punya `saveSettingsSafe` yang dipakai kode produksi → `moaSave()` crash → semua probe DOM gagal. Shim `chat-entry.tsx` juga ikut diperbaiki.
+- **Probe F14** diperbaiki: tombol "Apply" yang sebelumnya dipindai dari seluruh halaman (termasuk baris Embedding model) kini dibatasi ke baris Global default model.
+- **Preflight cepat:** `npm run release` sekarang cek apakah versi sudah di-tag di remote dalam 1 detik, bukan menunggu pipeline 3+ menit.
+- **Bump versi** ke 0.1.152 agar publisher dapat melanjutkan.
+
+Semua probe settings-audit (F1–F49) telah diverifikasi hijau dengan Chromium asli untuk pertama kalinya.
+
+---
+
 # Open Agent v0.1.151 — MCP credential isolation & catalog hardening 🔐
 
 **Release archive:** [Open Agent v0.1.151 on GitHub](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151) is a reconstructed verification release with six published assets, including the install ZIP and SHA-256. The artifacts were rebuilt and reverified from the tracked v0.1.151 source; they do **not** claim byte identity with the unavailable historical ZIP.

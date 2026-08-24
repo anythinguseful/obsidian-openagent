@@ -823,7 +823,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.151") &&
+					blob.includes("Open Agent v0.1.152") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
@@ -1152,16 +1152,21 @@ async function main() {
 				const customRow = [...document.querySelectorAll(".setting-item")].find((el) =>
 					el.querySelector(".setting-item-name")?.textContent?.trim() === "Custom global model id"
 				);
-				const buttons = [...document.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim());
+				const assignmentButtons = assignmentRow
+					? [...assignmentRow.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim())
+					: [];
+				const routeButtons = document.querySelector(".oa-model-route")
+					? [...document.querySelector(".oa-model-route").querySelectorAll("button")].map((b) => (b.textContent ?? "").trim())
+					: [];
 				return {
 					active: s.activeProviderId,
 					model: s.model,
 					routeText,
 					assignmentDesc: assignmentRow?.querySelector(".setting-item-description")?.textContent ?? "",
 					customDesc: customRow?.querySelector(".setting-item-description")?.textContent ?? "",
-					hasManagePin: buttons.includes("Manage profile pin"),
-					hasSaveGlobal: buttons.includes("Save global default"),
-					hasApply: buttons.includes("Apply"),
+					hasManagePin: routeButtons.includes("Manage profile pin"),
+					hasSaveGlobal: assignmentButtons.includes("Save global default"),
+					hasApply: assignmentButtons.includes("Apply"),
 				};
 			});
 			await page.locator('select[aria-label="Provider"]').selectOption("openrouter");
