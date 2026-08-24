@@ -16,9 +16,11 @@ small architecture improvements. The goal is not line-count reduction for its
 own sake: each step must create a clear ownership boundary while preserving
 user-visible behavior and existing proof.
 
-Stages 1–5 are complete in v0.1.151. Stage 6's first target, the smoke/harness
-split, is **done** as of 2026-08-24. The roadmap is again paused: the next
-Stage 6 target needs its own plan before any implementation.
+Stages 1–5 are complete in v0.1.151. Both scoped Stage 6 targets are now
+**done**: the smoke/harness split and the Settings section-renderer extraction
+completed on 2026-08-24. The roadmap remains active as a decision record; a
+future Stage 6 target needs its own plan and owner approval before any
+implementation.
 
 ## Decision framework
 
@@ -40,7 +42,7 @@ presented was:
 | Option offered | Original explanation | Current status |
 | --- | --- | --- |
 | **Pisahkan session panel dari ChatApp** | Paling kecil dan aman: daftar/pencarian/rename/load sesi menjadi surface terpisah; ChatApp tetap pemilik agent loop. | **done** |
-| **Pisahkan section Settings** | Mulai dari satu section berisiko rendah, lalu buat pola renderer reusable untuk mengecilkan settingsTab tanpa mengubah UI. | awaiting a new decision/plan |
+| **Pisahkan section Settings** | Mulai dari satu section berisiko rendah, lalu buat pola renderer reusable untuk mengecilkan settingsTab tanpa mengubah UI. | **done** — selected 2026-08-24 and completed in batch scope; plan: [Settings section renderers](settings-section-renderers-2026-08-24.md) |
 | **Pisahkan composer controller** | Ekstrak input, queue, slash, attachment, history, dan keyboard dari ChatApp; nilai tinggi tetapi blast radius lebih besar. | deferred |
 | **Pecah smoke/harness test** | Kurangi hotspot test dahulu agar refactor plugin berikutnya lebih mudah dan diagnosis failure lebih jelas. | **selected 2026-08-24** — plan: [Smoke/harness split](smoke-harness-split-2026-08-24.md) |
 
@@ -51,35 +53,28 @@ already provided proof. The owner approved it, and it shipped.
 
 ## Current work label
 
-> [!todo] **CURRENT PRIORITY — choosing the next Stage 6 target**
+> [!todo] **CURRENT PRIORITY — choose a future Stage 6 target**
 >
 > Session Panel, Settings modal Phases 1–3, MCP credential isolation, the
-> security-sensitive MCP Catalog extraction, and release retention are all
-> complete and verified in `main`.
+> security-sensitive MCP Catalog extraction, release retention, the
+> smoke/harness split, and the Settings section-renderer extraction are complete
+> and verified in `main`.
 >
-> The **smoke/harness split is done** (2026-08-24): `test/smoke.test.cjs` went
-> from 7,012 to 1,296 lines across eleven phases, with all 289 `✓` preserved at
-> every step. See [Smoke/harness split](smoke-harness-split-2026-08-24.md).
+> The **smoke/harness split** completed on 2026-08-24: `test/smoke.test.cjs`
+> went from 7,012 to 1,296 lines across eleven phases. See
+> [Smoke/harness split](smoke-harness-split-2026-08-24.md).
 >
-> Its enabler premise held, but the numbers in the earlier version of this label
-> were wrong. The real pin counts were **77** for `src/settingsTab.ts` and
-> **78** for `src/ui/ChatApp.tsx`, not 46 and 30 — the old figures came from the
-> same regex survey as Lesson 183. What the split changed is where those pins
-> live: settings pins are now concentrated (57 of 77 in `test/smoke/settings.cjs`),
-> while ChatApp pins stay spread across four modules (chat 27, preview 29,
-> settings 17, monolith 4).
->
-> On **2026-08-24** the owner selected **Settings section renderers** as the
-> next target, in batch scope. Its plan is
+> The **Settings section-renderer extraction** also completed on 2026-08-24 in
+> its approved batch scope. The ten extracted renderer modules now own the
+> twelve self-contained members under `src/settings/sections/`; the current
+> `src/settingsTab.ts` is 3,409 lines. The class retains settings data,
+> persistence, navigation, search indexing, and stateful renderers. See
 > [Settings section renderers](settings-section-renderers-2026-08-24.md).
-> It was chosen over `src/ui/ChatApp.tsx` on measured grounds: `settingsTab.ts`
-> has a ready seam (`renderSectionBody()` is one method per section) and twelve
-> renderers totalling 1,506 lines touch **zero** of the 34 class properties,
-> whereas `ChatApp()` is a single 4,892-line function with 35 `useState`,
-> 23 `useEffect` and 67 `useCallback` and no comparable boundary.
 >
-> The composer controller remains deferred and still requires its own plan. No
-> product refactor is implicitly authorized.
+> The original selection rationale remains useful: `renderSectionBody()` offered
+> a ready ownership seam, while `ChatApp()` has no comparable seam. The composer
+> controller remains deferred and still requires its own plan. No future product
+> refactor is implicitly authorized.
 
 ## Completed sequence
 
@@ -142,33 +137,30 @@ These shipped with the v0.1.150 Settings modularization release.
 
 ### Stage 6 — reassess large owners
 
-**Status: active; target selected 2026-08-24, implementation not yet authorized**
+**Status: active roadmap; two scoped targets completed 2026-08-24**
 
-Current hotspots at v0.1.151:
+The first Stage 6 target was the smoke/harness split because it was an enabler:
+the old harness pinned both remaining candidates as raw text. Its plan,
+[Smoke/harness split](smoke-harness-split-2026-08-24.md), is **done**:
+`test/smoke.test.cjs` went from 7,012 to 1,296 lines, while every baseline
+witness was retained.
 
-- `test/smoke.test.cjs`: 7,012 lines — **selected target**;
-- `src/ui/ChatApp.tsx`: approximately 5.3k lines;
-- `src/settingsTab.ts`: approximately 4.9k lines.
+The second target, **Settings section renderers**, was selected in batch scope
+and is also **done**. The plan
+[Settings section renderers](settings-section-renderers-2026-08-24.md) moved
+the twelve self-contained renderer members into ten modules under
+`src/settings/sections/`. `src/settingsTab.ts` is now 3,409 lines; it retains
+settings data, persistence, navigation, search indexing, and the renderers that
+own class state.
 
-The owner selected the smoke/harness split first because it is an enabler
-rather than an end in itself: the harness pins both remaining candidates as raw
-text, so either would otherwise have to amend those pins inside a 7k-line file.
-Its plan, [Smoke/harness split](smoke-harness-split-2026-08-24.md), is **done**
-as of 2026-08-24: 7,012 → 1,296 lines, 289 `✓` preserved throughout.
+The original pin-count correction remains part of the decision record: the
+measured figures were **77** pins for `src/settingsTab.ts` and **78** for
+`src/ui/ChatApp.tsx`, not 46 and 30. The smoke split concentrated the settings
+pins and made the subsequent extraction reviewable.
 
-The pin counts quoted here originally (46 and 30) were wrong; the measured
-figures are **77** for `src/settingsTab.ts` and **78** for `src/ui/ChatApp.tsx`
-(same regex-survey origin as Lesson 183). The enabler argument survives the
-correction, and the split concentrated the settings pins: 57 of 77 now sit in
-`test/smoke/settings.cjs`.
-
-**Second target, selected 2026-08-24: Settings section renderers**, planned in
-[Settings section renderers](settings-section-renderers-2026-08-24.md) and
-authorized in batch scope. `src/ui/ChatApp.tsx` remains deferred — it is larger
-but has no comparable seam.
-
-A new refactor must receive its own plan and behavior witnesses; this roadmap
-does not authorize a broad rewrite.
+`src/ui/ChatApp.tsx` and its composer controller remain deferred. A future
+refactor must receive its own owner-approved plan and behavior witnesses; this
+roadmap does not authorize a broad rewrite.
 
 ## Contract
 
@@ -210,10 +202,8 @@ Before a release, run the complete `npm run verify` and release pipeline.
 ## Open Questions
 
 - Which Stage 6 architecture candidate should receive the next dedicated plan?
-  **Answered 2026-08-24: the smoke/harness split** — now `done`. The follow-up
-  target is [Settings section renderers](settings-section-renderers-2026-08-24.md),
-  selected by the owner the same day in batch scope.
+  The smoke/harness split and [Settings section renderers](settings-section-renderers-2026-08-24.md)
+  are both `done`. No third target is selected.
 - Should `src/ui/ChatApp.tsx` be split at all, and along which seam? — open.
-  Unlike `settingsTab.ts` it has no per-section boundary: one 4,892-line
-  function holding 35 `useState`, 23 `useEffect` and 67 `useCallback`. It needs
-  a state-ownership answer before a file layout.
+  It still needs a state-ownership answer before a file layout; no refactor work
+  is authorized until that answer is captured in its own plan.

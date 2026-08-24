@@ -65,12 +65,12 @@ Feature plans and port designs, with their implementation status.
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
 | [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
 | [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
-| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 are complete; Stage 6 awaits the next owner-selected architecture target. |
+| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 and both scoped Stage 6 targets are complete; no future architecture target is selected. |
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
 | [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | done | Durable assets live in the [reconstructed, reverified v0.1.151 GitHub Release](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151). |
 | [Smoke/harness split](plans/smoke-harness-split-2026-08-24.md) | done | Stage 6 target, completed 2026-08-24: `test/smoke.test.cjs` split from 7,012 to 1,296 lines across eleven phases into a shared harness plus seven domain guard modules, with all 289 `✓` preserved at every step. |
-| [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | active | Stage 6 target #2: move the twelve self-contained section renderers (1,506 lines) out of the 4,938-line `src/settingsTab.ts` into `src/settings/sections/`, leaving the class owning data, persistence and every stateful renderer. |
+| [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | done | Stage 6 target #2 completed: twelve self-contained renderer members moved into `src/settings/sections/`, while the class retains data, persistence, navigation, search indexing, and stateful renderers. |
 
 ## Studies (`studies/`)
 
