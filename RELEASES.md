@@ -8,6 +8,17 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.153 — Unified Settings grouping ✦
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Settings now reads as one system.** Each named group keeps its title, purpose, and native Obsidian rows inside one quiet hairline shell instead of mixing floating rows and unrelated cards.
+- **MCP servers and scheduled tasks now belong to that same system.** They remain stronger managed-object cards, but share the group border, radius, spacing, and divider language.
+- **No settings behavior changed.** Names, order, controls, data, search harvesting, and security behavior remain the same.
+- **Real-DOM proof added.** `F49settingsGroups` verifies the grouped structure and computed 1 px / 8 px card geometry for Capabilities and Automations.
+
+---
+
 # Open Agent v0.1.152 — Fix release: harness saveSettingsSafe, CI crash, & preflight 🔧
 
 **Release archive:** akan diterbitkan di GitHub Releases setelah CI main hijau.
