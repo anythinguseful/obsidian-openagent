@@ -730,7 +730,7 @@ async function main() {
 			};
 		}
 
-		/* F46 — v0.1.187 reset button: change Memory Budget → re-render → the
+		/* F46 — v0.1.187 reset button: change Memory budget → re-render → the
 		   ↺ button + modified-dot appear → click → value reverts to default
 		   and the button disappears. Real-DOM proof of the whole loop. */
 		{
@@ -738,7 +738,7 @@ async function main() {
 			const r = await page.evaluate(() => {
 				const row = () =>
 					[...document.querySelectorAll(".setting-item")].find(
-						(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Memory Budget"
+						(it) => (it.querySelector(".setting-item-name")?.textContent ?? "").trim() === "Memory budget"
 					);
 				const setVal = (v) => {
 					const input = row()?.querySelector('input[type="number"]');

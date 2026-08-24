@@ -1667,8 +1667,8 @@ module.exports = function settingsGuards() {
 			tools.includes('"remove"') &&
 			setts.includes("memoryCharLimit: 4000") &&
 			setts.includes("userCharLimit: 2500") &&
-			mem148.includes('setName("Memory Budget")') &&
-			mem148.includes('setName("Profile Budget")');
+			mem148.includes('setName("Memory budget")') &&
+			mem148.includes('setName("Profile budget")');
 		if (ok) {
 			console.log("✓ v0.1.148: memory parity — replace/remove + budgets + injection scan + drift guard, shared threat patterns");
 		} else {
@@ -2217,6 +2217,101 @@ module.exports = function settingsGuards() {
 			console.log("✓ v0.1.135+: delegate_task — child/headless fail-closed allowlists · pool 3 · consolidated index-sorted · orchestrator/output_schema ditolak jujur · gap 🟡 TUNTAS SEMUA");
 		} else {
 			console.error("✗ v0.1.135 Hermes delegation port regressed");
+			failed++;
+		}
+	}
+
+	// v0.1.196 (owner: "perbaiki kesepuluhnya sekaligus ... plus guard supaya
+	// Title Case tidak balik lagi"): Obsidian's plugin guidelines require
+	// SENTENCE case for UI text — "only the first word in a sentence, and
+	// proper nouns, should be capitalized". Hermes Desktop's FIELD_LABELS are
+	// Title Case because they are schema-driven form labels; we copy the TERM
+	// ("Compression threshold"), never the CASING ("Compression Threshold").
+	//
+	// This guard is the standing net. It scans every row label (.setName) and
+	// every group heading (subheading) in src/ and fails on any mid-label word
+	// that starts capitalized, unless that word is a proper noun on the
+	// allowlist below. The allowlist is deliberately a list of NAMES, not of
+	// convenient exceptions: each entry names a product, a brand, a licence, a
+	// backend value, a protocol, a file, or a feature that ships under that
+	// exact capitalisation elsewhere in the codebase.
+	//
+	// Fail-loud design (lessons/196): a scanner guard that finds nothing looks
+	// exactly like a scanner guard that passes. So it also asserts it actually
+	// harvested a plausible corpus — if a refactor renames .setName or moves
+	// the renderers and the regex stops matching, the guard goes RED instead of
+	// silently green.
+	{
+		const SRC = path.join(ROOT, "src");
+		const files = [];
+		(function walk(dir) {
+			for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+				const f = path.join(dir, e.name);
+				if (e.isDirectory()) walk(f);
+				else if (/\.tsx?$/.test(f)) files.push(f);
+			}
+		})(SRC);
+
+		/* Proper nouns, each verified against its own definition site:
+		   Terminal & Processes  → subheading + service.ts error copy
+		   Backup & Restore / Danger Zone → named groups (v0.1.50), pinned by F18
+		   Mixture of Agents     → Hermes Desktop section + MoA prompt header
+		   Browse Hub            → Hermes Desktop feature, src/agent/hub.ts
+		   Quick Ask             → command name in src/main.ts:305
+		   MIT License           → the licence's own title (LICENSE line 1)
+		   Brave / Tavily / SearXNG / DuckDuckGo → search backends
+		   Local                 → the terminal backend VALUE ("local")
+		   MEMORY.md / USER.md / SKILL.md → real filenames */
+		const PROPER = new Set([
+			"Terminal", "Processes", "Backup", "Restore", "Danger", "Zone",
+			"Mixture", "Agents", "Browse", "Hub", "Quick", "Ask", "MIT",
+			"License", "Brave", "Tavily", "SearXNG", "DuckDuckGo", "Local",
+			"Search", "Studio", "Ollama", "OpenRouter", "OpenAI", "Obsidian",
+			"Hermes", "Docker", "Node", "Anthropic", "Gemini", "Git", "GitHub",
+			"Agent", "Open",
+		]);
+
+		const labels = [];
+		for (const f of files) {
+			const t = fs.readFileSync(f, "utf8");
+			const rel = path.relative(ROOT, f);
+			for (const m of t.matchAll(/\.setName\("([^"]+)"\)/g)) labels.push({ rel, text: m[1] });
+			for (const m of t.matchAll(/subheading\(\s*containerEl,\s*"([^"]+)"/g)) labels.push({ rel, text: m[1] });
+		}
+
+		const offenders = [];
+		for (const { rel, text } of labels) {
+			/* skip the first word (always capitalised in sentence case); a word
+			   is suspicious only when it is Capitalised-then-lowercase, so
+			   acronyms (API, URL, MCP, JSON, PDF, UI, ID, AI, N) and filenames
+			   in caps never trip it. */
+			/* A colon starts a new sentence, so each segment gets its own
+			   "first word may be capitalised" allowance. Our "Context menu: Add
+			   selection to chat" rows quote the literal menu entry that the
+			   toggle controls (src/editorMenu.ts), and that entry is itself a
+			   sentence. Whitelisting "Add"/"Run" as proper nouns instead would
+			   punch a hole everywhere else in the corpus. */
+			for (const segment of text.split(":")) {
+				for (const w of segment.trim().split(/[\s/]+/).slice(1)) {
+					const bare = w.replace(/^[("']+|[)"',.:;?!…]+$/g, "");
+					if (/^[A-Z][a-z]/.test(bare) && !PROPER.has(bare)) offenders.push(`${rel}: "${text}" → "${bare}"`);
+				}
+			}
+		}
+
+		/* corpus sanity: the scan must actually have found the labels */
+		const enoughLabels = labels.length >= 140;
+		const sawKnown =
+			labels.some((l) => l.text === "Memory budget") &&
+			labels.some((l) => l.text === "Compression threshold") &&
+			labels.some((l) => l.text === "Terminal & Processes");
+
+		if (offenders.length === 0 && enoughLabels && sawKnown) {
+			console.log(`✓ v0.1.196: sentence case — ${labels.length} settings labels/headings scanned, no Title Case outside the proper-noun allowlist`);
+		} else {
+			if (!enoughLabels) console.error(`✗ v0.1.196 sentence-case scanner harvested only ${labels.length} labels — the .setName/subheading pattern drifted, guard is not measuring anything`);
+			if (!sawKnown) console.error("✗ v0.1.196 sentence-case scanner did not see its known-label canaries");
+			for (const o of offenders) console.error(`✗ v0.1.196 Title Case in a settings label — ${o}`);
 			failed++;
 		}
 	}

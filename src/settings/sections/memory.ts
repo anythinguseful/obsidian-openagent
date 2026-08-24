@@ -53,7 +53,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	markModified(stUserProfileEnabled, ctx.plugin.settings, "userProfileEnabled");
 
 	const stMemoryCharLimit = new Setting(containerEl)
-		.setName("Memory Budget")
+		.setName("Memory budget")
 		.setDesc("Size cap for MEMORY.md (500–20,000). When full, the agent must consolidate before adding more.")
 		.addText((t) => {
 			t.inputEl.type = "number";
@@ -72,7 +72,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	ctx.resetButton(stMemoryCharLimit, "memoryCharLimit");
 
 	const stUserCharLimit = new Setting(containerEl)
-		.setName("Profile Budget")
+		.setName("Profile budget")
 		.setDesc("Character budget for USER.md (500–20,000). Same consolidation behavior as the memory budget.")
 		.addText((t) => {
 			t.inputEl.type = "number";
@@ -293,7 +293,7 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 
 	const stCompressionTargetRatio = new Setting(containerEl)
 		.setName("Compression target")
-		.setDesc("Keep this share of the most recent messages untouched when compressing.");
+		.setDesc("Recent tokens kept verbatim, as a share of the trigger point (20% of a 50% trigger ≈ 10% of the window).");
 	stCompressionTargetRatio.controlEl.appendChild(
 		createSliderInput({
 			ariaLabel: "Compression target",
