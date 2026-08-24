@@ -883,6 +883,7 @@ const props: ChatAppProps = {
 	runner: runnerMock as unknown as AgentRunner,
 	sessions: sessionsMock as unknown as SessionStore,
 	saveSettings: async () => {},
+		saveSettingsSafe: (): void => {},
 	/* v0.1.33 regression spy: Refresh Models (or any in-menu action) must
 	   NEVER route to settings — the pre-fix refresh did exactly that when
 	   a vault's zero providers passed the enabled gate */

@@ -35,6 +35,19 @@ const reconstructed = process.argv.includes("--reconstructed");
 const ARTIFACTS = ["main.js", "manifest.json", "styles.css", "vendor/pdf.worker.min.js"];
 const STAMP_RE = /20\d\d-\d\d-\d\d \d\d:\d\dZ/;
 
+/* Preflight: fail fast if this version has already been released.
+   The publisher preflight (assertReleaseAbsent in publish-release.mjs) also
+   checks this, but that runs AFTER the full 3+ minute pipeline. Detecting a
+   stale version here saves waiting for every commit-level gate to finish. */
+{
+	const tag = `v${manifest.version}`;
+	const remoteTag = execFileSync("git", ["ls-remote", "--tags", "origin", `refs/tags/${tag}`], { cwd: root, encoding: "utf8" }).trim();
+	if (remoteTag) {
+		console.error(`\n✗ version ${manifest.version} (tag ${tag}) has already been released; bump before running release.`);
+		process.exit(1);
+	}
+}
+
 function step(name, cmd, args, opts = {}) {
 	process.stdout.write(`\n== ${name}\n`);
 	try {
