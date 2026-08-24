@@ -45,6 +45,9 @@ jobs:
       - name: Adversarial PDF browser regression
         run: npm run test:pdf-security
 
+      - name: Floating promise gate
+        run: npm run check:promises
+
       - name: Source, docs, and metadata consistency
         run: npm run check:docs
 
