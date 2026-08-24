@@ -29,11 +29,11 @@ disebut bug. Kolom "nyata" di bawah hanya diisi setelah penelusuran itu.
 Konsekuensinya penting untuk membaca dokumen ini: **gate `tsc` yang hijau lebih
 lemah daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya.
 
-## Ringkasan: 11 dimensi, 1 bug nyata
+## Ringkasan: 11 dimensi, 3 bug nyata + 1 celah laten
 
 | # | Dimensi | Hit mentah | Nyata | Catatan |
 |---|---|---|---|---|
-| A | `tsc --strictNullChecks` | 9 | 0 | 4 false positive tipe-menyempit, 5 sisanya defensif |
+| A | `tsc --strictNullChecks` | 9 | **2** | + 1 celah laten keamanan; triase awal "0 nyata" **dikoreksi** — lihat Dimensi A |
 | B | Floating promise (`.then` tanpa `.catch`) | 37 | **2** | → temuan T1 |
 | C | `JSON.parse` tanpa try/catch | 15 | 0 | 13 idiom deep-clone; 2 sisanya dibungkus pemanggil |
 | D | `catch {}` menelan error | 58 | 0 | semuanya berkomentar justifikasi; 0 tanpa penjelasan |
@@ -45,8 +45,10 @@ lemah daripada kelihatannya** — cacat null/undefined tidak terlihat olehnya.
 | J | Escape hatch tipe | 38 | 0 | 0 `@ts-ignore`; `as unknown as` 23, `: any` 10 |
 | K | Off-by-one indeks | 0 | 0 | tanpa `[-1]`, tanpa `[x.length]` |
 
-Kesimpulan sapuan: basis kode ini jauh lebih disiplin daripada yang disugestikan
-oleh `strictNullChecks: false`. Sembilan dari sebelas dimensi bersih total.
+Kesimpulan sapuan: basis kode ini disiplin — sembilan dari sebelas dimensi bersih
+total. Tapi dimensi A membuktikan harga dari `strictNullChecks: false`: ia
+menyembunyikan satu crash nyata, satu blok cleanup yang jadi kode mati, dan satu
+jalur keamanan yang tidak fail-closed. Flag itu kini ON.
 
 ## T1 — Salin ke clipboard bisa gagal diam-diam (bug nyata) — **SELESAI**
 
@@ -117,26 +119,31 @@ Lengan M2 sempat **tidak merah**: guard membaca file mentah, dan docstring
 puas dari prosa, bukan dari kode. Diperbaiki dengan strip komentar sebelum
 memeriksa (Lesson 199).
 
-## Dimensi A — rincian 9 temuan `strictNullChecks`
+## Dimensi A — 9 temuan `strictNullChecks` — **SELESAI**
 
-Empat di antaranya **false positive dari penyempitan tipe**, bukan cacat
-runtime: variabel dideklarasikan `T | null`, lalu diisi di dalam callback yang
-tidak dilacak TS, sehingga menyempit ke `never`.
+> **Koreksi triase.** Versi pertama audit ini menyimpulkan "tidak ada yang perlu
+> diperbaiki: 4 false positive penyempitan tipe, 5 sisanya sudah dijaga".
+> Pemeriksaan per-baris saat mengeksekusi perbaikan membuktikan kesimpulan itu
+> **salah untuk tiga baris**. Membaca ulang tiap situs sebelum menyunting —
+> bukan mempercayai triase sendiri — yang memunculkannya.
 
-| File:line | Kode | Penilaian |
+Flag `strictNullChecks` kini **ON** di `tsconfig.json` dan `npx tsc --noEmit`
+bersih. Dijaga guard smoke **v0.1.198** (6/6 lengan terbukti merah).
+
+| File:line | Kode | Vonis akhir |
 |---|---|---|
-| `src/settingsTab.ts:1482` | TS2339 | false positive — `delBtn` diisi dalam `addButton` callback (L1469/1471) |
-| `src/ui/attach/pdf.ts:249-250` | TS2339 ×2 | false positive — `loadingTask` diisi di L215 |
-| `src/ui/components/session-panel.tsx:63` | TS2322 | ketidakcocokan `RefObject` vs `LegacyRef`, murni tipe |
-| `src/agent/terminal/tools.ts:10` | TS2322 | dijaga throw di L5-7 tepat di atasnya |
-| `src/settings.ts:1375,1378` | TS18048 ×2 | dijaga `?? {}` pada `Object.keys()` di baris yang sama |
-| `src/ui/ChatApp.tsx:3966` | TS2531 | dijaga `if (providerId && …)` |
-| `src/settingsTab.ts:3492` | TS2322 | `v.error` hanya dibaca setelah `if (!v.ok)` |
+| `src/ui/ChatApp.tsx:3966` | TS2531 | **BUG NYATA** — `getActiveProvider(settings).id` tanpa `?.`; fungsi itu `return null` bila tak ada provider aktif/enabled. Kembarannya di `main.ts:216` sudah memakai `?.` sejak awal — asimetri, bukan gaya. Triase lama keliru mengira `if (providerId && …)` menjaganya; guard itu menjaga argumen, bukan hasil panggilan. |
+| `src/ui/attach/pdf.ts:249-250` | TS2339 ×2 | **BUG NYATA (kode mati)** — `loadingTask` hanya diisi di dalam closure async, jadi CFA menyempitkannya ke `null` di `finally` luar: cleanup timeout/worker-failure **tak pernah jalan**. Bukan false positive; `never` justru pesan TS bahwa cabangnya mustahil. |
+| `src/agent/terminal/tools.ts:10` | TS2322 | **CELAH LATEN (keamanan)** — throw-guard L5 memeriksa `terminal`/`execution`, **tidak** `workspacePolicy`, padahal `service.ts:195` men-dereference `.mode` untuk memutuskan kurungan `strict-folder`. Runner selalu meng-inject (runner.ts:173), jadi tak hidup hari ini — tapi jalur keamanan harus fail-closed eksplisit. |
+| `src/settingsTab.ts:3488` | TS2322 | Akar di sumber, bukan di pemanggil: `validateCronExpr` mengembalikan `{ ok: boolean; error?: string }`. Diperbaiki jadi union terdiskriminasi `CronExprValidation`, sehingga `!v.ok` menyempitkan `error` ke `string` untuk **semua** 6 pemanggil. |
+| `src/settings.ts:1375,1378` | TS18048 ×2 | Benar aman (`?? {}`), tapi `Object.keys(srv.env ?? {})` membaca dari objek yang bisa berbeda dari yang ditulisi. Diikat sekali ke `const env`/`const headers`. |
+| `src/settingsTab.ts:1483` | TS2339 | Artefak penyempitan asli. `delBtn` dihapus; `setDisabled` dipanggil inline karena `addButton` menjalankan callback-nya sinkron. |
+| `src/ui/components/session-panel.tsx:63` | TS2322 | Prop ditulis gaya React 19 (`RefObject<HTMLElement \| null>`); repo ini React 18, di mana `RefObject<T>.current` **sudah** `T \| null`. Diselaraskan dengan `file-upload.tsx`. |
 
-Tidak ada yang perlu diperbaiki. Nilainya ada di kesimpulan sebaliknya:
-menyalakan `strictNullChecks` hanya berbiaya 9 anotasi, jadi flag itu **layak
-dipertimbangkan** sebagai pekerjaan tersendiri — bukan karena ada bug hari ini,
-tapi supaya cacat null berikutnya tertangkap gate.
+Catatan metode: dua "perbaikan" naif untuk kasus `never` (anotasi ulang lewat
+`const` lokal; setter function) diuji lebih dulu di scratch file dan **keduanya
+gagal** — CFA tetap menyempitkan ke `never`. Hanya holder object yang lolos.
+Menambal dengan `as` akan menyembunyikan kode mati itu, bukan menghidupkannya.
 
 ## Dimensi C — dua `JSON.parse` jaringan, keduanya aman
 

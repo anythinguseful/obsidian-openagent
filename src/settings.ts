@@ -1371,11 +1371,19 @@ export function redactSettingsSecrets(s: OpenAgentSettings): OpenAgentSettings {
 	   credentials — blank anything secret-shaped on export, same as provider
 	   keys. */
 	for (const srv of Object.values(clone.mcpServers ?? {})) {
-		for (const k of Object.keys(srv.env ?? {})) {
-			if (SENSITIVE_ENV_RE.test(k)) srv.env[k] = "";
+		/* Bind the maps once: the loop body writes back into them, and the reader
+		   must see the same object the keys came from. */
+		const env = srv.env;
+		if (env) {
+			for (const k of Object.keys(env)) {
+				if (SENSITIVE_ENV_RE.test(k)) env[k] = "";
+			}
 		}
-		for (const k of Object.keys(srv.headers ?? {})) {
-			if (SENSITIVE_HEADER_RE.test(k)) srv.headers[k] = "";
+		const headers = srv.headers;
+		if (headers) {
+			for (const k of Object.keys(headers)) {
+				if (SENSITIVE_HEADER_RE.test(k)) headers[k] = "";
+			}
 		}
 	}
 	return clone;

@@ -3963,7 +3963,10 @@ nudgeCounterRef.current = 0;
 	   list re-reads the new active provider. */
 	const selectModel = useCallback(
 		async (m: string, providerId?: string) => {
-			if (providerId && providerId !== getActiveProvider(settings).id) {
+			/* Optional chaining, matching the Quick Ask twin in main.ts: with no
+			   provider configured (or all disabled) getActiveProvider returns null,
+			   and a bare `.id` here threw instead of just activating the pick. */
+			if (providerId && providerId !== getActiveProvider(settings)?.id) {
 				activateProviderCatalog(settings, providerId);
 			}
 			settings.model = m;

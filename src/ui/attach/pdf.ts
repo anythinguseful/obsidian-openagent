@@ -175,7 +175,10 @@ async function extractPdfTextExclusive(
 	let expired = false;
 	let operationPdfjs: PdfJsWithWorker | null = null;
 	let operationWorker: Worker | null = null;
-	let loadingTask: LoadingTask | null = null;
+	/* Held in an object, not a bare `let`: the only assignment happens inside the
+	   async operation closure, so control-flow analysis narrows a plain local to
+	   `never` in the outer `finally` and silently drops the cleanup below. */
+	const pending: { loadingTask: LoadingTask | null } = { loadingTask: null };
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let rejectForWorker: ((reason: Error) => void) | null = null;
 
@@ -212,7 +215,8 @@ async function extractPdfTextExclusive(
 		operationWorker = sharedWorker;
 		activeWorkerReject = (reason) => rejectForWorker?.(reason);
 
-		loadingTask = pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false });
+		const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false });
+		pending.loadingTask = loadingTask;
 		try {
 			const doc = await loadingTask.promise;
 			let out = "";
@@ -232,9 +236,7 @@ async function extractPdfTextExclusive(
 			}
 			return out.slice(0, textLimit).trim();
 		} finally {
-			if (loadingTask) {
-				await destroyLoadingTaskBounded(loadingTask, pdfjs, operationWorker);
-			}
+			await destroyLoadingTaskBounded(loadingTask, pdfjs, operationWorker);
 		}
 	})();
 
@@ -246,8 +248,8 @@ async function extractPdfTextExclusive(
 		if (activeWorkerReject && rejectForWorker) activeWorkerReject = null;
 		// If timeout/worker failure won the race, request PDF.js cleanup without
 		// awaiting it; the raw worker was already terminated and this queue can recover.
-		if (loadingTask && !loadingTask.destroyed) {
-			void loadingTask.destroy().catch(() => {});
+		if (pending.loadingTask && !pending.loadingTask.destroyed) {
+			void pending.loadingTask.destroy().catch(() => {});
 		}
 	}
 }

@@ -9,7 +9,10 @@ export interface SessionPanelGroup {
 }
 
 interface SessionPanelProps {
-	panelRef: RefObject<HTMLElement | null>;
+	/* React 18's RefObject<T> already types `current` as `T | null`; spelling the
+	   null again produces RefObject<HTMLElement | null>, which no longer matches
+	   the `ref` prop. Mirrors file-upload.tsx's inputRef. */
+	panelRef: RefObject<HTMLElement>;
 	compact: boolean;
 	filter: string;
 	groups: SessionPanelGroup[];

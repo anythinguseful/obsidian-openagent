@@ -331,5 +331,70 @@ module.exports = async function miscGuards() {
 		}
 	}
 
+	// v0.1.198 (error/bug sweep 2026-08-24, finding A): strictNullChecks was OFF,
+	// so "possibly null/undefined" defects compiled clean. Nine were latent, two of
+	// them live: ChatApp.selectModel dereferenced a null provider, and pdf.ts's
+	// outer-finally cleanup was narrowed to `never` and could never run. The flag
+	// is now ON; this guard exists so it cannot be quietly flipped back to buy a
+	// green build, and so the two fixed sites cannot silently regress.
+	{
+		// Parse the real config rather than grepping: a commented-out line, or a
+		// second occurrence in prose, must not be able to satisfy this. Parsing
+		// also makes comment-stripping unnecessary for the common case -- and a
+		// naive block-comment regex MUST NOT be used here, because it eats the
+		// `/**/` inside globs like "src/**/*.ts" and silently rewrites include
+		// to "src*.ts" (this guard caught exactly that while being written).
+		const raw = read("tsconfig.json");
+		let cfg = null;
+		try {
+			cfg = JSON.parse(raw);
+		} catch {
+			// tsconfig is JSONC: retry with whole-line comments removed only.
+			try {
+				cfg = JSON.parse(
+					raw
+						.split("\n")
+						.filter((l) => !/^\s*\/\//.test(l))
+						.join("\n")
+				);
+			} catch {
+				cfg = null;
+			}
+		}
+		const opts = (cfg && cfg.compilerOptions) || null;
+		const parsed = !!opts;
+		// strict:true would imply it; accept either spelling, reject absence.
+		const strictNulls = parsed && (opts.strictNullChecks === true || (opts.strict === true && opts.strictNullChecks !== false));
+
+		// The flag only protects what it type-checks. If `include` stopped covering
+		// src, the flag would be true and meaningless.
+		const include = cfg && Array.isArray(cfg.include) ? cfg.include : [];
+		const coversSrc = include.some((g) => typeof g === "string" && g.startsWith("src/"));
+
+		// Behavioural pins on the two sites that were actually broken.
+		const chat = read("src/ui/ChatApp.tsx");
+		const chatFixed = /providerId !== getActiveProvider\(settings\)\?\.id/.test(chat);
+		const pdf = read("src/ui/attach/pdf.ts");
+		// The cleanup must read through a holder; a bare `let` narrows to never again.
+		const pdfFixed =
+			/const pending: \{ loadingTask: LoadingTask \| null \}/.test(pdf) &&
+			/pending\.loadingTask && !pending\.loadingTask\.destroyed/.test(pdf);
+		// Terminal tools must fail closed when no workspace policy is present.
+		const term = read("src/agent/terminal/tools.ts");
+		const termFixed = /if \(!ctx\.workspacePolicy\)/.test(term) && /refused: no workspace policy/.test(term);
+
+		if (strictNulls && coversSrc && chatFixed && pdfFixed && termFixed) {
+			console.log("✓ v0.1.198: strictNullChecks is on, covers src/, and the three fixed null-safety sites still hold");
+		} else {
+			if (!parsed) console.error("✗ v0.1.198 tsconfig.json could not be parsed — the flag check is not measuring anything");
+			else if (!strictNulls) console.error("✗ v0.1.198 strictNullChecks was turned back off in tsconfig.json");
+			if (parsed && !coversSrc) console.error("✗ v0.1.198 tsconfig include no longer covers src/ — strictNullChecks checks nothing");
+			if (!chatFixed) console.error("✗ v0.1.198 ChatApp.selectModel dropped the optional chaining on getActiveProvider — null provider crashes the model pick again");
+			if (!pdfFixed) console.error("✗ v0.1.198 pdf.ts loadingTask cleanup left its holder object — outer finally narrows to never and the destroy is dead code");
+			if (!termFixed) console.error("✗ v0.1.198 terminal prepareContext stopped refusing a missing workspacePolicy — sandbox confinement can be bypassed");
+			failed++;
+		}
+	}
+
 	return failed;
 };

@@ -1467,9 +1467,11 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.moaSave("explicit");
 			})
 		);
-		let delBtn: ButtonComponent | null = null;
 		ctl.addButton((b) => {
-			delBtn = b;
+			/* Disable inline: addButton runs its callback synchronously, so the
+			   button is configured in one place instead of via an outer handle
+			   that control-flow analysis cannot narrow. */
+			b.setDisabled(names.length <= 1);
 			b.setButtonText("Delete").onClick(() => {
 				if (names.length <= 1) return;
 				delete draft.presets[selected];
@@ -1480,7 +1482,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				this.moaSave("explicit");
 			});
 		});
-		delBtn?.setDisabled(names.length <= 1);
 		/* v0.1.111 owner: input nama + tombol Add preset dibungkus satu sub-baris
 		   (.oa-moa-ctl-new) supaya saat kontrol wrap mereka pindah sebagai satu
 		   paket — tombol tak pernah yatim di baris sendiri, dan di lebar wajar

@@ -5,6 +5,13 @@ function prepareContext(ctx: ToolContext, interactive?: ToolInteractive): Termin
 	if (!ctx.terminal || !ctx.execution || ctx.execution.kind !== "interactive-chat") {
 		throw new Error("Terminal & Processes are available only in an owned interactive desktop chat run.");
 	}
+	/* workspacePolicy is optional on ToolContext (isolated legacy/test contexts omit
+	   it) but REQUIRED here: the service dereferences it to decide strict-folder
+	   confinement and to resolve every physical cwd. Missing it must fail closed —
+	   never silently widen the sandbox. */
+	if (!ctx.workspacePolicy) {
+		throw new Error("Terminal & Processes refused: no workspace policy in this run.");
+	}
 	return {
 		settings: ctx.settings,
 		workspacePolicy: ctx.workspacePolicy,
