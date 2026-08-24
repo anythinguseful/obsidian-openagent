@@ -23,7 +23,7 @@
  * `s` (plugin.settings).
  */
 
-const { read } = require("./harness.cjs");
+const { read, region, regionFrom } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -72,10 +72,15 @@ module.exports = function stylesGuards() {
 	// anchors. No more 250/270/300px popover pinned to the buttons.
 	{
 		const css = read("styles.css");
-		const am = css.slice(css.indexOf(".oa-app .oa-attach-menu {"), css.indexOf("\n.oa-app .oa-attach-menu-head"));
-		const mm = css.slice(css.indexOf(".oa-app .oa-model-menu {"), css.indexOf("\n.oa-app .oa-model-menu-list"));
-		const picker = css.slice(css.indexOf(".oa-app .oa-model-picker {"), css.indexOf("\n.oa-app .oa-model-pill"));
-		const anchor = css.slice(css.indexOf(".oa-app .oa-attach-anchor {"), css.indexOf("\n.oa-app .oa-attach-toggle"));
+		// 2026-08-24 (Lesson 195): these were raw indexOf slices. `anchor` was
+		// broken — its end marker's FIRST occurrence (offset 23333) precedes
+		// the .oa-attach-anchor block (88893), so slice() returned "" and
+		// `!anchor.includes("position: relative;")` was vacuously true. region()
+		// searches the end marker only AFTER the start, and throws if absent.
+		const am = region(css, ".oa-app .oa-attach-menu {", "\n.oa-app .oa-attach-menu-head", { label: "attach-menu" });
+		const mm = region(css, ".oa-app .oa-model-menu {", "\n.oa-app .oa-model-menu-list", { label: "model-menu" });
+		const picker = region(css, ".oa-app .oa-model-picker {", "\n.oa-app .oa-model-pill", { label: "model-picker" });
+		const anchor = region(css, ".oa-app .oa-attach-anchor {", "\n.oa-app .oa-attach-toggle", { label: "attach-anchor" });
 		const ok =
 			am.includes("width: min(820px, calc(100% - 24px));") &&
 			am.includes("margin: 0 auto 6px;") &&
@@ -98,8 +103,8 @@ module.exports = function stylesGuards() {
 	// mirrors the same shape.
 	{
 		const css = read("styles.css");
-		const picker = css.slice(css.indexOf(".oa-app .oa-model-picker {"), css.indexOf(".oa-app .oa-model-menu"));
-		const qa = css.slice(css.indexOf(".oa-quickask .oa-model-picker {"), css.indexOf(".oa-quickask .oa-model-menu"));
+		const picker = region(css, ".oa-app .oa-model-picker {", ".oa-app .oa-model-menu", { label: "model-picker" });
+		const qa = region(css, ".oa-quickask .oa-model-picker {", ".oa-quickask .oa-model-menu", { label: "quickask-picker" });
 		const ok =
 			picker.includes("min-width: 0;") &&
 			picker.includes("flex: 0 1 210px;") &&
@@ -481,7 +486,7 @@ module.exports = function stylesGuards() {
 	{
 		const css22 = read("styles.css");
 		const mark22 = "SETTINGS CARD RHYTHM (v0.1.95";
-		const tail22 = css22.includes(mark22) ? css22.slice(css22.indexOf(mark22)) : "";
+		const tail22 = regionFrom(css22, mark22, { label: "v0.1.95 css tail" });
 		/* v0.1.159 amended: hex inside var() fallback is the sanctioned form —
 		   strip var(...) before the bare-hex check (same as v0.1.94). */
 		const bareHex22 = /#[0-9a-fA-F]{3,8}/.test(tail22.replace(/var\([^()]*\)/g, ""));

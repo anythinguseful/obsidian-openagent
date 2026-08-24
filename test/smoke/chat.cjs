@@ -18,7 +18,7 @@
  * ROOT path that must never resolve.
  */
 
-const { read } = require("./harness.cjs");
+const { read, region } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -542,7 +542,7 @@ module.exports = function chatGuards() {
 			chat.includes("SLASH_COMMANDS.filter((c) => c.name.startsWith(input))\n\t\t\t.map((c) =>") &&
 			/* group headers: Hermes spacing, hairline separator retired —
 			   check the block itself, not a file-wide scan */
-			!css.slice(css.indexOf(".oa-app .oa-slash-hdr {"), css.indexOf("\n}\n", css.indexOf(".oa-app .oa-slash-hdr {"))).includes("border-top:");
+			!region(css, ".oa-app .oa-slash-hdr {", "\n}\n", { label: "slash-hdr" }).includes("border-top:");
 		if (ok) {
 			console.log("✓ v0.1.166: slash overlay — composer-width drawer, all items listed, name fully visible, keyboard highlight");
 		} else {

@@ -21,7 +21,7 @@
  *     preview harness files themselves.
  */
 
-const { ROOT, read, fs, path } = require("./harness.cjs");
+const { ROOT, read, region, regionFrom, fs, path } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -258,7 +258,7 @@ module.exports = function previewGuards() {
 	{
 		const app16 = read("src/ui/ChatApp.tsx");
 		const rp16 = read("test/real-preview/chat-entry.tsx");
-		const refresh = app16.slice(app16.indexOf("const refreshModels = useCallback"), app16.indexOf("const selectModel = useCallback"));
+		const refresh = region(app16, "const refreshModels = useCallback", "const selectModel = useCallback", { label: "refreshModels" });
 		const ok =
 			refresh.includes("providerUsable(p)") &&
 			!refresh.includes("props.openSettings()") && // the settings jump is GONE
@@ -1003,7 +1003,7 @@ module.exports = function previewGuards() {
 		const ok =
 			!css26.includes(".oa-quickask :is(") &&
 			css26.includes("font-family: inherit;\n\tletter-spacing: inherit;\n\tcolor: inherit;") &&
-			!css26.slice(css26.indexOf("QUICK ASK FIELD RESET")).includes("font: inherit;") &&
+			!regionFrom(css26, "QUICK ASK FIELD RESET", { label: "quickask-reset" }).includes("font: inherit;") &&
 			lane26.includes("composer metrics not its own") &&
 			lane26.indexOf("composer metrics not its own") < lane26.indexOf("coarse-pointer (touch)");
 		if (ok) {

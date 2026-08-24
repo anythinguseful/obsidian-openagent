@@ -15,7 +15,7 @@
  * knowable path uses the repo-root read() from the harness instead.
  */
 
-const { ROOT, read, fs, path, plugin } = require("./harness.cjs");
+const { ROOT, read, region, regionFrom, fs, path, plugin } = require("./harness.cjs");
 
 // The monolith's __dirname. Only for dynamically composed paths -- prefer
 // read() whenever the path is a literal, so check-docs guard 1 can see it.
@@ -172,6 +172,89 @@ module.exports = async function miscGuards() {
 			console.log("✓ v0.1.131: styles.css zip-only minify + sentinel verify · repo tetap readable · audit CSS 43/43 tuntas false-positive");
 		} else {
 			console.error("✗ v0.1.131 zip-only css minify regressed");
+			failed++;
+		}
+	}
+
+	/* v0.1.195 (Lesson 195) — META-GUARD: the smoke lane must never slice a
+	   region with a raw indexOf again.
+
+	   The bug this closes: `x.slice(x.indexOf(A), x.indexOf(B))` returns a
+	   WRONG-BUT-PLAUSIBLE region when A is missing, because indexOf gives -1
+	   and slice reads -1 as "one char before EOF". Three live guards were
+	   measuring garbage and still reporting green — settings.cjs genSection
+	   was "" (so every `!genSection.includes(...)` arm was vacuously true),
+	   settings.cjs safetySection ran 141099 chars across 73 methods, and
+	   styles.cjs `anchor` was "" because its end marker's first occurrence
+	   sat 65k chars BEFORE the start marker.
+
+	   A guard that silently stops testing is worse than no guard: it spends
+	   the trust of a green check. region()/regionFrom() in harness.cjs throw
+	   on a missing marker, and this block keeps the raw idiom from returning.
+	   The scan is textual and deliberately narrow: `v.slice(v.indexOf(` with
+	   the SAME identifier on both sides, which is exactly the broken shape. */
+	{
+		const laneDir = path.join(ROOT, "test", "smoke");
+		const lane = fs
+			.readdirSync(laneDir)
+			.filter((f) => f.endsWith(".cjs"))
+			.sort();
+		const rawIdiom = /(\w+)\.slice\(\s*\1\.indexOf\(/;
+		const offenders = [];
+		for (const f of lane) {
+			const body = fs.readFileSync(path.join(laneDir, f), "utf8");
+			/* Prose describing the anti-pattern must not trip the scan — this
+			   block and harness.cjs both spell the idiom out. Blank the
+			   comments while PRESERVING newlines, so reported line numbers
+			   still point at the real offender. (Same intent as the
+			   comment-stripping recipe the heading-order guard uses; a
+			   line-prefix test is not enough because a continuation line of a
+			   block comment starts with neither // nor *.) */
+			const code = body
+				.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+				.replace(/(^|[^:])\/\/.*$/gm, (m, p) => p + " ".repeat(m.length - p.length));
+			code.split("\n").forEach((line, i) => {
+				if (rawIdiom.test(line)) offenders.push(`${f}:${i + 1}`);
+			});
+		}
+		/* Test the replacements by CALLING them, not by matching their source.
+		   A text match is too weak here and I proved it: turning region()'s
+		   first `throw` into `return ""` left the suite green, because the
+		   same message string still appeared in regionFrom() and the throw
+		   count stayed above the threshold. A guard for fail-loud behaviour
+		   has to observe the behaviour. */
+		const throws = (fn) => {
+			try {
+				fn();
+				return false;
+			} catch {
+				return true;
+			}
+		};
+		const body = "AAA start MIDDLE end ZZZ";
+		const ok =
+			offenders.length === 0 &&
+			/* happy path still returns the region between the markers */
+			region(body, "start", "end") === "start MIDDLE " &&
+			regionFrom(body, "MIDDLE") === "MIDDLE end ZZZ" &&
+			/* a missing marker must THROW, never yield a plausible-looking
+			   slice — this is the whole point of Lesson 195 */
+			throws(() => region(body, "nope", "end")) &&
+			throws(() => region(body, "start", "nope")) &&
+			throws(() => regionFrom(body, "nope")) &&
+			/* the end marker is searched only AFTER the start, so a marker
+			   that also occurs earlier cannot produce a reversed range
+			   (the styles.cjs .oa-attach-anchor bug) */
+			throws(() => region("end AAA start MIDDLE", "start", "end")) &&
+			region("end AAA start MIDDLE end", "start", "end") === "start MIDDLE ";
+		if (ok) {
+			console.log("✓ v0.1.195: smoke lane has no raw indexOf region slices · region()/regionFrom() throw on a missing marker (Lesson 195)");
+		} else {
+			console.error(
+				`✗ v0.1.195 raw indexOf region slice returned (or harness region() weakened)${
+					offenders.length ? ` — offenders: ${offenders.join(", ")}` : ""
+				}`,
+			);
 			failed++;
 		}
 	}

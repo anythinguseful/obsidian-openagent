@@ -21,7 +21,7 @@
  * tolerates.
  */
 
-const { ROOT, read, fs, path } = require("./harness.cjs");
+const { ROOT, read, region, regionFrom, fs, path } = require("./harness.cjs");
 
 // Returns the number of failed guards so the orchestrator can fold it into
 // its own counter. Guards keep using the bare `failed++` they were written
@@ -158,7 +158,7 @@ module.exports = function settingsGuards() {
 	// comments mentioning these names can never trip it.
 	{
 		const tab = read("src/settings.ts");
-		const overlays = tab.slice(tab.indexOf("export const PERSONALITY_OVERLAYS"), tab.indexOf("export function isOverlayKey"));
+		const overlays = region(tab, "export const PERSONALITY_OVERLAYS", "export function isOverlayKey", { label: "overlays" });
 		const ok =
 			overlays.includes("You are a helpful, friendly AI assistant.") &&
 			overlays.includes("You are Neko-chan, an anime catgirl AI assistant, nya~!") &&
@@ -405,10 +405,16 @@ module.exports = function settingsGuards() {
 		// 2026-08-24: Memory & Context is no longer a slice of the class — it is
 		// its own module, so the section boundary is the file boundary.
 		const memSection = read("src/settings/sections/memory.ts");
-		const genSection = stab5.slice(stab5.indexOf("private general("), stab5.indexOf("private providers("));
-		const agentSection = stab5.slice(stab5.indexOf("private agent("), stab5.indexOf("private profiles("));
-		const workspaceSection = stab5.slice(stab5.indexOf("private workspace("), stab5.indexOf("private safety("));
-		const safetySection = stab5.slice(stab5.indexOf("private safety("), stab5.indexOf("private general("));
+		// 2026-08-24 (Lesson 195): General left the class in 143858e, which
+		// deleted the "private general(" marker. Both slices anchored on it
+		// silently degraded — genSection became "" (every negative arm below
+		// vacuously true) and safetySection ran to EOF-1, swallowing 73 other
+		// methods including mcp(). Neither went red. They now read the real
+		// subject via region(), which throws when a marker is missing.
+		const genSection = read("src/settings/sections/general.ts");
+		const agentSection = region(stab5, "private agent(", "private profiles(", { label: "agentSection" });
+		const workspaceSection = region(stab5, "private workspace(", "private safety(", { label: "workspaceSection" });
+		const safetySection = region(stab5, "private safety(", "private providers(", { label: "safetySection" });
 		if (
 			/* the renderer left the class but the tab still owns wiring it up */
 			!stab5.includes("private memory(") &&
@@ -932,7 +938,7 @@ module.exports = function settingsGuards() {
 		const stab126 = read("src/settingsTab.ts");
 		const bs126 = read("test/real-preview/build-settings.mjs");
 		const mem126 = read("src/settings/sections/memory.ts"); // Memory renderer pindah 2026-08-24
-		const strip126 = stab126.slice(stab126.indexOf("const SECTIONS"), stab126.indexOf("const SECTION_DESC"));
+		const strip126 = region(stab126, "const SECTIONS", "const SECTION_DESC", { label: "SECTIONS" });
 		const idx126 = (needle) => strip126.indexOf(needle);
 		const ok =
 			idx126('key: "workspace"') > idx126('key: "model"') &&
@@ -1205,7 +1211,7 @@ module.exports = function settingsGuards() {
 		// in Model (or overridden by a profile pin).
 		const stab3 = read("src/settingsTab.ts");
 		const css3 = read("styles.css");
-		const providerMethod = stab3.slice(stab3.indexOf("\tprivate providers("), stab3.indexOf("\tprivate setTestResult("));
+		const providerMethod = region(stab3, "\tprivate providers(", "\tprivate setTestResult(", { label: "providers" });
 		if (
 			providerMethod.includes("providerEditingId") &&
 			providerMethod.includes('"Provider connections"') &&
@@ -1682,8 +1688,8 @@ module.exports = function settingsGuards() {
 		/* Every tab in the SECTIONS registry must have a matching case in
 		   renderSectionBody — a key without a case renders an EMPTY tab (the
 		   Lesson 107 trap the Appearance tab hit on its first landing). */
-		const switchSlice = tab.slice(tab.indexOf("private renderSectionBody"), tab.indexOf("/* ───────────────────────── sections"));
-		const sectionKeys = [...(tab.slice(tab.indexOf("const SECTIONS"), tab.indexOf("const SECTION_DESC")).matchAll(/key: "([a-z]+)"/g))].map((m) => m[1]);
+		const switchSlice = region(tab, "private renderSectionBody", "/* ───────────────────────── sections", { label: "renderSectionBody" });
+		const sectionKeys = [...region(tab, "const SECTIONS", "const SECTION_DESC", { label: "SECTIONS" }).matchAll(/key: "([a-z]+)"/g)].map((m) => m[1]);
 		const everyKeyHasCase = sectionKeys.length > 0 && sectionKeys.every((k) => switchSlice.includes(`case "${k}":`));
 		const ok =
 			setts.includes('toolViewMode: "collapsed"') &&
@@ -1724,8 +1730,8 @@ module.exports = function settingsGuards() {
 		const tools = read("src/agent/tools.ts");
 		const toolC = read("src/ui/components/tool.tsx");
 		const chat = read("src/ui/ChatApp.tsx");
-		const adv = tab.slice(tab.indexOf("private advanced(containerEl"), tab.indexOf("private notifications(containerEl"));
-		const agentSec = tab.slice(tab.indexOf("private agent(containerEl"), tab.indexOf("private appearance(containerEl"));
+		const adv = region(tab, "private advanced(containerEl", "private notifications(containerEl", { label: "advanced" });
+		const agentSec = region(tab, "private agent(containerEl", "private appearance(containerEl", { label: "agent" });
 		const ok =
 			setts.includes("checkpointMaxSnapshots: 30") &&
 			setts.includes("toolOutputMaxChars: 5000") &&
@@ -1750,7 +1756,7 @@ module.exports = function settingsGuards() {
 	{
 		const tab = read("src/settingsTab.ts");
 		const css = read("styles.css");
-		const cmd = tab.slice(tab.indexOf("private renderCommandRows"), tab.indexOf("private automations"));
+		const cmd = region(tab, "private renderCommandRows", "private automations", { label: "renderCommandRows" });
 		const ok =
 			cmd.includes("grip.draggable = true") &&
 			cmd.includes('setIcon(grip, "grip-vertical")') &&
@@ -2061,7 +2067,7 @@ module.exports = function settingsGuards() {
 		const search21 = fs.existsSync(search21Path) ? fs.readFileSync(search21Path, "utf8") : "";
 		const mod21 = fs.existsSync(mod21Path) ? fs.readFileSync(mod21Path, "utf8") : "";
 		const tailMark = "SETTINGS SEARCH + MODIFIED DOT (v0.1.94, additive)";
-		const tail21 = css21.includes(tailMark) ? css21.slice(css21.indexOf(tailMark)) : "";
+		const tail21 = regionFrom(css21, tailMark, { label: "v0.1.94 css tail" });
 		const harvestGuards = (tab21.match(/this\.searchHarvesting\) return;/g) || []).length;
 		/* v0.1.159 amended: hex is sanctioned INSIDE a var() fallback (the
 		   contract's own rule). Strip every var(...) before the bare-hex
