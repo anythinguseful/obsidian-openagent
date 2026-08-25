@@ -6694,3 +6694,28 @@
 	outline-offset: 2px;
 	background: var(--background-modifier-hover);
 }
+
+/* ── 2026-08-25: persisted clarify summary ───────────────────────────
+   A live clarify card remains interactive above the composer. Its persisted
+   turn part is a quiet read-only record so history never loses the question or
+   pretends a stale agent loop can be resumed. */
+.oa-app .oa-clarify-summary {
+	margin: 6px 0;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m, 8px);
+	background: var(--background-secondary);
+	font-size: var(--font-ui-small);
+}
+.oa-app .oa-clarify-summary-head {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+.oa-app .oa-clarify-summary-head > span:last-child { color: var(--text-faint); }
+.oa-app .oa-clarify-summary-question { margin-top: 4px; color: var(--text-normal); }
+.oa-app .oa-clarify-summary-choices,
+.oa-app .oa-clarify-summary-answer { margin-top: 4px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.oa-app .oa-clarify-summary.is-interrupted .oa-clarify-summary-head > span:last-child { color: var(--text-warning); }

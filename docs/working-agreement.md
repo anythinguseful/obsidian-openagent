@@ -2126,3 +2126,18 @@ preference may legitimately mention them.
 Guard: `test/memory.test.cjs` pins the reported entry as rejected from both
 store paths, while a stable user preference and reusable Arena environment
 lesson remain accepted. Prompt and tools tests pin the target/skip language.
+
+## Lesson 216 — Platform questions are transcript data, not merely a live React promise
+
+Clarify questions originally lived only in `clarify` React state while the agent
+loop awaited a Promise. Opening another session called `stopAgent()`, cleared
+that state, and left no persisted evidence that a question had ever been asked
+or answered. The result was a history that silently erased user-facing decision
+context.
+
+A platform interaction that affects an agent turn must write a durable turn part
+when it opens, then update it with `answered`, `skipped`, or `interrupted` when
+it resolves. A history view renders this part read-only; it must not resurrect
+an old loop because its workspace, approvals, provider, and context are stale.
+Guard: the real-DOM clarify lane pins single/open/multi/skip envelopes plus four
+persisted summaries; switching/stopping marks a pending question interrupted.

@@ -147,6 +147,7 @@ import { resolveWritePath } from "../agent/tools";
 type TraceBlock =
 	| { kind: "reasoning"; parts: Extract<TurnPart, { kind: "reasoning" }>[] }
 	| { kind: "tool"; parts: Extract<TurnPart, { kind: "tool" }>[] }
+	| { kind: "clarify"; parts: Extract<TurnPart, { kind: "clarify" }>[] }
 	| { kind: "text"; parts: Extract<TurnPart, { kind: "text" }>[] }
 	| { kind: "marker"; parts: Extract<TurnPart, { kind: "marker" }>[] };
 
@@ -452,6 +453,26 @@ function ClarifyCard(props: { req: ClarifyRequest; onAnswer: (a: ClarifyAnswer) 
 	);
 }
 
+function ClarifySummary({ part }: { part: Extract<TurnPart, { kind: "clarify" }> }) {
+	const status =
+		part.status === "answered"
+			? "Answered"
+			: part.status === "skipped"
+				? "Skipped — agent used best judgement"
+				: part.status === "interrupted"
+					? "Run stopped before an answer"
+					: "Question was not answered";
+	const answer = Array.isArray(part.answer) ? part.answer.join(" · ") : part.answer;
+	return (
+		<div className={`oa-clarify-summary is-${part.status}`}>
+			<div className="oa-clarify-summary-head"><span>Question</span><span>{status}</span></div>
+			<div className="oa-clarify-summary-question">{part.question}</div>
+			{part.choices?.length ? <div className="oa-clarify-summary-choices">Choices: {part.choices.join(" · ")}</div> : null}
+			{answer ? <div className="oa-clarify-summary-answer">Answer: {answer}</div> : null}
+		</div>
+	);
+}
+
 function approvalKindLabel(kind: ApprovalRequest["kind"]): string {
 	switch (kind) {
 		case "persistent-write":
@@ -604,6 +625,8 @@ export function ChatApp(props: ChatAppProps) {
 	   card — same machinery class as the approval card (pending promise
 	   resolved by a click), mutually exclusive with it in practice */
 		const [clarify, setClarify] = useState<{
+			clarifyId: string;
+			turnId: string;
 			req: ClarifyRequest;
 			resolve: (a: ClarifyAnswer) => void;
 			workspacePolicy: WorkspacePolicy;
@@ -1858,12 +1881,16 @@ export function ChatApp(props: ChatAppProps) {
 		/* Interactive tool promises must resolve as well as abort; otherwise a
 		   scope reset can leave the old loop parked forever behind a removed card. */
 		approvalRef.current?.resolve("deny");
-		clarifyRef.current?.resolve("");
+		const pendingClarify = clarifyRef.current;
+		if (pendingClarify) {
+			patchTurn(pendingClarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === pendingClarify.clarifyId ? { ...p, status: "interrupted" } : p));
+			pendingClarify.resolve("");
+		}
 		approvalRef.current = null;
 		clarifyRef.current = null;
 		setApproval(null);
 		setClarify(null);
-	}, []);
+	}, [patchTurn]);
 
 	/* explicit user halt (■ button, Interrupt action, /stop): park the queue
 	   too — desktop: an explicit Stop holds queued turns back until a resume
@@ -2808,7 +2835,12 @@ nudgeCounterRef.current = 0;
 								return;
 							}
 								props.onNotification?.({ kind: "inputRequired", contextId: runSessionId });
-								const pendingClarify = { req, resolve, workspacePolicy };
+								const clarifyId = `clarify-${Date.now().toString(36)}`;
+								patchTurn(aid, (parts) => [
+									...parts,
+									{ kind: "clarify", clarifyId, question: req.question, choices: req.choices, multiSelect: req.multiSelect, status: "pending" },
+								]);
+								const pendingClarify = { clarifyId, turnId: aid, req, resolve, workspacePolicy };
 								clarifyRef.current = pendingClarify;
 								setClarify(pendingClarify);
 						}),
@@ -4574,9 +4606,11 @@ nudgeCounterRef.current = 0;
 							(last.parts as TurnPart[]).push(part);
 						} else if (part.kind === "reasoning") {
 							blocks.push({ kind: "reasoning", parts: [part] });
-					} else if (part.kind === "tool") {
-						blocks.push({ kind: "tool", parts: [part] });
-					} else if (part.kind === "marker") {
+						} else if (part.kind === "tool") {
+							blocks.push({ kind: "tool", parts: [part] });
+						} else if (part.kind === "clarify") {
+							blocks.push({ kind: "clarify", parts: [part] });
+						} else if (part.kind === "marker") {
 						blocks.push({ kind: "marker", parts: [part] });
 					} else {
 						blocks.push({ kind: "text", parts: [part] });
@@ -4731,6 +4765,11 @@ nudgeCounterRef.current = 0;
 									</div>
 								);
 							}
+							if (block.kind === "clarify" && turn.role === "assistant") {
+								return block.parts.map((p) =>
+									clarify?.clarifyId === p.clarifyId && clarify.turnId === turn.id ? null : <ClarifySummary key={p.clarifyId} part={p} />
+								);
+							}
 							if (block.kind === "marker") {
 								return (
 									<div key={`${turn.id}-marker-${bi}`} className="oa-turn-marker">
@@ -4842,10 +4881,12 @@ nudgeCounterRef.current = 0;
 							req={clarify.req}
 								onAnswer={(a) => {
 									if (!pickerPolicyIsCurrent(clarify.workspacePolicy)) {
+										patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "interrupted" } : p));
 										clarify.resolve("");
 										setClarify(null);
 										return;
 									}
+									patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "answered", answer: a } : p));
 									clarify.resolve(a);
 									setClarify(null);
 								}}
@@ -4853,12 +4894,15 @@ nudgeCounterRef.current = 0;
 							   auto-skip — an Obsidian chat is not a terminal
 							   with a 120s egg-timer on it) */
 								onSkip={() => {
+									const skipped = "The user skipped this question. Use your best judgement to make the choice and proceed.";
 									if (!pickerPolicyIsCurrent(clarify.workspacePolicy)) {
+										patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "interrupted" } : p));
 										clarify.resolve("");
 										setClarify(null);
 										return;
 									}
-									clarify.resolve("The user skipped this question. Use your best judgement to make the choice and proceed.");
+									patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "skipped", answer: skipped } : p));
+									clarify.resolve(skipped);
 									setClarify(null);
 								}}
 						/>

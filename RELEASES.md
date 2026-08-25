@@ -20,6 +20,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 - **Conversations are safer and easier to use.** Session rows are keyboard-selectable, row actions appear on focus as well as hover, and deleting a saved chat now requires confirmation.
 - **Interactive run ownership is narrower.** `AgentRunner` now creates the interactive loop and scoped context; ChatApp receives a small run/steer handle while keeping UI callbacks and presentation.
 - **Memory routing is stricter.** USER.md now accepts stable user facts only; MEMORY.md accepts reusable environment/project lessons; unmistakable dated tool/test/session activity is rejected from both stores and stays in session history.
+- **Clarify questions survive history.** Questions, choices, answers, skips, and interruptions now persist as read-only chat summaries; opening history never silently resumes an old agent loop.
 
 ---
 

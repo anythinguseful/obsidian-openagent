@@ -1198,6 +1198,9 @@ export async function buildRealFrames({ shots = true } = {}) {
 		const multiOk = (byQ("Kategori mana")?.user_response ?? []).join(",") === "meeting,ide,inbox juga" &&
 			(byQ("Kategori mana")?.choices_offered ?? []).join(",") === "meeting,ide,bacaan";
 		const skipOk = (byQ("Konfirmasi terakhir")?.user_response ?? "").includes("Use your best judgement");
+		const summariesOk = (r.summaries ?? []).length === 4 &&
+			(r.summaries ?? []).some((s) => s.includes("Folder mana") && s.includes("Answer: Projects")) &&
+			(r.summaries ?? []).some((s) => s.includes("Konfirmasi terakhir") && s.includes("Skipped"));
 		const cardsOk =
 			r.got1 === true && r.got2 === true && r.got3 === true && r.got4 === true &&
 			(r.cardQ ?? []).join("|").includes("Folder mana") &&
@@ -1208,7 +1211,7 @@ export async function buildRealFrames({ shots = true } = {}) {
 			(r.s1Choices ?? []).some((c) => c.includes("Other (type your answer)")) &&
 			r.typed2 === true && r.typed3 === true &&
 			r.finishSeen === true;
-		if (!singleOk || !openOk || !multiOk || !skipOk || !cardsOk) {
+		if (!singleOk || !openOk || !multiOk || !skipOk || !cardsOk || !summariesOk) {
 			throw new Error(`clfy check failed: ${raw}`);
 		}
 		console.log("  [clfy] single pick rides the wire ✓ · open-ended ✓ · multi+Other list ✓ · skip=best-judgement ✓ · cards progress per question ✓");

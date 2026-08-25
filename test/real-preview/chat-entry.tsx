@@ -3485,6 +3485,7 @@ async function mount(): Promise<void> {
 			}
 		}
 		const bubbles = [...document.querySelectorAll(".oa-msg-assistant")].map((b) => b.textContent ?? "");
+		const summaries = [...document.querySelectorAll(".oa-clarify-summary")].map((el) => el.textContent ?? "");
 		window.__oaClfyCheck = JSON.stringify({
 			got1,
 			got2,
@@ -3495,6 +3496,7 @@ async function mount(): Promise<void> {
 			typed2,
 			typed3,
 			answers,
+			summaries,
 			finishSeen: bubbles.some((b) => b.includes("SIP-SELESAI")),
 		});
 		window.__oaReady = true;
