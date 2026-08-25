@@ -28,7 +28,7 @@ perbaikan cara dokumentasi proyek Open Agent.
 | Dua lapis docs: user vs agent | `docs/` (user-facing) terpisah dari `designdocs/` (agent/dev-facing) | ⏳ Kandidat ① — kita hanya punya satu lapis `docs/` |
 | Hub `docs/index.md` + routing | `docs/index.md` = hub berkelompok topik, setiap file sesuai topiknya | ✅ Sudah mirip (`docs/README.md`) — beda gaya pengelompokan |
 | **DOCS_GUIDE.md** | Aturan eksplisit "kapan & bagaimana update docs saat mengubah perilaku user-facing" | ⏳ Kandidat ② — kita belum punya aturan ini tertulis |
-| `AGENTS.md` + tabel routing | Instruksi agent satu pintu + tabel "When you're… → Read" ke guide spesifik | ⏳ Kandidat ③ — kita pakai `skills/`, tanpa tabel routing |
+| `AGENTS.md` + tabel routing | Instruksi agent satu pintu + tabel "When you're… → Read" ke guide spesifik | ⏳ Kandidat ③ — kita pakai `agents/skills/`, tanpa tabel routing |
 | Guide per-aktivitas (`designdocs/agents/`) | STYLE / TESTING / PLUGIN_DEV / VENDOR / PROCESS / DOCS guide | ⏳ Kandidat ④ — sebagian konsepnya ada di skills/lessons, belum terpilah |
 | Format plan terarsip | `docs/plans/archive/*.md` dengan frontmatter `title/session/revision/status/created` + Summary/Contract/Decisions/Impact/Phases/Risks/Open Questions/Interview | ⏳ Kandidat ⑤ — format plan kita beda |
 | Changelog satu file | `RELEASES.md` kronologis terbalik, tiap rilis: ringkasan + bullet bertema + daftar PR | ⏳ Kandidat ⑥ — kita pakai final-report per rilis di `releases/` |
@@ -288,7 +288,7 @@ Urutan nilai terbesar → terkecil, menunggu keputusan owner:
 
 Yang **tidak** disarankan ditiru: pemisahan total `docs/` vs `designdocs/`
 (mengubah struktur vault kita yang sudah binding di Lesson 118), dan `AGENTS.md`
-penuh (kita sudah punya `skills/` + working-agreement sebagai kontrak).
+penuh (kita sudah punya `agents/skills/` + working-agreement sebagai kontrak).
 
 ---
 

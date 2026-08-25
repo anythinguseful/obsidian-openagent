@@ -28,8 +28,8 @@ visual availability of row actions.
 
 ## Method and limits
 
-- Read `skills/internal/openagent-ui/SKILL.md` (binding visual contract),
-  `skills/internal/functional-ui/SKILL.md` (functional hierarchy), and the
+- Read `agents/skills/internal/openagent-ui/SKILL.md` (binding visual contract),
+  `agents/skills/internal/functional-ui/SKILL.md` (functional hierarchy), and the
   current Vercel Web Interface Guidelines source on 2026-08-25.
 - Inspected the current markup and CSS for Settings sections, MCP/Skills/Cron
   objects, the conversations panel, tool cards, changed-files cards, system

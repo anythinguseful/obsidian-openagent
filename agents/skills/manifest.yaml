@@ -1,6 +1,6 @@
 version: 2
 purpose: Development skills for agents maintaining the Open Agent repository.
-canonical_root: skills
+canonical_root: agents/skills
 installation: >-
   Arena does not auto-install this directory. AGENTS.md routes agents to the
   tracked skills. Vendor payloads are pinned source snapshots, not live pulls.
@@ -10,63 +10,63 @@ precedence:
   - Vendor skills
 internal:
   - name: openagent-ui
-    path: skills/internal/openagent-ui/SKILL.md
+    path: agents/skills/internal/openagent-ui/SKILL.md
     role: binding-project-contract
     required_for: [ui, css, visual, interface-copy]
   - name: functional-ui
-    path: skills/internal/functional-ui/SKILL.md
+    path: agents/skills/internal/functional-ui/SKILL.md
     role: functional-surface-layout
     required_for: [chat, settings, dashboard, status-surface]
   - name: openagent-docs
-    path: skills/internal/openagent-docs/SKILL.md
+    path: agents/skills/internal/openagent-docs/SKILL.md
     role: binding-project-documentation-contract
     required_for: [project-documentation, audit-record, refactor-plan, release-documentation]
 vendor:
   - name: frontend-design
-    path: skills/vendor/anthropics/frontend-design/SKILL.md
+    path: agents/skills/vendor/anthropics/frontend-design/SKILL.md
     upstream: anthropics/skills
     commit: 3b3fad96af16a10759d930941b4520ba0c40edae
     required_for: [ui-design]
   - name: skill-creator
-    path: skills/vendor/anthropics/skill-creator/SKILL.md
+    path: agents/skills/vendor/anthropics/skill-creator/SKILL.md
     upstream: anthropics/skills
     commit: 3b3fad96af16a10759d930941b4520ba0c40edae
     required_for: [create-internal-skill, update-agent-workflow, skill-evaluation]
   - name: doc-coauthoring
-    path: skills/vendor/anthropics/doc-coauthoring/SKILL.md
+    path: agents/skills/vendor/anthropics/doc-coauthoring/SKILL.md
     upstream: anthropics/skills
     commit: 3b3fad96af16a10759d930941b4520ba0c40edae
     required_for: [substantial-documentation, technical-spec, decision-document]
   - name: webapp-testing
-    path: skills/vendor/anthropics/webapp-testing/SKILL.md
+    path: agents/skills/vendor/anthropics/webapp-testing/SKILL.md
     upstream: anthropics/skills
     commit: 3b3fad96af16a10759d930941b4520ba0c40edae
     required_for: [local-webapp-testing]
   - name: handoff
-    path: skills/vendor/mattpocock/handoff/SKILL.md
+    path: agents/skills/vendor/mattpocock/handoff/SKILL.md
     upstream: mattpocock/skills
     commit: 5b15a47f2d7150f545fbcacbfe381787fc0230dc
     required_for: [session-handoff]
     adapter: agents/arena/workflows/handoff.md
   - name: tdd
-    path: skills/vendor/mattpocock/tdd/SKILL.md
+    path: agents/skills/vendor/mattpocock/tdd/SKILL.md
     upstream: mattpocock/skills
     commit: 5b15a47f2d7150f545fbcacbfe381787fc0230dc
     required_for: [test-first-development, regression-fix]
     adapter: agents/arena/workflows/tdd.md
   - name: diagnosing-bugs
-    path: skills/vendor/mattpocock/diagnosing-bugs/SKILL.md
+    path: agents/skills/vendor/mattpocock/diagnosing-bugs/SKILL.md
     upstream: mattpocock/skills
     commit: 5b15a47f2d7150f545fbcacbfe381787fc0230dc
     required_for: [bug-diagnosis, performance-diagnosis]
     adapter: agents/arena/workflows/diagnosing-bugs.md
   - name: web-design-guidelines
-    path: skills/vendor/vercel/web-design-guidelines/SKILL.md
+    path: agents/skills/vendor/vercel/web-design-guidelines/SKILL.md
     upstream: vercel-labs/agent-skills
     commit: dd089a8c752c966dee8bf0f27cb625ba193ffd9e
     required_for: [ui-audit, accessibility-review]
   - name: writing-guidelines
-    path: skills/vendor/vercel/writing-guidelines/SKILL.md
+    path: agents/skills/vendor/vercel/writing-guidelines/SKILL.md
     upstream: vercel-labs/agent-skills
     commit: dd089a8c752c966dee8bf0f27cb625ba193ffd9e
     required_for: [docs-review, prose-review]

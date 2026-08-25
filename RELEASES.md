@@ -8,6 +8,16 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.155 — Development skills live under agents/
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Development skills moved.** The tracked agent-skill tree is now `agents/skills/` (sibling of `agents/arena/`), so agent workflow and skills sit in one place.
+- **Runtime vault skills are unchanged.** `openagent/openagent-skills/` and Hub installs still live in the vault. Plugin behavior is the same.
+- **Routing follows the folder.** `AGENTS.md`, `check:skills`, and the working-agreement table now point at `agents/skills/`. A root `skills/` folder is treated as a regression.
+
+---
+
 # Open Agent v0.1.154 — Restore Settings from before grouping
 
 **Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.

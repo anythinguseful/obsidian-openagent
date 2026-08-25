@@ -19,18 +19,18 @@ files.
 
 ## Adopted
 
-- **New workspace skill `skills/internal/functional-ui/`** (outside this repo, indexed
-  in `skills/README.md`): arrangement-first design, density budget,
+- **New workspace skill `agents/skills/internal/functional-ui/`** (outside this repo, indexed
+  in `agents/skills/README.md`): arrangement-first design, density budget,
   one-loud-thing, states-as-layout, narrow-first discipline (our equivalent
   of the video's mobile section — the Obsidian side pane is ~280 px),
   functional-only motion. This is the video's dashboard-skill idea adapted to
   our chat pane + settings tab. Provenance: distilled from the transcript;
   the upstream repo the video cited (bergside/awesome-design-skills
   skills/dashboard) returned 404 at fetch time, so nothing was copied.
-- `skills/internal/openagent-ui/SKILL.md` working ritual now pairs with it
+- `agents/skills/internal/openagent-ui/SKILL.md` working ritual now pairs with it
   (arrangement before styling).
-- `skills/vendor/anthropics/frontend-design/` (Anthropic, Apache-2.0) and
-  `skills/vendor/vercel/web-design-guidelines/` (Vercel) were already vendored and already
+- `agents/skills/vendor/anthropics/frontend-design/` (Anthropic, Apache-2.0) and
+  `agents/skills/vendor/vercel/web-design-guidelines/` (Vercel) were already vendored and already
   cover direction + audit.
 
 ## Skipped — with reasons

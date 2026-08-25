@@ -2,7 +2,7 @@
  * Development-skill integrity gate.
  *
  * The project keeps portable agent instructions in AGENTS.md, project-owned
- * skills in skills/internal/, and reviewed upstream snapshots in skills/vendor/.
+ * skills in agents/skills/internal/, and reviewed upstream snapshots in agents/skills/vendor/.
  * This checker validates the graph without adding a YAML dependency.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -60,11 +60,11 @@ function parseManifest(text) {
 }
 
 check(isProjectFile("AGENTS.md"), "AGENTS.md exists at the repository root", "AGENTS.md is missing from the repository root");
-check(isProjectFile("skills/README.md"), "skills registry README exists", "skills/README.md is missing");
-check(isProjectFile("skills/manifest.yaml"), "machine-readable skills manifest exists", "skills/manifest.yaml is missing");
+check(isProjectFile("agents/skills/README.md"), "skills registry README exists", "agents/skills/README.md is missing");
+check(isProjectFile("agents/skills/manifest.yaml"), "machine-readable skills manifest exists", "agents/skills/manifest.yaml is missing");
 check(isProjectFile("agents/arena/README.md"), "Arena workflow guide exists", "agents/arena/README.md is missing");
 
-const manifestText = isProjectFile("skills/manifest.yaml") ? read("skills/manifest.yaml") : "";
+const manifestText = isProjectFile("agents/skills/manifest.yaml") ? read("agents/skills/manifest.yaml") : "";
 const entries = parseManifest(manifestText);
 const names = new Set(entries.map((entry) => entry.name));
 check(entries.length >= 7, `skills manifest declares ${entries.length} skills`, "skills manifest has too few declared skills");
@@ -85,13 +85,16 @@ for (const entry of entries) {
 	if (entry.upstream) {
 		check(/^[a-z0-9-]+\/[a-z0-9-]+$/i.test(entry.upstream), `${entry.name} records an upstream repository`, `${entry.name} has invalid upstream identifier: ${entry.upstream}`);
 		check(/^[0-9a-f]{40}$/i.test(entry.commit ?? ""), `${entry.name} pins a 40-character commit SHA`, `${entry.name} lacks a pinned 40-character upstream commit`);
-		const vendor = entry.path.split("/").slice(0, 3).join("/");
+		const parts = entry.path.split("/");
+		const vendorIdx = parts.indexOf("vendor");
+		const vendor = vendorIdx >= 0 ? parts.slice(0, vendorIdx + 2).join("/") : "";
 		check(isProjectFile(`${vendor}/UPSTREAM.md`), `${entry.name} vendor provenance exists`, `${entry.name} is missing ${vendor}/UPSTREAM.md`);
 	}
 	if (entry.adapter) check(isProjectFile(entry.adapter), `${entry.name} adapter exists`, `${entry.name} adapter missing: ${entry.adapter}`);
 }
 
-const actualSkills = collectSkillFiles(abs("skills"));
+check(!existsSync(abs("skills")), "root skills/ is gone — development skills live under agents/skills/", "root skills/ still exists; move it to agents/skills/");
+const actualSkills = collectSkillFiles(abs("agents/skills"));
 const missingManifest = actualSkills.filter((path) => !declaredPaths.has(path));
 const missingFiles = [...declaredPaths].filter((path) => !actualSkills.includes(path));
 check(missingManifest.length === 0, "every tracked SKILL.md is declared in the manifest", `SKILL.md files missing from manifest: ${missingManifest.join(", ")}`);
@@ -116,11 +119,11 @@ check(required.every((name) => names.has(name)), "required internal and approved
 const agents = isProjectFile("AGENTS.md") ? read("AGENTS.md") : "";
 for (const needle of [
 	"docs/working-agreement.md",
-	"skills/README.md",
-	"skills/internal/openagent-ui/SKILL.md",
-	"skills/vendor/mattpocock/handoff/SKILL.md",
-	"skills/vendor/mattpocock/tdd/SKILL.md",
-	"skills/vendor/mattpocock/diagnosing-bugs/SKILL.md",
+	"agents/skills/README.md",
+	"agents/skills/internal/openagent-ui/SKILL.md",
+	"agents/skills/vendor/mattpocock/handoff/SKILL.md",
+	"agents/skills/vendor/mattpocock/tdd/SKILL.md",
+	"agents/skills/vendor/mattpocock/diagnosing-bugs/SKILL.md",
 ]) check(agents.includes(needle), `AGENTS.md routes ${needle}`, `AGENTS.md does not route ${needle}`);
 check(agents.includes("Do not create `.arena/`"), "AGENTS.md rejects the non-persistent .arena directory", "AGENTS.md does not reject .arena/ explicitly");
 

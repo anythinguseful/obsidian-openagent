@@ -7,4 +7,4 @@
 - License: MIT, as declared by the upstream repository README.
 
 Do not edit upstream `SKILL.md` files in place. Refresh from a reviewed upstream
-commit, record the new SHA here, then update `skills/manifest.yaml`.
+commit, record the new SHA here, then update `agents/skills/manifest.yaml`.

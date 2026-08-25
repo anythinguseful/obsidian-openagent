@@ -91,7 +91,7 @@ Update current retention wording in:
 - `RELEASES.md`;
 - `CONTRIBUTING.md`;
 - `agents/arena/workflows/release.md`;
-- `skills/internal/openagent-docs/SKILL.md` and its release checklist;
+- `agents/skills/internal/openagent-docs/SKILL.md` and its release checklist;
 - `docs/README.md`;
 - current binding sections of `docs/working-agreement.md`.
 

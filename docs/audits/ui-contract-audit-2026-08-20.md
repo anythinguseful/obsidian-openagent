@@ -11,7 +11,7 @@ tags: [openagent, ui, audit, contract]
 ## Summary
 
 A bug-bounty style sweep of the binding UI contract
-(`skills/internal/openagent-ui/SKILL.md`, incl. the 2026-08-20 anti-breakage rules)
+(`agents/skills/internal/openagent-ui/SKILL.md`, incl. the 2026-08-20 anti-breakage rules)
 against the real codebase. Every check is evidence-based (grep + real-DOM
 measurement where relevant). Verdict: **no critical violations** — the contract
 is implemented. Three low-severity warns and one contract over-promise were

@@ -926,7 +926,7 @@ module.exports = function chatGuards() {
 			mtest125.includes("class-sebelum + kurung → class-sesudah + terkutip") &&
 			ttest125.includes("write_note sanitize fence mermaid saat create") &&
 			ttest125.includes("raw 'PS' crash shape tidak lolos ke vault") &&
-			read("manifest.json").includes('"version": "0.1.154"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.125: write_note mensanitasi fence mermaid (note agent tampil di editor) · class-::: direorder · saksi unit tools+markdown menjaga");
 		} else {
@@ -950,7 +950,7 @@ module.exports = function chatGuards() {
 			ic.length < 4500 && // file 63 baris ~3k-an; regresi tambahan ikon mati terdeteksi
 			!goals.includes("GOAL_JUDGE_SNIPPET_CHARS") &&
 			goals.includes("GOAL_MAX_TURNS") && // saudara hidup tak ikut terhapus
-			read("manifest.json").includes('"version": "0.1.154"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.129: ikon mati + konstanta goals yatim dibersihkan · BrainIcon park · RotateCcw live (SidebarIcon pensiun) · sibling hidup utuh");
 		} else {

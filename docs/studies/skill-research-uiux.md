@@ -131,7 +131,7 @@ Tiga kebutuhan berbeda jangan dicampur jadi satu skill:
 
 ## LIVE SET (2026-08-06) — di sinilah skill dev-ku berdiri
 
-Foldernya: `skills/` (BUKAN ~/.claude/... — jalan lama basi,
+Foldernya: `agents/skills/` (BUKAN ~/.claude/... — jalan lama basi,
 working-agreement sudah dibetulkan). Isi: `openagent-ui` (kontrak binding
 + kini seksi Anti-slop fingerprints kalibrasi 2026-08-06), `frontend-design`
 (revisi clarity upstream + LICENSE.txt), `functional-ui` (distilasi surface

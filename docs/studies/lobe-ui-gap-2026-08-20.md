@@ -101,7 +101,7 @@ Menu/DropdownMenu/ContextMenu (popover + menu konteks editor) · Snippet
 
 | lobe-ui | Alasan |
 |---|---|
-| EmojiPicker · FluentEmoji | `skills/internal/openagent-ui/SKILL.md` larang emoji di UI produksi |
+| EmojiPicker · FluentEmoji | `agents/skills/internal/openagent-ui/SKILL.md` larang emoji di UI produksi |
 | ThemeSwitch · ThemeProvider · ConfigProvider · MotionProvider | tema = milik Obsidian (kontrak `var(--*)`), tidak boleh ditimpa |
 | Input · Select · Checkbox · Radio · Switch · AutoComplete · DatePicker | `Setting` Obsidian sudah menyediakan form-control resmi |
 | Modal · Form · FormModal · Drawer · Popover | `Modal` Obsidian + `Setting` |

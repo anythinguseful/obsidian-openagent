@@ -147,7 +147,7 @@ module.exports = async function miscGuards() {
 			!cfg.includes("es.drop") && !cfg.includes("\tdrop:") && // jalur debugMode menjaga console.* nya — opsi pelempar-log tak boleh masuk
 			size > 100000 &&
 			size < 1200000 && // v0.1.145 Workspace enforcement adds policy/provenance guards; keep the minified bundle below 1.2 MB
-			read("manifest.json").includes('"version": "0.1.154"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.128: production minify aktif · main.js terjepit < 2,3 MB (dry-run 1,93 MB dari 5,40 MB) · console debugMode tidak di-drop");
 		} else {
@@ -167,7 +167,7 @@ module.exports = async function miscGuards() {
 			css.includes("QUICK ASK FIELD RESET") && // komentar sumber bertahan = repo styles.css TIDAK ikut terminify
 			css.includes(".oa-selbar .oa-selbar-btn {") && // aturan selbar asli tetap di selector nyata (v0.1.102)
 			css.includes("\n") && // layout multi-baris utuh
-			read("manifest.json").includes('"version": "0.1.154"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.131: styles.css zip-only minify + sentinel verify · repo tetap readable · audit CSS 43/43 tuntas false-positive");
 		} else {
@@ -674,6 +674,30 @@ module.exports = async function miscGuards() {
 			console.log(`\u2713 v0.1.201 static: ${srcFiles.length} source files scanned, no discarded settings-write promise left (await-in-callback, void, or .then without .catch \u2014 use saveSettingsSafe)`);
 		} else {
 			console.error(`\u2717 v0.1.201 discarded settings-save promise (files=${srcFiles.length}): ${offenders.join(", ")}`);
+			failed++;
+		}
+	}
+
+	{
+		// v0.1.155: development skills live under agents/skills/. Root
+		// skills/ is gone. Absence + routing pins so the old folder cannot
+		// return without breaking the gate. Vault runtime skills are a
+		// different tree and are not asserted here.
+		const agents = read("AGENTS.md");
+		const gate = read("scripts/check-skills.mjs");
+		const manifest = read("agents/skills/manifest.yaml");
+		const ok =
+			read("manifest.json").includes('"version": "0.1.155"') &&
+			agents.includes("agents/skills/README.md") &&
+			agents.includes("agents/skills/internal/openagent-ui/SKILL.md") &&
+			!agents.includes("](skills/README.md)") &&
+			gate.includes('collectSkillFiles(abs("agents/skills"))') &&
+			gate.includes('!existsSync(abs("skills"))') &&
+			manifest.includes("canonical_root: agents/skills");
+		if (ok) {
+			console.log("✓ v0.1.155: development skills live under agents/skills — root skills/ gone");
+		} else {
+			console.error("✗ v0.1.155 development-skills move drifted");
 			failed++;
 		}
 	}
