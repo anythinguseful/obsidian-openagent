@@ -1,6 +1,6 @@
 # Arena Handoff Workflow
 
-Use the pinned vendor skill `skills/vendor/mattpocock/handoff/SKILL.md` for the
+Use the pinned vendor skill `agents/skills/vendor/mattpocock/handoff/SKILL.md` for the
 content contract, with these Arena-specific overrides.
 
 ## Persistent destination
@@ -21,7 +21,7 @@ snapshot. It is a session bridge, not durable product documentation.
 - Next smallest safe action.
 - Exact paths to plans, audits, release artifacts, and evidence instead of
   duplicating their contents.
-- Suggested skills selected from `skills/manifest.yaml`.
+- Suggested skills selected from `agents/skills/manifest.yaml`.
 - Commands already run and their result.
 - Redact secrets, API keys, tokens, credentials, and personal data.
 

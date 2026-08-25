@@ -28,8 +28,8 @@ visual availability of row actions.
 
 ## Method and limits
 
-- Read `skills/internal/openagent-ui/SKILL.md` (binding visual contract),
-  `skills/internal/functional-ui/SKILL.md` (functional hierarchy), and the
+- Read `agents/skills/internal/openagent-ui/SKILL.md` (binding visual contract),
+  `agents/skills/internal/functional-ui/SKILL.md` (functional hierarchy), and the
   current Vercel Web Interface Guidelines source on 2026-08-25.
 - Inspected the current markup and CSS for Settings sections, MCP/Skills/Cron
   objects, the conversations panel, tool cards, changed-files cards, system
@@ -137,7 +137,9 @@ error detail remaining attached to its owning row.
 
 ### F4 — Settings grouping should be audited by density, not by decoration
 
-**Status: visual-system follow-up.**
+**Status: grouping shells shipped then reverted (v0.1.154).** The follow-up
+plan boxed every named subsection. Owner review: Settings felt destroyed
+(cards inside cards). Restore native rows + spacing; keep MCP object cards.
 
 The source already uses spacing for group breaks and cards for compound objects.
 The remaining aesthetic question is whether a particular **dense** Settings tab
@@ -168,9 +170,10 @@ specific group boundary.
 
 ## Next action
 
-The Settings grouping and consecutive-tool findings are resolved. Before a
-future aesthetic change, capture a dense transcript that combines changed files,
-system notice, and approval alongside tool activity, or capture the dense
-Settings frames listed in F4. Compare them at the same viewport in light and
-dark themes, then choose one narrow, evidence-backed direction rather than a
-generic "card + row + divider" treatment.
+Settings grouping shells shipped in v0.1.153 and were reverted in v0.1.154 —
+do not reintroduce `.oa-settings-group`. Chat tool-activity grouping stays.
+Before a future aesthetic change, capture a dense transcript that combines
+changed files, system notice, and approval alongside tool activity, or capture
+the dense Settings frames listed in F4. Compare them at the same viewport in
+light and dark themes, then choose one narrow, evidence-backed direction
+rather than a generic "card + row + divider" treatment.

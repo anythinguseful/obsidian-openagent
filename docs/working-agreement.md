@@ -9,13 +9,13 @@ tags: [openagent, process]
 # Open Agent — Working Agreement
 
 Standing instruction dari owner (2026-07-21). **Binding** untuk semua sesi.
-Dibaca bersama set skill UI dev di `skills/` — `openagent-ui`
+Dibaca bersama set skill UI dev di `agents/skills/` — `openagent-ui`
 (kontrak binding, MENANG atas saran skill lain), `frontend-design` (arah
 estetika; salinan = revisi clarity upstream), `functional-ui` (susunan
 surface fungsional), `web-design-guidelines` (audit a11y/UX; salinan
 reference/ identik upstream per 2026-08-06). Jalan lama
 `~/.claude/skills/…` TIDAK dipakai lagi (diverifikasi 2026-08-06) — semua
-skill kini di `skills/`.
+skill kini di `agents/skills/`.
 
 ## Gaya komunikasi (feedback owner 2026-07-21)
 
@@ -71,7 +71,7 @@ apa pun — audit dulu, implementasi belakangan:
 2. **Verifikasi artefak handoff kunci.** Cek keberadaan: `.github/workflows/ci.yml`,
    `scripts/check-docs.mjs`, `package.json` script `check:docs`, README
    "21 tools in 9 toggleable toolsets", `docs/working-agreement.md`
-   "Bootstrap sesi GitHub" + Lesson 117, dan `skills/internal/openagent-ui/SKILL.md`
+   "Bootstrap sesi GitHub" + Lesson 117, dan `agents/skills/internal/openagent-ui/SKILL.md`
    menunjuk `preview/index.html`. Yang hilang = pekerjaan rekonstruksi.
 3. **Baca dokumen & skill binding.** `docs/working-agreement.md` (seluruh
    Lessons log, terutama 109+), lalu keempat SKILL.md
@@ -116,10 +116,10 @@ isi ke sini).
 
 | Kalau kerja… | Baca |
 |---|---|
-| UI / visual / CSS / copy plugin apa pun | `skills/internal/openagent-ui/SKILL.md` (KONTRAK — menang atas saran skill lain) |
-| Arah estetika (tipografi, layout, anti-"AI slop") | `skills/vendor/anthropics/frontend-design/SKILL.md` |
-| Susunan permukaan fungsional (chat, settings, dashboard) | `skills/internal/functional-ui/SKILL.md` |
-| Audit a11y/UX (fokus, form, animasi, tipografi) | `skills/vendor/vercel/web-design-guidelines/SKILL.md` |
+| UI / visual / CSS / copy plugin apa pun | `agents/skills/internal/openagent-ui/SKILL.md` (KONTRAK — menang atas saran skill lain) |
+| Arah estetika (tipografi, layout, anti-"AI slop") | `agents/skills/vendor/anthropics/frontend-design/SKILL.md` |
+| Susunan permukaan fungsional (chat, settings, dashboard) | `agents/skills/internal/functional-ui/SKILL.md` |
+| Audit a11y/UX (fokus, form, animasi, tipografi) | `agents/skills/vendor/vercel/web-design-guidelines/SKILL.md` |
 | Parity dengan upstream (prompt-kit, Hermes, Copilot, lobe-ui, shadcn) | `docs/reference/reference-sources.md` — **verify raw dulu** |
 | Batas Workspace (Whole/Preferred/Strict, symlink, read ceiling) | `docs/reference/workspace-security.md` |
 | Proses, prinsip owner, Lessons log, bootstrap GitHub | `docs/working-agreement.md` |
@@ -1344,7 +1344,7 @@ isi ke sini).
 - Owner meminta docs "lebih terstruktur dan profesional" dan proyek "dapat dibuka nantinya dengan Obsidian (khususnya docs)". Keputusan binding via ask_user: (1) grouping `plans/` · `studies/` · `audits/` · `reference/` (working-agreement + backlog tetap di root — path working-agreement di-pin check-docs), (2) bahasa English untuk hub & frontmatter (isi doc lama dibiarkan apa adanya).
 - Frontmatter WAJIB tiap note (`title`, `type`, `status`, `date`, `tags`) + hub `docs/README.md` wajib ada — dijaga check-docs (bootstrap check #12–13). Status frontmatter harus jujur (done/draft/active/archived) dan di-update saat plan ship/superseded.
 - Link internal = **relative markdown link** (`[x](subfolder/note.md)`), BUKAN wikilink `[[x]]`: repo ini publik di GitHub — wikilink tidak ter-render di GitHub, sedangkan relative link jalan di GitHub DAN Obsidian (Obsidian resolve relative link dari folder note-nya). Keputusan ini menyimpang dari kata "wikilink" di opsi ask_user; alasan: dual-compat GitHub+Obsidian.
-- Setiap move file docs = sapu referensi path ke file itu di SELURUH repo (docs lain, skills/, README, scripts, **test/**, **src/**, .github, esbuild.config) — termasuk penyebutan prose dalam backtick dan komentar kode, bukan cuma link. Yang lolos pada percobaan pertama: `read("docs/hermes-delegation-plan-…")` di smoke.test.cjs (gagal ENOENT saat `npm test`), lalu 17 komentar lain di src/, test/, esbuild.config.mjs. Dua jebakan pengukur: (a) sweep `| head` MEMOTONG daftar temuan (kelas lesson 27a — output ke file, jangan head); (b) sweep parsial pertama hanya menyapu docs/skills/README/scripts, bukan src/ + test/.
+- Setiap move file docs = sapu referensi path ke file itu di SELURUH repo (docs lain, agents/skills/, README, scripts, **test/**, **src/**, .github, esbuild.config) — termasuk penyebutan prose dalam backtick dan komentar kode, bukan cuma link. Yang lolos pada percobaan pertama: `read("docs/hermes-delegation-plan-…")` di smoke.test.cjs (gagal ENOENT saat `npm test`), lalu 17 komentar lain di src/, test/, esbuild.config.mjs. Dua jebakan pengukur: (a) sweep `| head` MEMOTONG daftar temuan (kelas lesson 27a — output ke file, jangan head); (b) sweep parsial pertama hanya menyapu docs/skills/README/scripts, bukan src/ + test/.
 
 ### 119. (2026-08-11) "Buat knowledge graph dengan Graphify" → owner batalkan setelah penilaian jujur: ukur kebutuhan SEBELUM bangun, dan Obsidian Graph view adalah knowledge graph gratis
 - Owner meminta integrasi Graphify (github.com/Graphify-Labs/graphify) untuk knowledge graph docs + update workflow. Studi terverifikasi dari source (venv `pip install graphifyy` v0.9.39, `docs/how-it-works.md`, `extractors/markdown.py`, `cli.py`): (1) kode = AST tree-sitter lokal tanpa key; (2) markdown/docs = Pass 3 LLM — CLI menolak tanpa key (`error: no LLM API key found`); (3) ekstraktor markdown DETERMINISTIK resmi ada (`extract_markdown`: file + heading + link antar-doc) dan bisa dipanggil lewat `graphify.extract.extract(md_files, root=docs)` → 308 nodes/322 edges id kanonik tanpa key; `graphify cluster-only <path> --no-label` → GRAPH_REPORT.md + graph.html + graph.json tanpa LLM. Jadi versi deterministik SAH dibuat tanpa key, tapi "Surprising Connections" jujur kosong (tanpa INFERRED edge).
@@ -1435,7 +1435,7 @@ isi ke sini).
 - D (kepanjangan, 10 desc): Checkpoints 160c→satu kalimat; Include API keys; Title generation; Context menu Quick Ask; Docker image; Memory Budget; Run a script; Script only; I understand Local (consent — dipangkas tapi makna keamanan utuh); Stop all owned processes.
 - E (konsistensi): Temperature `-1 = omit`→`don't send`; desc tab Advanced di-rescope ke isi aktualnya.
 - Guard v0.1.191 (smoke): ekstrak SETIAP literal setDesc → panjang (di luar ${...}) wajib ≤140 + larang token internal di string UI saja (komentar kode kebal — jebakan string-match yang menggigit komentar dihindari dengan regex ber-scope setDesc).
-- Voice rules tertulis di skills/internal/openagent-ui/SKILL.md ("use first, mechanism second"; ≤140c; default di akhir; larang nama internal; angka yang bisa drift di-pin test).
+- Voice rules tertulis di agents/skills/internal/openagent-ui/SKILL.md ("use first, mechanism second"; ≤140c; default di akhir; larang nama internal; angka yang bisa drift di-pin test).
 - Pin yang di-amend: copy band ("Switches back…" → "Resets to Off each time you open this tab.") + agent SECTION_DESC (baris 4868). Deskripsi baru diverifikasi jujur: toggle Include-API-keys memang selalu mulai Off tiap render; tombol notif test berubah "Send test" saat izin sudah granted → kata "may ask" dipertahankan.
 
 ### 175. (2026-08-22) Owner: "mau hidupkan kembali tab about" → tab About informasional + header menyisakan tagline pendek
@@ -1655,7 +1655,7 @@ isi ke sini).
 
 ### 137. (2026-08-20) Kontrak UI diperbarui atas permintaan owner: gaya SUDAH kuat, yang bolong = aturan anti-runtuh teknis. Lima kategori berulang dikodifikasi
 - Owner bertanya sebelum lanjut perbaikan: adakah rule UI/UX yang perlu diperbarui soal masalah yang sering bikin hasil collapse/hancur. Audit lessons 107/121/130/133–136 → lima kategori berulang: (1) wiring section (key tanpa case → tab kosong), (2) CSS kalah dari painter Obsidian (button:hover 0,1,1 vs .oa-* 0,1,0), (3) var() tanpa fallback, (4) guard pin ABSENSI makan nama kelas/komentar baru, (5) "done" diverifikasi via grep bukan render.
-- Ditambahkan seksi "Anti-breakage rules" di `skills/internal/openagent-ui/SKILL.md` (binding) + constraint #1 diubah: fallback `var()` jadi ABSOLUT untuk SEMUA var (bukan cuma status colors). Check-docs tetap hijau (pin preview/index.html + larangan test/preview*.html tak tersentuh).
+- Ditambahkan seksi "Anti-breakage rules" di `agents/skills/internal/openagent-ui/SKILL.md` (binding) + constraint #1 diubah: fallback `var()` jadi ABSOLUT untuk SEMUA var (bukan cuma status colors). Check-docs tetap hijau (pin preview/index.html + larangan test/preview*.html tak tersentuh).
 - Prinsip: aturan yang dimasukkan = yang bisa DIPERIKSA (komputasi spesifisitas, grep pin sebelum menamai kelas, bukti render nyata), bukan himbauan kosong. "Rapikan" tanpa kontrak anti-runtuh = akan hancur lagi dengan cara yang sama.
 
 ### 136. (2026-08-20) A8 swatch: "sudah setara" itu klaim setengah benar — kelas warna ADA tapi rapuh; owner benar, warnanya bisa tidak muncul. Fallback var() + selektor dua-kelas
@@ -2141,3 +2141,39 @@ it resolves. A history view renders this part read-only; it must not resurrect
 an old loop because its workspace, approvals, provider, and context are stale.
 Guard: the real-DOM clarify lane pins single/open/multi/skip envelopes plus four
 persisted summaries; switching/stopping marks a pending question interrupted.
+
+## Lesson 217 — (2026-08-26) A Settings group shell around every subsection is panelitis; the binding UI skill already forbade it
+
+Owner: Settings after v0.1.153 felt destroyed, hard to explain in words, and
+the request was to restore the page from before grouping. Pixel proof (Memory,
+General, Capabilities) showed the cause: native `.setting-item` rows were
+already cards, then `.oa-settings-group` boxed every named subsection around
+them — cards inside cards. Loose rows above the first heading stayed unboxed,
+so one page mixed floating rows and nested shells.
+
+The aesthetics audit F1 and openagent-ui anti-slop already said: do not wrap
+every Settings group in a card; separate with spacing first. Shipping the
+shells anyway was a skill-contract miss, not a missing visual language.
+
+Fix (v0.1.154): remove `groupSubsections()` and the group-shell CSS. MCP
+server cards stay (they are managed objects). Guards invert: smoke pins
+absence of the wrapper class; F49 now requires zero group shells and
+direct-child subsections. Do not re-skin Settings behind a "unify the system"
+story without owner greenlight on a real screenshot.
+
+## Lesson 218 — (2026-08-26) Development skills belong under agents/; vault skills do not move with them
+
+Owner: move `skills/` into `agents/`. That folder is the **development**
+skill tree for coding agents (`SKILL.md` contracts, vendor snapshots,
+`check:skills`). It is not the runtime skill library the plugin installs
+into a vault.
+
+A bulk path replace of `skills/vendor/` will also rewrite **upstream URLs**
+that happen to contain the same substring (anthropics/skills/main/skills/vendor/…).
+Sweep after the move: live routing yes; historical evidence checksums no;
+third-party URLs must stay byte-identical.
+
+Fix (v0.1.155): `git mv skills agents/skills`, retarget AGENTS.md /
+working-agreement / check-skills / check-docs. Guard: root `skills/` must
+not exist; `canonical_root` is `agents/skills`. Do not touch
+`src/agent/skills.ts` or `openagent/openagent-skills/`.

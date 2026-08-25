@@ -207,7 +207,7 @@ module.exports = function previewGuards() {
 			rp.includes("makeTinyPdf") &&
 			entry.includes("isImageLike") &&
 			entry.includes("isPdfLike") &&
-			manifest.includes('"version": "0.1.153"') &&
+			manifest.includes('"version": "0.1.155"') &&
 			/* sent-message attachment block (owner ask 2026-07-22): metadata
 			   persisted on the user turn, chips rendered in the bubble, E2E
 			   proves the block survives Send */
@@ -1408,7 +1408,7 @@ module.exports = function previewGuards() {
 			gates123.includes("attach hover netral") &&
 			gates123.includes("mermaidParenSalvage") &&
 			driver123.includes("mermaidParenSalvage") &&
-			read("manifest.json").includes('"version": "0.1.153"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.123: hover/is-open [+] tangga netral (tint aksen ala stop pergi) · label kurung mermaid terkutip sebelum lexer · saksi empty-hover+md menjaga");
 		} else {
@@ -1433,7 +1433,7 @@ module.exports = function previewGuards() {
 			gates124.includes("saveMermaidSalvage") &&
 			driver124.includes("saveMermaidSalvage") &&
 			driver124.includes("REPLY_SLASH2") &&
-			read("manifest.json").includes('"version": "0.1.153"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.124: /save mensanitasi fence mermaid sebelum masuk vault (crash 'PS' startup note render padam) · saksi slash2+unit menjaga");
 		} else {
@@ -1479,7 +1479,7 @@ module.exports = function previewGuards() {
 			bs.includes("probes.F34") &&
 			ut.includes("computeMarkdownEdit: mkEdit") &&
 			read("test/markdown-entry.ts").includes('from "../src/ui/markdown-keys"') &&
-			read("manifest.json").includes('"version": "0.1.153"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.127: chord kirim — bawaan Shift+Enter · Enter=baris baru sampai wire · Ctrl/Cmd+Enter selalu kirim · saksi driveKeys dua mode + F34 + unit mkEdit");
 		} else {
@@ -1521,7 +1521,7 @@ module.exports = function previewGuards() {
 			ent.includes('pluginDir: ".obsidian/plugins/openagent"') &&
 			app.includes("pdfWorker={props.pluginDir") &&
 			fu.includes("pdfWorker") &&
-			read("manifest.json").includes('"version": "0.1.153"');
+			read("manifest.json").includes('"version": "0.1.155"');
 		if (ok) {
 			console.log("✓ v0.1.130: pdf.worker eksternal (vendor file + blob Worker asli) · main.js menyusut ✓ · seller rilis/lane komplit");
 		} else {

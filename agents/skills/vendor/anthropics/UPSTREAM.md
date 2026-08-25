@@ -8,4 +8,4 @@
 
 Do not edit upstream `SKILL.md`, `LICENSE.txt`, `scripts/`, or `examples/` in
 place. Refresh from a reviewed upstream commit, record the new SHA here, then
-update `skills/manifest.yaml`.
+update `agents/skills/manifest.yaml`.

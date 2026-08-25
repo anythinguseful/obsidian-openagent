@@ -1,6 +1,6 @@
 {
 	"name": "openagent",
-	"version": "0.1.153",
+	"version": "0.1.155",
 	"description": "A self-improving AI agent for Obsidian. Hermes-inspired agent loop, Hermes Desktop-inspired settings, prompt-kit UI.",
 	"main": "main.js",
 	"scripts": {

@@ -86,7 +86,7 @@ already provided proof. The owner approved it, and it shipped.
 **Status: done**
 
 - Root `AGENTS.md` routes all work to contracts and skills.
-- Internal and vendor skills are separated under `skills/`.
+- Internal and vendor skills are separated under `agents/skills/`.
 - `check:skills` validates discovery, manifest, provenance, adapter, and
   handoff contracts.
 - Relevant vendor skills are pinned and adapted for Arena without pretending

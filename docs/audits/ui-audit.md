@@ -9,7 +9,7 @@ tags: [openagent, ui, audit]
 # UI Audit — 2026-07-19
 
 Dilakukan dengan skill **`web-design-guidelines`** (Vercel, vendored di
-`skills/vendor/vercel/web-design-guidelines/reference/`) di atas scope UI produksi
+`agents/skills/vendor/vercel/web-design-guidelines/reference/`) di atas scope UI produksi
 (`styles.css`, `src/settingsTab.ts`, `src/ui/ChatApp.tsx`, `src/ui/components/*`,
 `src/main.ts`), dalam batas kontrak **`openagent-ui`**. Obsidian-native widgets
 (`Setting`, dropdown, toggle Obsidian) sudah membawa a11y bawaan — audit fokus ke
@@ -55,5 +55,5 @@ markup kustom kita.
 - Notice missed-run: tombol native `<button>` berlabel teks ✓.
 
 ## Kontrak proyek yang menang atas saran skill
-- frontend-design mendorong palet/font khusus → **ditolak**: tema = CSS vars Obsidian (lihat `skills/internal/openagent-ui/SKILL.md`).
+- frontend-design mendorong palet/font khusus → **ditolak**: tema = CSS vars Obsidian (lihat `agents/skills/internal/openagent-ui/SKILL.md`).
 - `<meta theme-color>`, `color-scheme`, preconnect, dsb → milik Obsidian (app host), bukan plugin.

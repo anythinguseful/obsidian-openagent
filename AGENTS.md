@@ -8,7 +8,7 @@ including Arena Agent. Read it before inspecting or changing code.
 1. Read [`docs/working-agreement.md`](docs/working-agreement.md). It contains
    owner decisions, the Lessons log, security/process rules, and documentation
    requirements.
-2. Read [`skills/README.md`](skills/README.md), then load every skill required
+2. Read [`agents/skills/README.md`](agents/skills/README.md), then load every skill required
    by the routing table below before acting.
 3. Inspect the current workspace. Do not assume generated files, dependencies,
    Git metadata, or a prior session's local state exists.
@@ -20,19 +20,19 @@ including Arena Agent. Read it before inspecting or changing code.
 
 | When working on… | Load before acting |
 | --- | --- |
-| Any UI, CSS, visual state, or interface copy | `skills/internal/openagent-ui/SKILL.md` **first**; then `frontend-design`, `functional-ui`, and `web-design-guidelines` as applicable |
-| Visual direction, typography, or layout | `skills/vendor/anthropics/frontend-design/SKILL.md` |
-| Chat, Settings, dashboard, or other functional surface | `skills/internal/functional-ui/SKILL.md` |
-| UI accessibility or UX review | `skills/vendor/vercel/web-design-guidelines/SKILL.md` |
-| User-facing behavior or documentation | `skills/internal/openagent-docs/SKILL.md`; `docs/working-agreement.md`; `docs/README.md` |
-| Create/evaluate a skill or agent workflow | `skills/vendor/anthropics/skill-creator/SKILL.md`; `skills/manifest.yaml` |
-| Write a substantial plan, spec, or decision document | `skills/vendor/anthropics/doc-coauthoring/SKILL.md`; `docs/plans/_TEMPLATE.md` |
+| Any UI, CSS, visual state, or interface copy | `agents/skills/internal/openagent-ui/SKILL.md` **first**; then `frontend-design`, `functional-ui`, and `web-design-guidelines` as applicable |
+| Visual direction, typography, or layout | `agents/skills/vendor/anthropics/frontend-design/SKILL.md` |
+| Chat, Settings, dashboard, or other functional surface | `agents/skills/internal/functional-ui/SKILL.md` |
+| UI accessibility or UX review | `agents/skills/vendor/vercel/web-design-guidelines/SKILL.md` |
+| User-facing behavior or documentation | `agents/skills/internal/openagent-docs/SKILL.md`; `docs/working-agreement.md`; `docs/README.md` |
+| Create/evaluate a skill or agent workflow | `agents/skills/vendor/anthropics/skill-creator/SKILL.md`; `agents/skills/manifest.yaml` |
+| Write a substantial plan, spec, or decision document | `agents/skills/vendor/anthropics/doc-coauthoring/SKILL.md`; `docs/plans/_TEMPLATE.md` |
 | Security, Workspace policy, Terminal, MCP, or network boundaries | `docs/working-agreement.md`; relevant note under `docs/audits/` or `docs/reference/` |
 | Release or packaging | `agents/arena/workflows/release.md`; `CONTRIBUTING.md`; `scripts/release.mjs` |
 | Audit or evidence organization | `agents/arena/workflows/audit.md`; `agents/arena/workflows/docs.md` |
-| Continue work in a later Arena session | `skills/vendor/mattpocock/handoff/SKILL.md`; `agents/arena/workflows/handoff.md` |
-| Diagnose a bug, failure, or performance regression | `skills/vendor/mattpocock/diagnosing-bugs/SKILL.md`; relevant project audit/test |
-| Build a fix test-first | `skills/vendor/mattpocock/tdd/SKILL.md`; `CONTRIBUTING.md` |
+| Continue work in a later Arena session | `agents/skills/vendor/mattpocock/handoff/SKILL.md`; `agents/arena/workflows/handoff.md` |
+| Diagnose a bug, failure, or performance regression | `agents/skills/vendor/mattpocock/diagnosing-bugs/SKILL.md`; relevant project audit/test |
+| Build a fix test-first | `agents/skills/vendor/mattpocock/tdd/SKILL.md`; `CONTRIBUTING.md` |
 
 `openagent-ui` is the binding UI contract and wins if it conflicts with a
 more generic design skill.

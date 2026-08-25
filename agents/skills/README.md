@@ -1,9 +1,10 @@
 # Open Agent — Development Skills
 
-Tracked development skills for agents maintaining this repository. They use the
-[Agent Skills](https://agentskills.io) `SKILL.md` format.
+Tracked development skills for agents maintaining this repository. They live
+under `agents/skills/` (moved from the repository-root `skills/` in v0.1.155)
+and use the [Agent Skills](https://agentskills.io) `SKILL.md` format.
 
-**Start through [`../AGENTS.md`](../AGENTS.md).** Arena does not auto-install
+**Start through [`../../AGENTS.md`](../../AGENTS.md).** Arena does not auto-install
 this directory. `AGENTS.md` is the durable discovery and routing entry point.
 
 ## Precedence

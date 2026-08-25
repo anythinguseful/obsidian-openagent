@@ -8,6 +8,27 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.155 — Development skills live under agents/
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Development skills moved.** The tracked agent-skill tree is now `agents/skills/` (sibling of `agents/arena/`), so agent workflow and skills sit in one place.
+- **Runtime vault skills are unchanged.** `openagent/openagent-skills/` and Hub installs still live in the vault. Plugin behavior is the same.
+- **Routing follows the folder.** `AGENTS.md`, `check:skills`, and the working-agreement table now point at `agents/skills/`. A root `skills/` folder is treated as a regression.
+
+---
+
+# Open Agent v0.1.154 — Restore Settings from before grouping
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Settings groups are no longer boxed.** Named subsections go back to native Obsidian rows with spacing and headings — the extra hairline shells from v0.1.153 are gone.
+- **MCP servers stay as object cards.** Those are real managed objects, not decorative wrappers around every setting.
+- **No setting behavior changed.** Names, order, controls, search, and security stay the same.
+- **Real-DOM proof.** `F49settingsGroups` now verifies that grouping shells are absent and that Capabilities subsections sit as direct children of the pane.
+
+---
+
 # Open Agent v0.1.153 — Unified Settings grouping ✦
 
 **Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.

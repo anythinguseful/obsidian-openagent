@@ -109,7 +109,7 @@ Tiga contract surfaces menyatakan final report berada di `releases/vN/`:
 
 - `RELEASES.md`;
 - `docs/working-agreement.md`;
-- `skills/internal/openagent-docs/SKILL.md`.
+- `agents/skills/internal/openagent-docs/SKILL.md`.
 
 Tidak ada satu pun path `releases/` yang tracked dalam snapshot ini. Ini bisa
 berasal dari proses upload yang tidak membawa arsip lama, tetapi kondisi yang

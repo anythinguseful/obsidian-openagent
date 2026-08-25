@@ -12,4 +12,4 @@ that do not hold in Arena: temporary handoff storage, `CONTEXT.md`, native
 subagent calls, and local-server defaults.
 
 Refresh only from a reviewed upstream commit. Record the new SHA here and in
-`skills/manifest.yaml`; do not silently pull from upstream `main`.
+`agents/skills/manifest.yaml`; do not silently pull from upstream `main`.

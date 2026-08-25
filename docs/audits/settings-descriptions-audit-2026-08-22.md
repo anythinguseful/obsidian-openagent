@@ -145,7 +145,7 @@ Cakupan: 15 deskripsi tab (SECTION_DESC) · 33 deskripsi grup (subheading) ·
 
 ## Saran lain (proses, bukan teks)
 
-1. **Voice rules tertulis** di `skills/internal/openagent-ui/SKILL.md` (kontrak UI):
+1. **Voice rules tertulis** di `agents/skills/internal/openagent-ui/SKILL.md` (kontrak UI):
    - kegunaan dulu, mekanisme belakangan;
    - ≤ 2 kalimat, desc setting idealnya ≤ ~100 karakter;
    - default di akhir (`… by default.`);
