@@ -43,6 +43,7 @@ function mustNotInclude(rel, needle, label) {
 
 /* Public entry points and maintained workflow. */
 mustInclude("README.md", "25 tools in 10 toggleable toolsets", "verified tool inventory");
+mustInclude("docs/working-agreement.md", "25 tools in 10 toggleable toolsets", "GitHub bootstrap verifies the current tool inventory");
 mustInclude("README.md", "vendor/pdf.worker.min.js", "manual installation keeps the PDF worker");
 mustInclude("CONTRIBUTING.md", "npm run verify", "documented contributor gate");
 mustInclude("SECURITY.md", "CVE-2024-4367", "documented PDF security boundary");
