@@ -43,12 +43,42 @@ const {
 	applyMemoryReplace,
 	applyMemoryRemove,
 	inventoryBlock,
+	transientMemoryActivityReason,
+	assertDurableMemoryEntry,
+	MemoryStore,
 } = require(out);
 
 const tests = [];
 function t(name, fn) {
 	tests.push({ name, fn });
 }
+
+/* ---------------- routing ---------------- */
+
+t("transientMemoryActivityReason: rejects the reported dated tool-test session", () => {
+	const reason = transientMemoryActivityReason("Tool test 2026-08-22: user requested a tools-testing session (setup isolated folder + report any issues found).");
+	assert.ok(reason && reason.includes("transient session activity"));
+});
+
+t("transientMemoryActivityReason: allows stable user and environment facts", () => {
+	assert.strictEqual(transientMemoryActivityReason("User prefers explanations in Indonesian."), null);
+	assert.strictEqual(transientMemoryActivityReason("Arena browser proof requires the documented Chromium bootstrap."), null);
+});
+
+t("assertDurableMemoryEntry: blocks activity logs but permits durable facts", () => {
+	assert.throws(
+		() => assertDurableMemoryEntry("Tool test 2026-08-22: user requested a tools-testing session."),
+		/transient session activity/
+	);
+	assert.doesNotThrow(() => assertDurableMemoryEntry("User prefers explanations in Indonesian."));
+});
+
+t("MemoryStore: the activity guard runs before either persistent write path", () => {
+	const store = new MemoryStore({ vault: {} }, "openagent/openagent-memory");
+	const entry = "Tool test 2026-08-22: user requested a tools-testing session.";
+	assert.throws(() => store.add(entry), /transient session activity/);
+	assert.throws(() => store.addUser(entry), /transient session activity/);
+});
 
 /* ---------------- entry parsing ---------------- */
 

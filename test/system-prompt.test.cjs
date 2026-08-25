@@ -148,6 +148,22 @@ async function main() {
 	}
 
 	{
+		const routed = await SP.buildSystemPrompt({
+			settings: freshSettings(),
+			tools: [],
+			skills: [],
+			memory,
+			app,
+			memoryNudgeDue: true,
+			activeNotePath: null,
+			contextFileContent: null,
+			personalityOverlay: null,
+		});
+		check(routed.includes("USER.md: stable facts about the user") && routed.includes("MEMORY.md: reusable notes for the agent"), "memory nudge names the two durable destinations");
+		check(routed.includes("dated tool/test/session activity") && routed.includes("Keep those in session history"), "memory nudge rejects transient session activity");
+	}
+
+	{
 		/* v0.1.54 feedback → learning signal: a down-rated previous reply
 		   adds exactly one reflection section; the save path follows
 		   memoryEnabled; no signal → no section at all */

@@ -75,6 +75,7 @@ Feature plans and port designs, with their implementation status.
 | [Chat tool activity grouping](plans/chat-tool-activity-grouping-2026-08-25.md) | done | Consecutive tool calls now share one activity card with independently expandable rows, hairline separators, and a real-DOM witness. |
 | [Conversations panel interaction](plans/conversations-panel-interaction-2026-08-25.md) | done | Session rows are semantic and keyboard-discoverable; deletion now uses the owner-approved confirmation flow with real-DOM proof. |
 | [Interactive chat controller — Phase 1](plans/interactive-chat-controller-phase-1-2026-08-25.md) | done | Interactive AgentLoop/context construction now lives behind AgentRunner's narrow run handle; ChatApp retains UI-owned presentation and callbacks. |
+| [Memory and user-profile routing](plans/memory-profile-routing-2026-08-25.md) | done | Hermes-style user/memory/transient routing now guides both tools and blocks unmistakable activity logs before either persistent store is written. |
 
 ## Studies (`studies/`)
 

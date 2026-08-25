@@ -2093,8 +2093,10 @@ proof.
 For Arena only, the durable procedure lives in
 [`agents/arena/README.md`](../agents/arena/README.md#chromium-bootstrap-for-arena-workspaces):
 `npm pack @sparticuz/chromium@149.0.0` into `/tmp`, brotli-decompress
-`chromium.br` into the cache path reported by `chromium.executablePath()`,
-extract `al2023.tar.br` for NSS, and run browser commands with
+`chromium.br` into both the full-browser cache path reported by
+`chromium.executablePath()` **and** its same-revision headless-shell sibling
+(the browser launcher probes the latter), extract `al2023.tar.br` for NSS, and
+run browser commands with
 `LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib`. First prove
 `chromium.launch()` prints `HeadlessChrome/149`; only then run the settings
 preview, PDF browser test, or release pipeline.
@@ -2103,3 +2105,24 @@ The workaround is intentionally Arena-scoped: `/tmp`, Playwright cache,
 `node_modules`, browser screenshots, and release staging are ephemeral or
 ignored. Do not add them to Git, do not add `.arena/`, and do not change project
 runtime dependencies to accommodate the sandbox.
+
+## Lesson 215 — MEMORY.md and USER.md need a routing contract, not only a security filter
+
+A `USER.md` entry recorded a dated tool-testing session: it was neither a stable
+user fact nor reusable agent memory. The existing read path correctly enforced
+bullet shape, budgets, recency, and injection scanning, but those are safety and
+format filters — they cannot decide semantic destination.
+
+Hermes Agent source `tools/memory_tool.py` @ `41447a6` defines the missing
+contract explicitly: `user` holds identity/role/preferences/style; `memory`
+holds environment/conventions/tool quirks/lessons; task progress, completed-work
+logs, temporary TODO state, raw dumps, and trivial facts are skipped. Open Agent
+keeps its two-tool API but mirrors this contract through one shared routing
+prompt and a deliberately narrow write-time guard. The guard rejects only
+unmistakable dated tool/test/session activity or explicit session-request forms;
+it must not broadly reject words such as "tool" or "test", because a stable
+preference may legitimately mention them.
+
+Guard: `test/memory.test.cjs` pins the reported entry as rejected from both
+store paths, while a stable user preference and reusable Arena environment
+lesson remain accepted. Prompt and tools tests pin the target/skip language.

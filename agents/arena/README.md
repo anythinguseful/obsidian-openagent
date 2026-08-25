@@ -36,19 +36,26 @@ mkdir -p /tmp/chromium-pkg
 npm pack @sparticuz/chromium@149.0.0 --pack-destination /tmp/chromium-pkg
 tar -xzf /tmp/chromium-pkg/sparticuz-chromium-149.0.0.tgz -C /tmp/chromium-pkg
 
-# Resolve the Playwright revision installed by this checkout; do not hardcode
-# its cache path in the command.
+# Resolve the installed Playwright revision. chromium.executablePath() names
+# the full-browser cache path, but chromium.launch() in headless mode probes a
+# sibling headless-shell path, so populate BOTH without hardcoding the revision.
 export PLAYWRIGHT_BIN="$(node -e "const { chromium } = require('playwright'); console.log(chromium.executablePath())")"
-mkdir -p "$(dirname "$PLAYWRIGHT_BIN")" /tmp/chromium-pkg/nss
+export PLAYWRIGHT_CACHE_ROOT="$(dirname "$(dirname "$(dirname "$PLAYWRIGHT_BIN")")")"
+export PLAYWRIGHT_REV="$(basename "$(dirname "$(dirname "$PLAYWRIGHT_BIN")")")"
+export PLAYWRIGHT_REV="${PLAYWRIGHT_REV#chromium-}"
+export PLAYWRIGHT_HEADLESS_BIN="$PLAYWRIGHT_CACHE_ROOT/chromium_headless_shell-$PLAYWRIGHT_REV/chrome-headless-shell-linux64/chrome-headless-shell"
+mkdir -p "$(dirname "$PLAYWRIGHT_BIN")" "$(dirname "$PLAYWRIGHT_HEADLESS_BIN")" /tmp/chromium-pkg/nss
 
 node - <<'NODE'
 const fs = require('fs');
 const zlib = require('zlib');
 const base = '/tmp/chromium-pkg/package/bin';
-fs.writeFileSync(process.env.PLAYWRIGHT_BIN, zlib.brotliDecompressSync(fs.readFileSync(`${base}/chromium.br`)));
+const binary = zlib.brotliDecompressSync(fs.readFileSync(`${base}/chromium.br`));
+fs.writeFileSync(process.env.PLAYWRIGHT_BIN, binary);
+fs.writeFileSync(process.env.PLAYWRIGHT_HEADLESS_BIN, binary);
 fs.writeFileSync('/tmp/chromium-pkg/al2023.tar', zlib.brotliDecompressSync(fs.readFileSync(`${base}/al2023.tar.br`)));
 NODE
-chmod +x "$PLAYWRIGHT_BIN"
+chmod +x "$PLAYWRIGHT_BIN" "$PLAYWRIGHT_HEADLESS_BIN"
 tar -xf /tmp/chromium-pkg/al2023.tar -C /tmp/chromium-pkg/nss
 ```
 
