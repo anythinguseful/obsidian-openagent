@@ -8,6 +8,17 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.154 — Restore Settings from before grouping
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Settings groups are no longer boxed.** Named subsections go back to native Obsidian rows with spacing and headings — the extra hairline shells from v0.1.153 are gone.
+- **MCP servers stay as object cards.** Those are real managed objects, not decorative wrappers around every setting.
+- **No setting behavior changed.** Names, order, controls, search, and security stay the same.
+- **Real-DOM proof.** `F49settingsGroups` now verifies that grouping shells are absent and that Capabilities subsections sit as direct children of the pane.
+
+---
+
 # Open Agent v0.1.153 — Unified Settings grouping ✦
 
 **Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.

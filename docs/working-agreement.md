@@ -2141,3 +2141,22 @@ it resolves. A history view renders this part read-only; it must not resurrect
 an old loop because its workspace, approvals, provider, and context are stale.
 Guard: the real-DOM clarify lane pins single/open/multi/skip envelopes plus four
 persisted summaries; switching/stopping marks a pending question interrupted.
+
+## Lesson 217 — (2026-08-26) A Settings group shell around every subsection is panelitis; the binding UI skill already forbade it
+
+Owner: Settings after v0.1.153 felt destroyed, hard to explain in words, and
+the request was to restore the page from before grouping. Pixel proof (Memory,
+General, Capabilities) showed the cause: native `.setting-item` rows were
+already cards, then `.oa-settings-group` boxed every named subsection around
+them — cards inside cards. Loose rows above the first heading stayed unboxed,
+so one page mixed floating rows and nested shells.
+
+The aesthetics audit F1 and openagent-ui anti-slop already said: do not wrap
+every Settings group in a card; separate with spacing first. Shipping the
+shells anyway was a skill-contract miss, not a missing visual language.
+
+Fix (v0.1.154): remove `groupSubsections()` and the group-shell CSS. MCP
+server cards stay (they are managed objects). Guards invert: smoke pins
+absence of the wrapper class; F49 now requires zero group shells and
+direct-child subsections. Do not re-skin Settings behind a "unify the system"
+story without owner greenlight on a real screenshot.

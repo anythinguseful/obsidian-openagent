@@ -552,29 +552,6 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		title.createDiv({ cls: "oa-section-desc", text: SECTION_DESC[this.section] });
 
 		this.renderSectionBody(this.section, content);
-		this.groupSubsections(content);
-	}
-
-	/**
-	 * A named Settings subsection owns every following direct sibling until the
-	 * next subsection. Wrapping finished nodes here preserves each renderer's
-	 * native Setting rows, listeners, and DOM handles while giving the page one
-	 * visual grouping system. Search harvests call renderSectionBody() directly,
-	 * so its detached index remains a read-only rendering of the same content.
-	 */
-	private groupSubsections(content: HTMLElement): void {
-		const children = Array.from(content.children);
-		let group: HTMLElement | null = null;
-		for (const child of children) {
-			if (child.classList.contains("oa-subsection")) {
-				group = document.createElement("section");
-				group.className = "oa-settings-group";
-				child.before(group);
-				group.appendChild(child);
-			} else if (group) {
-				group.appendChild(child);
-			}
-		}
 	}
 
 	/** Settings search (v0.1.94): section body without the title — also used by

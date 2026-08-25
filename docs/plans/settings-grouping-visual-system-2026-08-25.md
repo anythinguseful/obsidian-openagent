@@ -1,7 +1,7 @@
 ---
 title: "Settings grouping visual system"
 type: plan
-status: done
+status: archived
 date: 2026-08-25
 tags: [openagent, plan, ui, settings, aesthetics]
 ---
@@ -115,12 +115,10 @@ Phases 1 and 2 are implemented in this branch:
 - A smoke guard and real-DOM probe `F49settingsGroups` cover the ownership,
   structure, and computed-card contract.
 
-`npm run verify` passes. The real-DOM Settings witness runs locally with
-HeadlessChrome 149 and `F49settingsGroups` passes: all six Capabilities
-subsections are grouped, no subsection is left loose, MCP is inside its group
-with a 1 px border and 8 px radius, and cron tasks retain the same 1 px / 8 px
-object-card contract. The tracked witness records the result, so this plan is
-`done`.
+`npm run verify` passed at ship time. Owner review of v0.1.153 found the
+shells made Settings feel nested and destroyed (cards inside cards). **v0.1.154
+reverts the grouping wrappers.** Native subsection spacing returns; MCP object
+cards stay. This plan is `archived`.
 
 ## GWT
 
