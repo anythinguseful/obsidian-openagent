@@ -33,6 +33,35 @@ const noop = (): void => {};
 export const MEMORY_DEFAULT_CHAR_LIMIT = 4000;
 export const USER_DEFAULT_CHAR_LIMIT = 2500;
 
+/** Hermes memory-tool parity: durable stores are not session logs. This text
+ * has one owner so the system nudge and both write-tool schemas cannot drift. */
+export const MEMORY_ROUTING_GUIDANCE = [
+	"Persistent memory routing:",
+	"- USER.md: stable facts about the user — identity, role, preferences, communication style, or durable personal goals.",
+	"- MEMORY.md: reusable notes for the agent — environment facts, project conventions, tool quirks, decisions, or lessons.",
+	"- SKIP: task progress, dated tool/test/session activity, completed-work logs, temporary TODO state, one-turn requests, raw dumps, and trivial facts. Keep those in session history.",
+	"- Reusable procedures belong in a skill, not either memory file.",
+].join("\n");
+
+const DATED_ACTIVITY_RE = /^\s*(?:tool(?:s)?\s+(?:test|testing)|test(?:ing)?|session|run|task)\s+\d{4}-\d{2}-\d{2}\s*:/i;
+const SESSION_REQUEST_RE = /\buser requested (?:an? )?(?:[\w-]+\s+){0,4}(?:session|test|run)\b/i;
+
+/** Reject only unmistakable activity logs. This is deliberately narrower than
+ * natural-language classification: a stable preference may legitimately mention
+ * tools, while a dated tool-test/session log never belongs in durable memory. */
+export function transientMemoryActivityReason(entry: string): string | null {
+	const text = entry.trim();
+	if (DATED_ACTIVITY_RE.test(text) || SESSION_REQUEST_RE.test(text)) {
+		return "This is transient session activity, not durable memory or user-profile information. Keep it in session history; save only a reusable lesson or stable fact.";
+	}
+	return null;
+}
+
+export function assertDurableMemoryEntry(entry: string): void {
+	const reason = transientMemoryActivityReason(entry);
+	if (reason) throw new Error(reason);
+}
+
 /* ------------------------------------------------------------------ */
 /* pure entry helpers (node-testable, no Obsidian)                     */
 /* ------------------------------------------------------------------ */
@@ -263,12 +292,14 @@ export class MemoryStore {
 
 	/* ── MEMORY.md ── */
 	add(entry: string, category = "general"): Promise<void> {
+		assertDurableMemoryEntry(entry);
 		return this.mutateMemory(this.memoryPath, "Memory", this.memoryCharLimit, (entries) =>
 			applyMemoryAdd(entries, formatMemoryEntry(entry, category, this.stamp()), this.memoryCharLimit)
 		);
 	}
 
 	replace(oldText: string, entry: string, category = "general"): Promise<void> {
+		assertDurableMemoryEntry(entry);
 		return this.mutateMemory(this.memoryPath, "Memory", this.memoryCharLimit, (entries) =>
 			applyMemoryReplace(entries, oldText, formatMemoryEntry(entry, category, this.stamp()), this.memoryCharLimit)
 		);
@@ -282,12 +313,14 @@ export class MemoryStore {
 
 	/* ── USER.md ── */
 	addUser(entry: string): Promise<void> {
+		assertDurableMemoryEntry(entry);
 		return this.mutateMemory(this.userPath, "User Profile", this.userCharLimit, (entries) =>
 			applyMemoryAdd(entries, formatUserEntry(entry), this.userCharLimit)
 		);
 	}
 
 	replaceUser(oldText: string, entry: string): Promise<void> {
+		assertDurableMemoryEntry(entry);
 		return this.mutateMemory(this.userPath, "User Profile", this.userCharLimit, (entries) =>
 			applyMemoryReplace(entries, oldText, formatUserEntry(entry), this.userCharLimit)
 		);

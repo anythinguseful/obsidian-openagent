@@ -246,12 +246,38 @@ module.exports = function chatGuards() {
 			!chat.includes('from "./components/steps"') &&
 			chat.includes("oa-tools-list") &&
 			chat.includes("toToolPart(") &&
-			css.includes(".oa-tools-list") &&
+			css.includes(".oa-app .oa-tools-list {") &&
+			css.includes(".oa-app .oa-tools-list > .oa-tool {") &&
+			css.includes(".oa-app .oa-tools-list > .oa-tool + .oa-tool {") &&
 			css.includes(".oa-tool-badge-processing");
 		if (ok) {
-			console.log("✓ tool calls: faithful prompt-kit Tool cards (v5 states, per-invocation)");
+			console.log("✓ tool calls: one activity card with independently expandable prompt-kit rows (v5 states)");
 		} else {
-			console.error("✗ tool-card fidelity drifted (Steps crept back into tool rendering?)");
+			console.error("✗ tool-activity grouping drifted (outer card, row separator, or disclosure semantics lost)");
+			failed++;
+		}
+	}
+	// Interactive run construction belongs to AgentRunner. ChatApp retains UI
+	// callbacks and only holds the narrow steer handle, never a raw AgentLoop.
+	{
+		const runner = read("src/agent/runner.ts");
+		const chat = read("src/ui/ChatApp.tsx");
+		const ok =
+			runner.includes("export interface InteractiveRunHandle") &&
+			runner.includes("async createInteractiveRun(options: CreateInteractiveRunOptions)") &&
+			runner.includes("this.getToolsWithMcp(options.settings, { interactiveTerminal: true })") &&
+			runner.includes("new AgentLoop(options.settings, tools, ctx, options.moa ?? null)") &&
+			chat.includes("runner.createInteractiveRun({") &&
+			chat.includes("const interactiveTools = interactiveRun.tools") &&
+			chat.includes("interactiveRun.run(runMessages(), events)") &&
+			chat.includes("useRef<Pick<InteractiveRunHandle, \"steer\"> | null>") &&
+			!chat.includes("new AgentLoop(") &&
+			!chat.includes("runner.makeContext(workspacePolicy, runSettings") &&
+			!chat.includes("runner.getToolsWithMcp(runSettings");
+		if (ok) {
+			console.log("✓ interactive chat boundary: AgentRunner owns loop/context construction; ChatApp owns event presentation");
+		} else {
+			console.error("✗ interactive chat boundary drifted");
 			failed++;
 		}
 	}
@@ -354,6 +380,12 @@ module.exports = function chatGuards() {
 			chat.includes("scopedSessions.rename(id, next)") &&
 			chat.includes("sessionTitleRef.current = next") &&
 			chat.includes("onRename={renameSession}") &&
+			chat.includes("app={props.app}") &&
+			panel.includes("class ConfirmSessionDeleteModal extends Modal") &&
+			panel.includes('text: "Delete chat"') &&
+			panel.includes("new ConfirmSessionDeleteModal(app, session.title") &&
+			panel.includes('className="oa-panel-row-select"') &&
+			panel.includes('aria-label={`Open chat “${session.title}”`}') &&
 			panel.includes("const [renamingId, setRenamingId]") &&
 			panel.includes("const commitRename = useCallback") &&
 			panel.includes('aria-label="Rename chat"') &&
@@ -364,11 +396,13 @@ module.exports = function chatGuards() {
 			!/^import .*AgentLoop/m.test(panel) &&
 			css.includes(".oa-panel-row-rename-input {") &&
 			css.includes(".oa-panel-row-rename-input:focus") &&
-			css.includes(".oa-panel-row-rename:hover");
+			css.includes(".oa-panel-row:hover .oa-panel-row-del,") &&
+			css.includes(".oa-panel-row:focus-within .oa-panel-row-del,") &&
+			css.includes(".oa-panel-row-select:focus-visible {");
 		if (ok) {
-			console.log("✓ v0.1.158: inline session rename — isolated panel UI, durable ChatApp store callback, Enter/Escape");
+			console.log("✓ Conversations panel: semantic selection, focus-revealed actions, inline rename, and confirmed deletion");
 		} else {
-			console.error("✗ v0.1.158 inline session rename drifted");
+			console.error("✗ Conversations panel interaction drifted");
 			failed++;
 		}
 	}
@@ -686,7 +720,7 @@ module.exports = function chatGuards() {
 			loop9.includes("pendingSteer: aborted") &&
 			loop9.includes("onSteerApplied") &&
 			app9.includes('case "/steer"') &&
-			app9.includes("loopRef.current = loop") &&
+			app9.includes("loopRef.current = interactiveRun") &&
 			app9.includes("applySteerMarker") &&
 			app9.includes("/^\\/steer(?:\\s|$)/i") &&
 			app9.includes("result.pendingSteer") &&
@@ -892,7 +926,7 @@ module.exports = function chatGuards() {
 			mtest125.includes("class-sebelum + kurung → class-sesudah + terkutip") &&
 			ttest125.includes("write_note sanitize fence mermaid saat create") &&
 			ttest125.includes("raw 'PS' crash shape tidak lolos ke vault") &&
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.125: write_note mensanitasi fence mermaid (note agent tampil di editor) · class-::: direorder · saksi unit tools+markdown menjaga");
 		} else {
@@ -916,7 +950,7 @@ module.exports = function chatGuards() {
 			ic.length < 4500 && // file 63 baris ~3k-an; regresi tambahan ikon mati terdeteksi
 			!goals.includes("GOAL_JUDGE_SNIPPET_CHARS") &&
 			goals.includes("GOAL_MAX_TURNS") && // saudara hidup tak ikut terhapus
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.129: ikon mati + konstanta goals yatim dibersihkan · BrainIcon park · RotateCcw live (SidebarIcon pensiun) · sibling hidup utuh");
 		} else {

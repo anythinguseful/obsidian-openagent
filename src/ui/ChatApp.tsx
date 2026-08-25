@@ -8,7 +8,7 @@
 import { App, Component, MarkdownView, Notice, TFile, normalizePath } from "obsidian";
 import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { AgentLoop, AgentLoopEvents, ApprovalDecision, ApprovalRequest } from "../agent/agentLoop";
+import { AgentLoopEvents, ApprovalDecision, ApprovalRequest } from "../agent/agentLoop";
 import type { ClarifyAnswer, ClarifyRequest } from "../agent/tools";
 import {
 	ProviderHttpError,
@@ -35,7 +35,7 @@ import {
 	validCompressionCache,
 	type CompressionCache,
 } from "../agent/contextManager";
-import { AgentRunner } from "../agent/runner";
+import { AgentRunner, type InteractiveRunHandle } from "../agent/runner";
 import { buildRecallBlock, isTrivialPrompt } from "../agent/memoryEngine";
 import { embedTexts } from "../agent/providers";
 import { ComposerHistoryBrowse, deriveUserHistory } from "./composer/history";
@@ -147,6 +147,7 @@ import { resolveWritePath } from "../agent/tools";
 type TraceBlock =
 	| { kind: "reasoning"; parts: Extract<TurnPart, { kind: "reasoning" }>[] }
 	| { kind: "tool"; parts: Extract<TurnPart, { kind: "tool" }>[] }
+	| { kind: "clarify"; parts: Extract<TurnPart, { kind: "clarify" }>[] }
 	| { kind: "text"; parts: Extract<TurnPart, { kind: "text" }>[] }
 	| { kind: "marker"; parts: Extract<TurnPart, { kind: "marker" }>[] };
 
@@ -452,6 +453,26 @@ function ClarifyCard(props: { req: ClarifyRequest; onAnswer: (a: ClarifyAnswer) 
 	);
 }
 
+function ClarifySummary({ part }: { part: Extract<TurnPart, { kind: "clarify" }> }) {
+	const status =
+		part.status === "answered"
+			? "Answered"
+			: part.status === "skipped"
+				? "Skipped — agent used best judgement"
+				: part.status === "interrupted"
+					? "Run stopped before an answer"
+					: "Question was not answered";
+	const answer = Array.isArray(part.answer) ? part.answer.join(" · ") : part.answer;
+	return (
+		<div className={`oa-clarify-summary is-${part.status}`}>
+			<div className="oa-clarify-summary-head"><span>Question</span><span>{status}</span></div>
+			<div className="oa-clarify-summary-question">{part.question}</div>
+			{part.choices?.length ? <div className="oa-clarify-summary-choices">Choices: {part.choices.join(" · ")}</div> : null}
+			{answer ? <div className="oa-clarify-summary-answer">Answer: {answer}</div> : null}
+		</div>
+	);
+}
+
 function approvalKindLabel(kind: ApprovalRequest["kind"]): string {
 	switch (kind) {
 		case "persistent-write":
@@ -604,6 +625,8 @@ export function ChatApp(props: ChatAppProps) {
 	   card — same machinery class as the approval card (pending promise
 	   resolved by a click), mutually exclusive with it in practice */
 		const [clarify, setClarify] = useState<{
+			clarifyId: string;
+			turnId: string;
 			req: ClarifyRequest;
 			resolve: (a: ClarifyAnswer) => void;
 			workspacePolicy: WorkspacePolicy;
@@ -717,7 +740,7 @@ export function ChatApp(props: ChatAppProps) {
 		const headlessCommandAbortRef = useRef<AbortController | null>(null);
 		/* the live AgentLoop — /steer reaches its thread-safe stash through this
 		   while a run is in flight (run_agent.py busy-path parity) */
-		const loopRef = useRef<AgentLoop | null>(null);
+		const loopRef = useRef<Pick<InteractiveRunHandle, "steer"> | null>(null);
 		/* Closing the view must release provider/tool work and interactive
 		   promises without scheduling React state from an unmount cleanup. */
 		useEffect(() => () => {
@@ -1858,12 +1881,16 @@ export function ChatApp(props: ChatAppProps) {
 		/* Interactive tool promises must resolve as well as abort; otherwise a
 		   scope reset can leave the old loop parked forever behind a removed card. */
 		approvalRef.current?.resolve("deny");
-		clarifyRef.current?.resolve("");
+		const pendingClarify = clarifyRef.current;
+		if (pendingClarify) {
+			patchTurn(pendingClarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === pendingClarify.clarifyId ? { ...p, status: "interrupted" } : p));
+			pendingClarify.resolve("");
+		}
 		approvalRef.current = null;
 		clarifyRef.current = null;
 		setApproval(null);
 		setClarify(null);
-	}, []);
+	}, [patchTurn]);
 
 	/* explicit user halt (■ button, Interrupt action, /stop): park the queue
 	   too — desktop: an explicit Stop holds queued turns back until a resume
@@ -2578,9 +2605,33 @@ nudgeCounterRef.current = 0;
 				const prevAssistant = [...turnsRef.current].reverse().find((t) => t.role === "assistant" && t.id !== assistantTurnRef.current);
 				const feedbackDue = prevAssistant ? feedbackOf(prevAssistant.reaction) === "down" : false;
 
-				/* Terminal schemas are opt-in at this one owned interactive path;
-				   all generic/headless/delegated runner paths stay terminal-free. */
-				const interactiveTools = await runner.getToolsWithMcp(runSettings, { interactiveTerminal: true });
+				/* MoA facade (v0.1.30, Hermes moa_loop MoAClient parity): an
+				   active preset routes every iteration through the advisor fan-out +
+				   guidance attach; the preset's aggregator acts. The feed buffer resets
+				   per run before the runner constructs the owned loop. */
+				let moaEngine: MoaTurnEngine | null = null;
+				const moaRunCfg = runSettings.moa ? normalizeMoaConfig(runSettings.moa) : null;
+				if (moaRunCfg?.active_preset && moaRunCfg.presets[moaRunCfg.active_preset]) {
+					moaFeedRef.current = "";
+					moaEngine = new MoaTurnEngine({
+						presetName: moaRunCfg.active_preset,
+						preset: moaRunCfg.presets[moaRunCfg.active_preset],
+						settings: runSettings,
+						signal: abort.signal,
+						emit: (e) => {
+							if (!abort.signal.aborted) moaEmit(assistantTurn.id, e);
+						},
+					});
+				}
+				const interactiveRun = await runner.createInteractiveRun({
+					settings: runSettings,
+					workspacePolicy,
+					execution: { kind: "interactive-chat", sessionId: runSessionId, runId: assistantTurn.id },
+					todo: runTodoApi,
+					moa: moaEngine,
+				});
+				loopRef.current = interactiveRun;
+				const interactiveTools = interactiveRun.tools;
 				/* v0.1.176 structured-memory recall: pure-fusion (BM25 + entity +
 				   temporal + trust), zero latency — no LLM in this phase. Never
 				   breaks the run. */
@@ -2632,34 +2683,6 @@ nudgeCounterRef.current = 0;
 					if (abort.signal.aborted) throw new Error("Run interrupted.");
 						runSessionMessages = messagesRef.current;
 						runCompression = compressionRef.current;
-				/* MoA facade (v0.1.30, Hermes moa_loop MoAClient parity): an
-				   active preset routes every iteration through the advisor
-				   fan-out + guidance attach; the preset's aggregator acts. The
-				   feed buffer resets per run — events only fire on the
-				   iteration that actually fans out. */
-				let moaEngine: MoaTurnEngine | null = null;
-				const moaRunCfg = runSettings.moa ? normalizeMoaConfig(runSettings.moa) : null;
-				if (moaRunCfg?.active_preset && moaRunCfg.presets[moaRunCfg.active_preset]) {
-					moaFeedRef.current = "";
-					moaEngine = new MoaTurnEngine({
-						presetName: moaRunCfg.active_preset,
-						preset: moaRunCfg.presets[moaRunCfg.active_preset],
-						settings: runSettings,
-						signal: abort.signal,
-						emit: (e) => {
-							if (!abort.signal.aborted) moaEmit(assistantTurn.id, e);
-						},
-					});
-				}
-				const runCtx = runner.makeContext(workspacePolicy, runSettings, {
-					kind: "interactive-chat",
-					sessionId: runSessionId,
-					runId: assistantTurn.id,
-				});
-				runCtx.todo = runTodoApi; // run-owned: late tool callbacks cannot mutate a replacement chat
-				const loop = new AgentLoop(runSettings, interactiveTools, runCtx, moaEngine);
-				loopRef.current = loop;
-
 				const aid = assistantTurn.id;
 				const captureOwnedTurns = (): void => {
 					if (!abort.signal.aborted) runOwnedTurns = turnsRef.current;
@@ -2812,7 +2835,12 @@ nudgeCounterRef.current = 0;
 								return;
 							}
 								props.onNotification?.({ kind: "inputRequired", contextId: runSessionId });
-								const pendingClarify = { req, resolve, workspacePolicy };
+								const clarifyId = `clarify-${Date.now().toString(36)}`;
+								patchTurn(aid, (parts) => [
+									...parts,
+									{ kind: "clarify", clarifyId, question: req.question, choices: req.choices, multiSelect: req.multiSelect, status: "pending" },
+								]);
+								const pendingClarify = { clarifyId, turnId: aid, req, resolve, workspacePolicy };
 								clarifyRef.current = pendingClarify;
 								setClarify(pendingClarify);
 						}),
@@ -2820,7 +2848,7 @@ nudgeCounterRef.current = 0;
 
 				let result;
 				try {
-					result = await loop.run(runMessages(), events);
+					result = await interactiveRun.run(runMessages(), events);
 				} catch (err) {
 					if (abort.signal.aborted) throw err;
 					/* heuristic said vision but the model disagrees (HTTP 400) →
@@ -2835,7 +2863,7 @@ nudgeCounterRef.current = 0;
 						new Notice("Open Agent: model rejected image input — resending it as a path reference.", 6000);
 						const last = messagesRef.current[messagesRef.current.length - 1];
 						if (last?.role === "user") last.content = fallbackPrompt;
-						result = await loop.run(runMessages(), events);
+						result = await interactiveRun.run(runMessages(), events);
 					} else {
 						throw err;
 					}
@@ -4578,9 +4606,11 @@ nudgeCounterRef.current = 0;
 							(last.parts as TurnPart[]).push(part);
 						} else if (part.kind === "reasoning") {
 							blocks.push({ kind: "reasoning", parts: [part] });
-					} else if (part.kind === "tool") {
-						blocks.push({ kind: "tool", parts: [part] });
-					} else if (part.kind === "marker") {
+						} else if (part.kind === "tool") {
+							blocks.push({ kind: "tool", parts: [part] });
+						} else if (part.kind === "clarify") {
+							blocks.push({ kind: "clarify", parts: [part] });
+						} else if (part.kind === "marker") {
 						blocks.push({ kind: "marker", parts: [part] });
 					} else {
 						blocks.push({ kind: "text", parts: [part] });
@@ -4735,6 +4765,11 @@ nudgeCounterRef.current = 0;
 									</div>
 								);
 							}
+							if (block.kind === "clarify" && turn.role === "assistant") {
+								return block.parts.map((p) =>
+									clarify?.clarifyId === p.clarifyId && clarify.turnId === turn.id ? null : <ClarifySummary key={p.clarifyId} part={p} />
+								);
+							}
 							if (block.kind === "marker") {
 								return (
 									<div key={`${turn.id}-marker-${bi}`} className="oa-turn-marker">
@@ -4846,10 +4881,12 @@ nudgeCounterRef.current = 0;
 							req={clarify.req}
 								onAnswer={(a) => {
 									if (!pickerPolicyIsCurrent(clarify.workspacePolicy)) {
+										patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "interrupted" } : p));
 										clarify.resolve("");
 										setClarify(null);
 										return;
 									}
+									patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "answered", answer: a } : p));
 									clarify.resolve(a);
 									setClarify(null);
 								}}
@@ -4857,12 +4894,15 @@ nudgeCounterRef.current = 0;
 							   auto-skip — an Obsidian chat is not a terminal
 							   with a 120s egg-timer on it) */
 								onSkip={() => {
+									const skipped = "The user skipped this question. Use your best judgement to make the choice and proceed.";
 									if (!pickerPolicyIsCurrent(clarify.workspacePolicy)) {
+										patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "interrupted" } : p));
 										clarify.resolve("");
 										setClarify(null);
 										return;
 									}
-									clarify.resolve("The user skipped this question. Use your best judgement to make the choice and proceed.");
+									patchTurn(clarify.turnId, (parts) => parts.map((p) => p.kind === "clarify" && p.clarifyId === clarify.clarifyId ? { ...p, status: "skipped", answer: skipped } : p));
+									clarify.resolve(skipped);
 									setClarify(null);
 								}}
 						/>
@@ -5048,6 +5088,7 @@ nudgeCounterRef.current = 0;
 					{/* ---------- sessions panel (slash-menu-style popover) ---------- */}
 					{panelOpen ? (
 						<SessionPanel
+							app={props.app}
 							panelRef={panelRef}
 							compact={settings.sessionListDensity === "compact"}
 							filter={panelFilter}

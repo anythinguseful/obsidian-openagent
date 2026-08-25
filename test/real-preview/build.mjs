@@ -239,7 +239,25 @@ export async function buildRealFrames({ shots = true } = {}) {
 				) {
 					throw new Error(`panel check failed: ${JSON.stringify(p)}`);
 				}
-				console.log("  [panel] sessions panel is a slash-menu-style popover (no backdrop, above composer, scrolling list, history glyph) ✓");
+				const select = page.locator(".oa-panel-row-select").first();
+				await select.focus();
+				const focusActions = await page.evaluate(() => {
+					const row = document.querySelector(".oa-panel-row");
+					const rename = row?.querySelector(".oa-panel-row-rename");
+					const del = row?.querySelector(".oa-panel-row-del");
+					return {
+						activeIsSelect: document.activeElement?.classList.contains("oa-panel-row-select") === true,
+						rename: rename ? getComputedStyle(rename).display : null,
+						delete: del ? getComputedStyle(del).display : null,
+					};
+				});
+				await select.press("Enter");
+				await page.waitForTimeout(80);
+				const selectedId = await page.evaluate(() => window.__oaLoadedSession ?? null);
+				if (!focusActions.activeIsSelect || focusActions.rename === "none" || focusActions.delete === "none" || selectedId !== "s-1") {
+					throw new Error(`panel semantic-row check failed: ${JSON.stringify({ focusActions, selectedId })}`);
+				}
+				console.log("  [panel] sessions panel is a semantic popover: keyboard focus reveals actions and Enter selects a session ✓");
 			}
 
 			frames[s] = await page.$eval("#root", (el) => el.innerHTML);
@@ -742,12 +760,27 @@ export async function buildRealFrames({ shots = true } = {}) {
 				return { svg: !!svg, w: Math.round(r.width), color: getComputedStyle(ic).color, spin: svg ? getComputedStyle(svg).animationName : "NO-SVG", dur: svg ? getComputedStyle(svg).animationDuration : "" };
 			};
 			const [streaming, ready, done, error] = [0, 1, 2, 3].map(iconOf);
+			const group = document.querySelector(".oa-tools-list");
+			const rows = group ? [...group.querySelectorAll(":scope > .oa-tool")] : [];
+			const gc = group ? getComputedStyle(group) : null;
+			const separators = rows.slice(1).filter((row) => getComputedStyle(row).borderTopWidth !== "0px").length;
+			const errorBody = rows[3]?.querySelector(".oa-tool-content");
+			const grouped = {
+				outerBorder: gc?.borderTopWidth ?? null,
+				outerRadius: gc?.borderTopLeftRadius ?? null,
+				rows: rows.length,
+				separators,
+				errorAttached: errorBody?.closest(".oa-tool") === rows[3],
+			};
 			const chk = (name, s, f) => { if (!(s && f(s))) why.push(`${name}=${JSON.stringify(s)}`); };
 			chk("streaming", streaming, (s) => s.svg && s.w === 16 && s.spin === "oa-spin" && listen(s.color)[2] > 140);
 			chk("ready", ready, (s) => s.svg && s.w === 16 && (([r, g]) => r > 150 && g > 60 && g < 190)(listen(s.color)));
 			chk("done", done, (s) => s.svg && s.w === 16 && listen(s.color)[1] > 130);
 			chk("error", error, (s) => s.svg && s.w === 16 && listen(s.color)[0] > 160);
-			return { why, gap, streaming, ready, done, error };
+			if (grouped.outerBorder === "0px" || grouped.outerRadius === "0px" || grouped.rows !== 4 || grouped.separators !== 3 || !grouped.errorAttached) {
+				why.push(`grouped=${JSON.stringify(grouped)}`);
+			}
+			return { why, gap, streaming, ready, done, error, grouped };
 		});
 		if (ts.why.length) throw new Error(`toolstate lane failed (GEJALA OWNER): ${JSON.stringify(ts.why)}`);
 		console.log("  [toolstate] thinking stop: right-flush + dotted, tanpa pill/chevron ✓ · state glyphs 16px: spinner arc oa-spin biru ✓ · ready oranye ✓ · done hijau ✓ · error merah ✓");
@@ -967,7 +1000,37 @@ export async function buildRealFrames({ shots = true } = {}) {
 			throw new Error(`rename cancel check failed: ${JSON.stringify(cancelled)}`);
 		}
 
-		console.log("  [slash] /title saved to disk ✓ · /version shows build ✓ · /q idle→drain ✓ · /sessions alias opens panel + prefill ✓ · SearchField pill ✓ · md keys ✓ · del-icon containment ✓ · profile strip rhythm ✓ · inline rename commit/cancel ✓");
+		/* Conversations delete is deliberate: Cancel must preserve the row;
+		   only the host modal's destructive confirmation reaches SessionStore. */
+		const deleteRow = page.locator('.oa-panel-row:has(.oa-panel-row-title:text-is("agent-loop design"))');
+		await deleteRow.hover();
+		await deleteRow.locator(".oa-panel-row-del").click();
+		const modal = page.locator(".oa-confirm-modal");
+		if (!(await modal.textContent())?.includes('Delete chat “agent-loop design”?')) {
+			throw new Error("session-delete confirmation did not open with the selected chat title");
+		}
+		await modal.getByRole("button", { name: "Cancel" }).evaluate((el) => el.click());
+		await page.waitForTimeout(80);
+		const cancelledDelete = await page.evaluate(() => ({
+			deleted: window.__oaDeletedSession ?? null,
+			stillThere: [...document.querySelectorAll(".oa-panel-row-title")].some((x) => x.textContent === "agent-loop design"),
+		}));
+		if (cancelledDelete.deleted !== null || !cancelledDelete.stillThere) {
+			throw new Error(`session-delete cancel failed: ${JSON.stringify(cancelledDelete)}`);
+		}
+		await deleteRow.hover();
+		await deleteRow.locator(".oa-panel-row-del").click();
+		await page.locator(".oa-confirm-modal").getByRole("button", { name: "Delete chat" }).evaluate((el) => el.click());
+		await page.waitForTimeout(220);
+		const confirmedDelete = await page.evaluate(() => ({
+			deleted: window.__oaDeletedSession ?? null,
+			stillThere: [...document.querySelectorAll(".oa-panel-row-title")].some((x) => x.textContent === "agent-loop design"),
+		}));
+		if (confirmedDelete.deleted !== "s-1" || confirmedDelete.stillThere) {
+			throw new Error(`session-delete confirmation failed: ${JSON.stringify(confirmedDelete)}`);
+		}
+
+		console.log("  [slash] /title saved to disk ✓ · /version shows build ✓ · /q idle→drain ✓ · /sessions alias opens panel + prefill ✓ · SearchField pill ✓ · md keys ✓ · semantic row focus/select ✓ · inline rename commit/cancel ✓ · delete confirm/cancel ✓");
 	}
 	/* Slash medium-batch honesty check (v0.1.21): the arg-stage popover
 	   offers the three approval modes, clicking one fills the composer and
@@ -1135,6 +1198,9 @@ export async function buildRealFrames({ shots = true } = {}) {
 		const multiOk = (byQ("Kategori mana")?.user_response ?? []).join(",") === "meeting,ide,inbox juga" &&
 			(byQ("Kategori mana")?.choices_offered ?? []).join(",") === "meeting,ide,bacaan";
 		const skipOk = (byQ("Konfirmasi terakhir")?.user_response ?? "").includes("Use your best judgement");
+		const summariesOk = (r.summaries ?? []).length === 4 &&
+			(r.summaries ?? []).some((s) => s.includes("Folder mana") && s.includes("Answer: Projects")) &&
+			(r.summaries ?? []).some((s) => s.includes("Konfirmasi terakhir") && s.includes("Skipped"));
 		const cardsOk =
 			r.got1 === true && r.got2 === true && r.got3 === true && r.got4 === true &&
 			(r.cardQ ?? []).join("|").includes("Folder mana") &&
@@ -1145,7 +1211,7 @@ export async function buildRealFrames({ shots = true } = {}) {
 			(r.s1Choices ?? []).some((c) => c.includes("Other (type your answer)")) &&
 			r.typed2 === true && r.typed3 === true &&
 			r.finishSeen === true;
-		if (!singleOk || !openOk || !multiOk || !skipOk || !cardsOk) {
+		if (!singleOk || !openOk || !multiOk || !skipOk || !cardsOk || !summariesOk) {
 			throw new Error(`clfy check failed: ${raw}`);
 		}
 		console.log("  [clfy] single pick rides the wire ✓ · open-ended ✓ · multi+Other list ✓ · skip=best-judgement ✓ · cards progress per question ✓");

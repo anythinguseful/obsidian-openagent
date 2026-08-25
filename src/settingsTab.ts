@@ -552,6 +552,29 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 		title.createDiv({ cls: "oa-section-desc", text: SECTION_DESC[this.section] });
 
 		this.renderSectionBody(this.section, content);
+		this.groupSubsections(content);
+	}
+
+	/**
+	 * A named Settings subsection owns every following direct sibling until the
+	 * next subsection. Wrapping finished nodes here preserves each renderer's
+	 * native Setting rows, listeners, and DOM handles while giving the page one
+	 * visual grouping system. Search harvests call renderSectionBody() directly,
+	 * so its detached index remains a read-only rendering of the same content.
+	 */
+	private groupSubsections(content: HTMLElement): void {
+		const children = Array.from(content.children);
+		let group: HTMLElement | null = null;
+		for (const child of children) {
+			if (child.classList.contains("oa-subsection")) {
+				group = document.createElement("section");
+				group.className = "oa-settings-group";
+				child.before(group);
+				group.appendChild(child);
+			} else if (group) {
+				group.appendChild(child);
+			}
+		}
 	}
 
 	/** Settings search (v0.1.94): section body without the title — also used by
@@ -2822,7 +2845,8 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 			? "ok"
 			: "idle";
 
-		const setting = new Setting(containerEl);
+		const taskCard = containerEl.createDiv({ cls: "oa-cron-task" });
+		const setting = new Setting(taskCard);
 		const nameFrag = document.createDocumentFragment();
 		const dot = document.createElement("span");
 		dot.className = `oa-cron-dot is-${status}`;
@@ -2916,7 +2940,7 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (this.cronHistoryOpen.has(task.id)) this.cronHistory(containerEl, task);
+		if (this.cronHistoryOpen.has(task.id)) this.cronHistory(taskCard, task);
 	}
 
 	/** Last 5 run archives with links. */

@@ -8,6 +8,22 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.153 — Unified Settings grouping ✦
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Settings now reads as one system.** Each named group keeps its title, purpose, and native Obsidian rows inside one quiet hairline shell instead of mixing floating rows and unrelated cards.
+- **MCP servers and scheduled tasks now belong to that same system.** They remain stronger managed-object cards, but share the group border, radius, spacing, and divider language.
+- **No settings behavior changed.** Names, order, controls, data, search harvesting, and security behavior remain the same.
+- **Real-DOM proof added.** `F49settingsGroups` verifies the grouped structure and computed 1 px / 8 px card geometry for Capabilities and Automations.
+- **Consecutive tool calls now read as one activity.** A single outer card contains independently expandable tool rows separated by hairlines, so repeated tool calls no longer form a wall of nested cards.
+- **Conversations are safer and easier to use.** Session rows are keyboard-selectable, row actions appear on focus as well as hover, and deleting a saved chat now requires confirmation.
+- **Interactive run ownership is narrower.** `AgentRunner` now creates the interactive loop and scoped context; ChatApp receives a small run/steer handle while keeping UI callbacks and presentation.
+- **Memory routing is stricter.** USER.md now accepts stable user facts only; MEMORY.md accepts reusable environment/project lessons; unmistakable dated tool/test/session activity is rejected from both stores and stays in session history.
+- **Clarify questions survive history.** Questions, choices, answers, skips, and interruptions now persist as read-only chat summaries; opening history never silently resumes an old agent loop.
+
+---
+
 # Open Agent v0.1.152 — Fix release: harness saveSettingsSafe, CI crash, & preflight 🔧
 
 **Release archive:** akan diterbitkan di GitHub Releases setelah CI main hijau.

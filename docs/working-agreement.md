@@ -2081,3 +2081,63 @@ Aturan:
 2. **Shim contract-complete.** Setelah menambah method ke `OpenAgentPlugin` asli (`saveSettingsSafe`, Lesson 204), kedua mock sim (`settings-entry.tsx` dan `chat-entry.tsx`) ikut diperbarui di commit yang sama — jangan tunggu crash detik pertama di CI. Mock yang kehilangan method yang dipakai kode produksi adalah "mock lembut" kelas Lesson 45/47.
 3. **Probe scoping.** Probe yang memindai tombol dengan `buttons.includes("X")` di seluruh halaman (global `document.querySelectorAll`) rentan positif-palsu dari tombol row lain. Scope ke elemen induk yang relevan (assignment row, route card). Kegagalan probe pertama dengan Chromium asli bukan bukti bug plugin — bisa bug harness.
 4. **Settings browser never executed before.** Semua probe settings-audit (F1–F49) belum pernah dijalankan dengan browser nyata sejak diluncurkan. Perubahan settings yang mengubah DOM baris bisa mematahkan probe tanpa sepengetahuan. Guard: setelah mengubah baris settings, rebut settings preview di CI yang punya Chromium, baru merge.
+
+## Lesson 214 — Arena-only Chromium bootstrap: browser proof remains mandatory when CDN and apt are unavailable
+
+Arena workspaces can lose both `node_modules` and `~/.cache/ms-playwright`
+between messages. In some sandboxes, Playwright's CDN and Debian package mirrors
+are unreachable even though `registry.npmjs.org` works. This is an environment
+limitation, **not** permission to skip the required real-DOM or browser-security
+proof.
+
+For Arena only, the durable procedure lives in
+[`agents/arena/README.md`](../agents/arena/README.md#chromium-bootstrap-for-arena-workspaces):
+`npm pack @sparticuz/chromium@149.0.0` into `/tmp`, brotli-decompress
+`chromium.br` into both the full-browser cache path reported by
+`chromium.executablePath()` **and** its same-revision headless-shell sibling
+(the browser launcher probes the latter), extract `al2023.tar.br` for NSS, and
+run browser commands with
+`LD_LIBRARY_PATH=/tmp/chromium-pkg/nss/lib`. First prove
+`chromium.launch()` prints `HeadlessChrome/149`; only then run the settings
+preview, PDF browser test, or release pipeline.
+
+The workaround is intentionally Arena-scoped: `/tmp`, Playwright cache,
+`node_modules`, browser screenshots, and release staging are ephemeral or
+ignored. Do not add them to Git, do not add `.arena/`, and do not change project
+runtime dependencies to accommodate the sandbox.
+
+## Lesson 215 — MEMORY.md and USER.md need a routing contract, not only a security filter
+
+A `USER.md` entry recorded a dated tool-testing session: it was neither a stable
+user fact nor reusable agent memory. The existing read path correctly enforced
+bullet shape, budgets, recency, and injection scanning, but those are safety and
+format filters — they cannot decide semantic destination.
+
+Hermes Agent source `tools/memory_tool.py` @ `41447a6` defines the missing
+contract explicitly: `user` holds identity/role/preferences/style; `memory`
+holds environment/conventions/tool quirks/lessons; task progress, completed-work
+logs, temporary TODO state, raw dumps, and trivial facts are skipped. Open Agent
+keeps its two-tool API but mirrors this contract through one shared routing
+prompt and a deliberately narrow write-time guard. The guard rejects only
+unmistakable dated tool/test/session activity or explicit session-request forms;
+it must not broadly reject words such as "tool" or "test", because a stable
+preference may legitimately mention them.
+
+Guard: `test/memory.test.cjs` pins the reported entry as rejected from both
+store paths, while a stable user preference and reusable Arena environment
+lesson remain accepted. Prompt and tools tests pin the target/skip language.
+
+## Lesson 216 — Platform questions are transcript data, not merely a live React promise
+
+Clarify questions originally lived only in `clarify` React state while the agent
+loop awaited a Promise. Opening another session called `stopAgent()`, cleared
+that state, and left no persisted evidence that a question had ever been asked
+or answered. The result was a history that silently erased user-facing decision
+context.
+
+A platform interaction that affects an agent turn must write a durable turn part
+when it opens, then update it with `answered`, `skipped`, or `interrupted` when
+it resolves. A history view renders this part read-only; it must not resurrect
+an old loop because its workspace, approvals, provider, and context are stale.
+Guard: the real-DOM clarify lane pins single/open/multi/skip envelopes plus four
+persisted summaries; switching/stopping marks a pending question interrupted.

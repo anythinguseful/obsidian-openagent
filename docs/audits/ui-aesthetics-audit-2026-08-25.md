@@ -1,0 +1,176 @@
+---
+title: "UI aesthetics audit — Settings and chat"
+type: audit
+status: done
+date: 2026-08-25
+tags: [openagent, ui, aesthetics, settings, chat, audit]
+---
+
+# UI aesthetics audit — Settings and chat
+
+## Scope and conclusion
+
+This is a source-level audit of the visual language requested for **cards,
+rows, and dividers** in Settings and the chat panel. It does not authorize a
+reskin or an implementation.
+
+The current UI already has a coherent direction: normal Settings controls are
+host-native rows; cards identify an object, result, or decision with its own
+context; dividers describe an internal boundary rather than separating every
+item. This direction matches the binding UI contract: prefer spacing, then a
+hairline, and use a card only when it conveys real information structure.
+
+The evidence does **not** support adding a generic card wrapper or a divider to
+every Settings row or chat turn. That would create the nested-box "panelitis"
+the project explicitly rejects. The one concrete interaction defect found is in
+the Conversations panel; it is documented below because it also changes the
+visual availability of row actions.
+
+## Method and limits
+
+- Read `skills/internal/openagent-ui/SKILL.md` (binding visual contract),
+  `skills/internal/functional-ui/SKILL.md` (functional hierarchy), and the
+  current Vercel Web Interface Guidelines source on 2026-08-25.
+- Inspected the current markup and CSS for Settings sections, MCP/Skills/Cron
+  objects, the conversations panel, tool cards, changed-files cards, system
+  messages, approval, reasoning, and composer-adjacent surfaces.
+- Compared the result with the completed [UI contract audit](ui-contract-audit-2026-08-20.md)
+  and [UI audit](ui-audit.md).
+- Chromium was unavailable during this initial audit, so its findings were
+  source-backed. The follow-up [Settings grouping visual system](../plans/settings-grouping-visual-system-2026-08-25.md)
+  later ran its real-DOM witness with HeadlessChrome 149; future aesthetic
+  changes still require the same proof in light and dark themes and at narrow
+  pane widths.
+
+## Current visual system
+
+### Settings: rows are the default, cards are the exception
+
+The Settings page already uses one clear hierarchy:
+
+1. The page title and description are separated by a single hairline
+   (`styles.css`, `.oa-section-title`).
+2. Subsections use a larger spacing break (28 px) and a compact heading plus
+   description (`.oa-subsection`), rather than a new card.
+3. Ordinary controls use Obsidian's native `.setting-item` rows.
+4. Cards are reserved for an object with several related controls: for example
+   one MCP server (`.oa-mcp-server`), one Skill row, or the new-cron form.
+
+That is the right division of labor. A card is meaningful for an MCP server
+because its enabled state, endpoint/command, headers or environment, and delete
+action form one object. A scalar such as a slider, toggle, or dropdown does not
+need a second container around its native Settings row.
+
+### Chat: cards already mark work objects, not conversation turns
+
+The chat transcript keeps ordinary user and assistant messages light. A card is
+used where the agent exposes a distinct work object:
+
+- a tool invocation (`.oa-tool`);
+- a changed-files summary (`.oa-changed`);
+- a system-level notice (`.oa-sysmsg`);
+- an approval decision (`.oa-approval`);
+- a code block or table.
+
+Those cards already share the intended grammar: themed surface, small radius,
+hairline border, compact header, and content that may expand. The header/content
+boundary is a divider only where it explains structure: tool header → Input /
+Output; changed-files count → file rows; preview header → diff rows. Markdown
+`hr` is intentionally spacing-only, so ordinary assistant prose does not become
+a ruled document.
+
+## Findings
+
+### F1 — Do not introduce global cards or global dividers
+
+**Status: confirmed design constraint, not a defect.**
+
+A generic `.oa-card` treatment across Settings would box normal scalar controls
+inside another box while Obsidian already renders the row surface. Applying a
+full divider between every chat turn would make a transcript read like a table
+and compete with message rhythm.
+
+**Keep:** spacing between Settings groups; native rows for scalar values; cards
+for multi-control objects; dividers inside a card when its header, body, and
+actions are separate reading regions.
+
+**Do not add:** a card around every Settings group, a border around every chat
+message, or a horizontal rule between every transcript turn.
+
+### F2 — Conversations panel had a row-action accessibility and affordance gap
+
+**Status: resolved 2026-08-25.**
+
+The original selectable conversation was a clickable `div`, while Rename and
+Delete were hidden until pointer hover. The completed
+[Conversations panel interaction](../plans/conversations-panel-interaction-2026-08-25.md)
+keeps an outer layout container but makes the title/meta region a real button
+and keeps Rename/Delete as sibling controls. `:focus-within` now reveals the
+actions alongside pointer hover, and the selection button has a visible focus
+ring.
+
+The owner selected a short confirmation rather than Undo. `Delete chat` now
+opens an Obsidian-native modal; Cancel preserves the session and only the
+modal's destructive action calls the existing deletion callback. The browser
+witness proves keyboard focus, Enter selection, inline rename, cancel, and
+confirmed removal.
+
+### F3 — Consecutive tool cards formed a visual wall
+
+**Status: resolved 2026-08-25.**
+
+The existing card roles deliberately have different weight:
+
+- Tool and changed-files cards use `--radius-m` and a neutral hairline.
+- System messages and approvals use `--radius-l`; approval also carries a
+  warning border and shadow because it blocks an agent action.
+- Cards with lists have capped inner scrolling, so a long result does not bury
+  the composer.
+
+The issue was narrower than a universal-card inconsistency: consecutive tool
+calls repeated the same outer border and radius for every row. The completed
+[Chat tool activity grouping](../plans/chat-tool-activity-grouping-2026-08-25.md)
+keeps role differences intact while turning each chronological tool block into
+one outer card with independently expandable rows and hairline separators. Its
+HeadlessChrome 149 fixture proves four rows, three separators, and the open
+error detail remaining attached to its owning row.
+
+### F4 — Settings grouping should be audited by density, not by decoration
+
+**Status: visual-system follow-up.**
+
+The source already uses spacing for group breaks and cards for compound objects.
+The remaining aesthetic question is whether a particular **dense** Settings tab
+has too many consecutive groups or too much description text. This cannot be
+answered honestly from selector names alone.
+
+The appropriate real-DOM frames are:
+
+- Capabilities: tools, terminal, web search, skills, and MCP in one pane;
+- Model: provider/model controls plus auxiliary-model routes;
+- Memory & Context: context, compression, and recall controls;
+- a 280 px narrow pane and both light/dark themes.
+
+Measure title-to-first-row rhythm, group-to-group gap, row height, overflow, and
+visible focus. Only then decide whether to adjust spacing or add a divider to a
+specific group boundary.
+
+## Proposed decision boundaries for a later discussion
+
+| Surface | Keep as-is | Candidate change | Requires owner choice |
+| --- | --- | --- | --- |
+| Ordinary Settings scalar | Native row | None by default | No |
+| Compound Settings object | Card | Standardize only after a visual family comparison | Yes, if appearance changes |
+| Settings group boundary | Spacing first | Add a hairline only when a measured dense group needs a stronger break | Yes |
+| Ordinary chat turn | Lightweight transcript | None | No |
+| Tool / diff / approval / system work object | Role-specific card | Compare card weight in a dense real transcript before unifying | Yes |
+| Conversations row | Current layout is not sufficient | Semantic select control plus focus-visible actions | No for accessibility repair; yes for delete confirmation vs Undo |
+
+## Next action
+
+The Settings grouping and consecutive-tool findings are resolved. Before a
+future aesthetic change, capture a dense transcript that combines changed files,
+system notice, and approval alongside tool activity, or capture the dense
+Settings frames listed in F4. Compare them at the same viewport in light and
+dark themes, then choose one narrow, evidence-backed direction rather than a
+generic "card + row + divider" treatment.

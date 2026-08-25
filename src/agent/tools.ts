@@ -16,6 +16,7 @@ import { CronTask, OpenAgentSettings, getActiveProvider } from "../settings";
 import { findCronTask, formatRelative, isCronCompleted, scanCronPrompt, validateCronExpr } from "./cron";
 import { sanitizeScriptName } from "./cronScripts";
 import { chatCompletion } from "./providers";
+import { MEMORY_ROUTING_GUIDANCE } from "./memory";
 import { resolveAuxTask } from "./contextManager";
 import {
 	WEB_EXTRACT_MAX_URLS,
@@ -797,7 +798,8 @@ const saveMemory: AgentTool = {
 	description:
 		"Add, replace or remove an entry in long-term memory (MEMORY.md). Memory is injected into every future turn, so keep entries compact and high-signal. " +
 		"Use replace/remove with a short unique substring (`old_text`) to correct a mistake or drop a stale fact. " +
-		"If an add is refused as full, free room with remove/replace in the same effort, then add again.",
+		"If an add is refused as full, free room with remove/replace in the same effort, then add again.\n\n" +
+		MEMORY_ROUTING_GUIDANCE,
 	parameters: {
 		type: "object",
 		properties: {
@@ -831,7 +833,8 @@ const updateUserProfile: AgentTool = {
 	approvalKind: "persistent-write",
 	description:
 		"Add, replace or remove a durable fact about the user (role, goals, preferences) in USER.md. " +
-		"Use replace/remove with a short unique substring (`old_text`) to correct a mistake or drop a stale fact.",
+		"Use replace/remove with a short unique substring (`old_text`) to correct a mistake or drop a stale fact.\n\n" +
+		MEMORY_ROUTING_GUIDANCE,
 	parameters: {
 		type: "object",
 		properties: {

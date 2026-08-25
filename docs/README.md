@@ -65,12 +65,18 @@ Feature plans and port designs, with their implementation status.
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
 | [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
 | [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
-| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 are complete; Stage 6 awaits the next owner-selected architecture target. |
+| [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 and both scoped Stage 6 targets are complete; no future architecture target is selected. |
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
 | [GitHub Release retention and publication](plans/github-release-retention-2026-08-23.md) | done | Durable assets live in the [reconstructed, reverified v0.1.151 GitHub Release](https://github.com/anythinguseful/obsidian-openagent/releases/tag/v0.1.151). |
 | [Smoke/harness split](plans/smoke-harness-split-2026-08-24.md) | done | Stage 6 target, completed 2026-08-24: `test/smoke.test.cjs` split from 7,012 to 1,296 lines across eleven phases into a shared harness plus seven domain guard modules, with all 289 `✓` preserved at every step. |
-| [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | active | Stage 6 target #2: move the twelve self-contained section renderers (1,506 lines) out of the 4,938-line `src/settingsTab.ts` into `src/settings/sections/`, leaving the class owning data, persistence and every stateful renderer. |
+| [Settings section renderers](plans/settings-section-renderers-2026-08-24.md) | done | Stage 6 target #2 completed: twelve self-contained renderer members moved into `src/settings/sections/`, while the class retains data, persistence, navigation, search indexing, and stateful renderers. |
+| [Settings grouping visual system](plans/settings-grouping-visual-system-2026-08-25.md) | done | Group shells now unify native rows with MCP-server and cron-task object cards; behavior is unchanged and the real-DOM witness passes. |
+| [Chat tool activity grouping](plans/chat-tool-activity-grouping-2026-08-25.md) | done | Consecutive tool calls now share one activity card with independently expandable rows, hairline separators, and a real-DOM witness. |
+| [Conversations panel interaction](plans/conversations-panel-interaction-2026-08-25.md) | done | Session rows are semantic and keyboard-discoverable; deletion now uses the owner-approved confirmation flow with real-DOM proof. |
+| [Interactive chat controller — Phase 1](plans/interactive-chat-controller-phase-1-2026-08-25.md) | done | Interactive AgentLoop/context construction now lives behind AgentRunner's narrow run handle; ChatApp retains UI-owned presentation and callbacks. |
+| [Memory and user-profile routing](plans/memory-profile-routing-2026-08-25.md) | done | Hermes-style user/memory/transient routing now guides both tools and blocks unmistakable activity logs before either persistent store is written. |
+| [Clarify history summary](plans/clarify-history-summary-2026-08-25.md) | done | Clarify questions and outcomes persist as read-only transcript summaries; history never resumes a stale agent loop. |
 
 ## Studies (`studies/`)
 
@@ -100,9 +106,10 @@ Audits of the plugin itself (our own surface, not upstream).
 | Document | Status | Summary |
 | --- | --- | --- |
 | [Plugin audit 2026-08-09](audits/audit-2026-08-09.md) | done | Full plugin audit after v0.1.127. |
-| [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | active | Repo-wide 11-dimension defect sweep; T1 (silent clipboard failure) fixed under guard v0.1.197. |
+| [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | done | Repo-wide sweep closed after all documented dimensions were verified and its recorded findings received regression guards. |
 | [Documentation consistency audit 2026-08-23](audits/documentation-consistency-audit-2026-08-23.md) | done | v0.1.151 source/test/release truth versus stale plan status, hub coverage, and release-proof contracts. |
 | [Plugin technical audit 2026-08-11](audits/plugin-audit-2026-08-11.md) | done | Historical v0.1.135 technical audit; its hardening findings informed later work. |
+| [Hermes Desktop architecture parity 2026-08-25](audits/hermes-desktop-architecture-parity-2026-08-25.md) | done | Source-backed architecture review: plugin boundaries are sound; the remaining debt is interactive-run orchestration inside ChatApp. |
 | [Mermaid inline-percent audit 2026-08-13](audits/mermaid-inline-percent-audit-2026-08-13.md) | done | Root cause and regression scope for invalid trailing Mermaid comments. |
 | [Mermaid pipeline audit 2026-08-14](audits/mermaid-pipeline-audit-2026-08-14.md) | done | Historical read-only audit of Mermaid rendering, retry, and vault-write paths. |
 | [Workspace path-security audit 2026-08-14](audits/workspace-path-security-audit-2026-08-14.md) | done | Historical basis for Workspace Modes; current semantics live in Workspace path security. |
@@ -114,6 +121,7 @@ Audits of the plugin itself (our own surface, not upstream).
 | [Settings descriptions audit 2026-08-22](audits/settings-descriptions-audit-2026-08-22.md) | done | Full Settings copy inventory; approved A–E changes and anti-regression voice/length guards shipped. |
 | [UI audit](audits/ui-audit.md) | done | UI audit using the vendored web-design-guidelines skill. |
 | [UI contract audit 2026-08-20](audits/ui-contract-audit-2026-08-20.md) | done | Bug-bounty pass of the openagent-ui contract: 14 rules verified, 3 warns, 1 contract clarification (var() fallback scoping). |
+| [UI aesthetics audit 2026-08-25](audits/ui-aesthetics-audit-2026-08-25.md) | done | Source-level audit of cards, rows, and dividers in Settings and chat; rejects a global card treatment and records the Conversations-row interaction gap. |
 
 ## Reference (`reference/`)
 

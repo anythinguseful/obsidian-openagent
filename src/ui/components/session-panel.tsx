@@ -1,7 +1,26 @@
 import { type RefObject, useCallback, useState } from "react";
+import { App, Modal } from "obsidian";
 import { PencilIcon, PlusIcon, TrashIcon, XIcon } from "../icons";
 import { type SessionMeta } from "../../agent/sessions";
 import { SearchField } from "./search-field";
+
+class ConfirmSessionDeleteModal extends Modal {
+	constructor(app: App, private title: string, private onConfirm: () => void) {
+		super(app);
+	}
+
+	onOpen(): void {
+		this.contentEl.addClass("oa-confirm-modal");
+		this.contentEl.createEl("h3", { text: `Delete chat “${this.title}”?` });
+		this.contentEl.createEl("p", { text: "This permanently removes the saved conversation from Open Agent." });
+		const actions = this.contentEl.createDiv({ cls: "oa-modal-actions" });
+		actions.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
+		actions.createEl("button", { text: "Delete chat", cls: "mod-warning" }).addEventListener("click", () => {
+			this.close();
+			this.onConfirm();
+		});
+	}
+}
 
 export interface SessionPanelGroup {
 	label: string;
@@ -12,6 +31,7 @@ interface SessionPanelProps {
 	/* React 18's RefObject<T> already types `current` as `T | null`; spelling the
 	   null again produces RefObject<HTMLElement | null>, which no longer matches
 	   the `ref` prop. Mirrors file-upload.tsx's inputRef. */
+	app: App;
 	panelRef: RefObject<HTMLElement>;
 	compact: boolean;
 	filter: string;
@@ -32,6 +52,7 @@ interface SessionPanelProps {
  * interaction and forwards every durable action through typed callbacks.
  */
 export function SessionPanel({
+	app,
 	panelRef,
 	compact,
 	filter,
@@ -92,39 +113,45 @@ export function SessionPanel({
 									<div
 										key={session.id}
 										className={`oa-panel-row${session.id === activeSessionId ? " is-active" : ""}`}
-										onClick={() => onSelect(session.id)}
 									>
-										<div className="oa-panel-row-text">
-											{renamingId === session.id ? (
+										{renamingId === session.id ? (
+											<div className="oa-panel-row-text">
 												<input
 													className="oa-panel-row-rename-input"
 													aria-label="Rename chat"
 													autoFocus
 													value={renameDraft}
-													onClick={(event) => event.stopPropagation()}
 													onChange={(event) => setRenameDraft(event.target.value)}
 													onBlur={() => void commitRename()}
 													onKeyDown={(event) => {
 														if (event.key === "Enter") void commitRename();
-														else if (event.key === "Escape") {
-															event.stopPropagation();
-															cancelRename();
-														}
+														else if (event.key === "Escape") cancelRename();
 													}}
 												/>
-											) : (
-												<span className="oa-panel-row-title">{session.title}</span>
-											)}
-											<span className="oa-panel-row-meta">
-												{session.turnCount} turns · {session.model || "—"}
-											</span>
-											{hits?.get(session.id) ? <span className="oa-panel-row-excerpt">{hits.get(session.id)}</span> : null}
-										</div>
+												<span className="oa-panel-row-meta">
+													{session.turnCount} turns · {session.model || "—"}
+												</span>
+											</div>
+										) : (
+											<button
+												type="button"
+												className="oa-panel-row-select"
+												aria-label={`Open chat “${session.title}”`}
+												onClick={() => onSelect(session.id)}
+											>
+												<div className="oa-panel-row-text">
+													<span className="oa-panel-row-title">{session.title}</span>
+													<span className="oa-panel-row-meta">
+														{session.turnCount} turns · {session.model || "—"}
+													</span>
+													{hits?.get(session.id) ? <span className="oa-panel-row-excerpt">{hits.get(session.id)}</span> : null}
+												</div>
+											</button>
+										)}
 										<button
 											className="oa-panel-row-rename"
 											aria-label="Rename chat"
-											onClick={(event) => {
-												event.stopPropagation();
+											onClick={() => {
 												setRenamingId(session.id);
 												setRenameDraft(session.title);
 											}}
@@ -134,10 +161,7 @@ export function SessionPanel({
 										<button
 											className="oa-panel-row-del"
 											aria-label="Delete chat"
-											onClick={(event) => {
-												event.stopPropagation();
-												onDelete(session.id);
-											}}
+											onClick={() => new ConfirmSessionDeleteModal(app, session.title, () => onDelete(session.id)).open()}
 										>
 											<TrashIcon size={12} />
 										</button>

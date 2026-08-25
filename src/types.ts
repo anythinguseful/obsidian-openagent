@@ -47,6 +47,15 @@ export type TurnPart =
 			status: "pending" | "running" | "done" | "error" | "denied";
 			result?: string;
 	  }
+	| {
+			kind: "clarify";
+			clarifyId: string;
+			question: string;
+			choices: string[] | null;
+			multiSelect: boolean;
+			status: "pending" | "answered" | "skipped" | "interrupted";
+			answer?: string | string[];
+	  }
 	/** Quiet one-line system marker (e.g. model failover notice). */
 	| { kind: "marker"; text: string };
 

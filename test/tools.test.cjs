@@ -260,6 +260,12 @@ const expectThrow = async (fn, label) => {
 				calls[3][0] === "addUser" && calls[4][0] === "replaceUser" && calls[5][0] === "removeUser",
 			"memory tools: add/replace/remove dispatch to the right store methods"
 		);
+		check(
+			tool("save_memory").description.includes("USER.md: stable facts about the user") &&
+			tool("update_user_profile").description.includes("dated tool/test/session activity") &&
+			tool("update_user_profile").description.includes("Keep those in session history"),
+			"memory tools: Hermes-style target and transient-session routing is advertised"
+		);
 		await expectThrow(
 			() => tool("save_memory").execute({ action: "remove" }, memCtx),
 			"memory tool: remove without old_text is refused"

@@ -23,8 +23,8 @@ dari bacaan narasi docs sendirian (pelajaran 86 — pixel/SOURCE mengalahkan tek
 | **prompt-kit** | github.com/ibelick/prompt-kit (`main`) | Paritas komponen chat: thinking-bar, tool, loader, message, prompt-input, reasoning, feedback | verified (dipakai harian, raw fetch per komponen) |
 | **lobe-ui** | github.com/lobehub/lobe-ui (`master`) | Paritas fitur AIGC lanjutan: **CodeDiff** (acuan approval-preview diff), Highlighter, komponen chat AIGC lain | verified 2026-08-07 (repo+tree+file kunci via API/raw) |
 | **shadcn-ui/ui** | github.com/shadcn-ui/ui (`main`) | Disiplin design-token (CSS-var theming), pola aksesibilitas primitif (radix/base-ui), referensi komponen umum bila butuh port baru | verified 2026-08-07 (repo via API) |
-| Hermes Agent | github.com/NousResearch/hermes-agent | Arsitektur agent loop, tools, skills, sessions | historical (lihat doc studi per fitur) |
-| Hermes Desktop | hermes-agent/tree/main/apps/desktop | Peta settings + shell chat | historical |
+| Hermes Agent | github.com/NousResearch/hermes-agent | Arsitektur agent loop, tools, skills, sessions | verified 2026-08-25 (`41447a6`; Desktop README/AGENTS/DESIGN + settings source) |
+| Hermes Desktop | hermes-agent/tree/main/apps/desktop | Authority boundaries, settings scope, shell chat | verified 2026-08-25 (`41447a6`; see architecture parity audit) |
 | obsidian-copilot | github.com/logancyang/obsidian-copilot | Preprocess markdown, ApplyView/diff recipe | historical |
 | Obsidian app.css | `test/reference-obsidian-app.css` (snapshot canonical untuk harness) | Token tema resmi Obsidian (warna, spacing, radius); **diff-view resmi: baris 0.2 / segmen 0.4** | verified 2026-08-07 (lampiran owner) |
 | lucide | github.com/lucide-icons/lucide | Glyph resmi — body SVG di-inline verbatim (nama antar-era berubah: circle-check/check-circle dsb) | verified (per glyph, curl) |

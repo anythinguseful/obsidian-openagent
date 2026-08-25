@@ -823,7 +823,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.152") &&
+					blob.includes("Open Agent v0.1.153") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
@@ -2563,6 +2563,51 @@ async function main() {
 					reduced.main && reduced.main.anim === "none",
 				normal,
 				reduced,
+			};
+		}
+
+		/* F49 — Settings visual grouping: direct subsection content belongs to
+		   one quiet shell. Native rows stay inside it; managed MCP and cron
+		   objects retain a stronger nested card without escaping the group. */
+		{
+			const { page: capPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "capabilities"), "capabilities");
+			const capabilities = await capPage.evaluate(() => {
+				const groups = [...document.querySelectorAll(".oa-settings-group")];
+				const mcp = document.querySelector(".oa-mcp-server");
+				const group = groups.find((el) => el.querySelector(".oa-subsection-title")?.textContent?.trim() === "MCP servers");
+				const cs = (el) => el ? getComputedStyle(el) : null;
+				return {
+					groups: groups.length,
+					mcpInGroup: !!mcp?.closest(".oa-settings-group"),
+					mcpBorder: cs(mcp)?.borderTopWidth ?? null,
+					mcpRadius: cs(mcp)?.borderTopLeftRadius ?? null,
+					mcpGroupRows: group ? group.querySelectorAll(":scope > .setting-item").length : 0,
+					looseSubsections: [...document.querySelectorAll(".oa-settings-content > .oa-subsection")].length,
+				};
+			});
+			await capPage.close();
+
+			const { page: cronPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "automations"), "automations");
+			const cron = await cronPage.evaluate(() => {
+				const task = document.querySelector(".oa-cron-task");
+				const group = task?.closest(".oa-settings-group");
+				const cs = task ? getComputedStyle(task) : null;
+				return {
+					taskInGroup: !!group,
+					border: cs?.borderTopWidth ?? null,
+					radius: cs?.borderTopLeftRadius ?? null,
+				};
+			});
+			await cronPage.close();
+			probes.F49settingsGroups = {
+				fixed:
+					capabilities.groups >= 5 &&
+					capabilities.looseSubsections === 0 &&
+					capabilities.mcpInGroup && capabilities.mcpGroupRows > 0 &&
+					capabilities.mcpBorder !== "0px" && capabilities.mcpRadius !== "0px" &&
+					cron.taskInGroup && cron.border !== "0px" && cron.radius !== "0px",
+				capabilities,
+				cron,
 			};
 		}
 

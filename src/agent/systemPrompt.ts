@@ -8,7 +8,7 @@ import { App } from "obsidian";
 import { OpenAgentSettings } from "../settings";
 import { AgentTool, mayNeedCautiousApproval } from "./tools";
 import { Skill } from "./skills";
-import { MemoryStore } from "./memory";
+import { MemoryStore, MEMORY_ROUTING_GUIDANCE } from "./memory";
 import { overlayText, resolveIdentity } from "./profiles";
 import { STEER_CHANNEL_NOTE } from "./steer";
 import { WorkspacePolicy, workspacePolicyFor } from "./workspacePolicy";
@@ -148,7 +148,9 @@ export async function buildSystemPrompt(p: PromptParts): Promise<string> {
 		if (user.trim()) sections.push(`What you know about the user:\n${user.trim()}`);
 		if (p.memoryNudgeDue) {
 			sections.push(
-				"Memory nudge: if this conversation surfaced a durable preference, decision or fact, save it with `save_memory` or `update_user_profile` now."
+				"Memory nudge: save only durable information that stops the user repeating themselves.\n" +
+					MEMORY_ROUTING_GUIDANCE +
+					"\nUse `update_user_profile` only for USER.md and `save_memory` only for MEMORY.md."
 			);
 		}
 	}
@@ -173,7 +175,7 @@ export async function buildSystemPrompt(p: PromptParts): Promise<string> {
 		sections.push(
 			"User feedback: your previous reply in this conversation was rated not helpful. Do not repeat the same shape — be more direct, more specific, or ask one clarifying question first." +
 				(s.memoryEnabled
-					? " If the exchange taught a durable lesson about this user, save it with `save_memory` or `update_user_profile`."
+					? " If it taught a stable user fact, use `update_user_profile`; if it taught a reusable environment or project lesson, use `save_memory`. Do not save session activity."
 					: "")
 		);
 	}

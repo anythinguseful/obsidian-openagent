@@ -1037,7 +1037,7 @@ module.exports = function settingsGuards() {
 			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
 			bs126.includes("workspaceMovedOut") &&
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ Notifications IA: native/sound tab is in tabs/search; Appearance present after Chat; About last tab with renderer; Workspace/Safety and audited sliders remain");
 		} else {
@@ -1648,7 +1648,8 @@ module.exports = function settingsGuards() {
 			/* 2026-08-24: pemanggil modal pindah dari tab ke sections/mcp.ts */
 			read("src/settings/sections/mcp.ts").includes("new McpConsentModal") &&
 			consent.includes("class McpConsentModal") &&
-			chat.includes("getToolsWithMcp");
+			runner.includes("this.getToolsWithMcp(options.settings, { interactiveTerminal: true })") &&
+			chat.includes("runner.createInteractiveRun({");
 		if (ok) {
 			console.log("✓ v0.1.147h: MCP runtime — pure client + lazy stdio + consent-gated runtime + first-use consent, interactive-path-only injection");
 		} else {
@@ -2236,7 +2237,7 @@ module.exports = function settingsGuards() {
 			st2.includes("clarify: true,") && st2.includes("todo: true,") &&
 			tb.includes('key: "todo"') &&
 			tp.includes("todo dedupe: last occurrence wins") &&
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.133: todo tool (port Hermes 1:1) — ride session file · injeksi lintas kompresi hanya item aktif · ephemeral di headless/quick-ask · 18 cek unit hijau");
 		} else {
@@ -2268,7 +2269,7 @@ module.exports = function settingsGuards() {
 			cm.includes('"webExtract" | "vision"') &&
 			tp.includes("vision source: vault path") &&
 			al.includes("vision: provider request carries pixels inside the tool message") &&
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.134: vision_analyze — native pixels ride tool result (bypass 20k clipper) · legacy aux+template mereka · magic-byte detect · witness wire-level hijau");
 		} else {
@@ -2304,7 +2305,7 @@ module.exports = function settingsGuards() {
 			tp.includes("runPooled(3, workers)") &&
 			al.includes("delegation: consolidated batch result lands on the wire") &&
 			plan.includes("DELEGATE_BLOCKED_TOOLS") &&
-			read("manifest.json").includes('"version": "0.1.152"');
+			read("manifest.json").includes('"version": "0.1.153"');
 		if (ok) {
 			console.log("✓ v0.1.135+: delegate_task — child/headless fail-closed allowlists · pool 3 · consolidated index-sorted · orchestrator/output_schema ditolak jujur · gap 🟡 TUNTAS SEMUA");
 		} else {
@@ -2428,6 +2429,31 @@ module.exports = function settingsGuards() {
 			console.log("\u2713 v0.1.152: custom headers sanitized at both boundaries \u2014 non-object JSON cannot crash settings or reach the wire");
 		} else {
 			console.error("\u2717 v0.1.152 custom-header sanitize drifted (raw JSON.parse stored, or the load merge stopped sanitizing)");
+			failed++;
+		}
+	}
+	// Settings visual grouping: named subsections own their following direct
+	// siblings inside a quiet shell; ordinary values remain native rows, while
+	// MCP servers and cron tasks are stronger managed objects.
+	{
+		const tab = read("src/settingsTab.ts");
+		const css = read("styles.css");
+		const ok =
+			read("manifest.json").includes('"version": "0.1.153"') &&
+			tab.includes("this.groupSubsections(content);") &&
+			tab.includes("private groupSubsections(content: HTMLElement): void") &&
+			tab.includes('group.className = "oa-settings-group"') &&
+			tab.includes('const taskCard = containerEl.createDiv({ cls: "oa-cron-task" });') &&
+			tab.includes("this.cronHistory(taskCard, task)") &&
+			css.includes(".oa-settings .oa-settings-group {") &&
+			css.includes(".oa-settings .oa-settings-group > .oa-subsection {") &&
+			css.includes(".oa-settings .oa-settings-group > .setting-item + .setting-item {") &&
+			css.includes(".oa-settings .oa-cron-task {") &&
+			css.includes(".oa-settings .oa-mcp-server .setting-item + .setting-item {");
+		if (ok) {
+			console.log("✓ Settings visual grouping: group shells keep native rows together and align MCP/cron managed objects");
+		} else {
+			console.error("✗ Settings visual grouping drifted");
 			failed++;
 		}
 	}

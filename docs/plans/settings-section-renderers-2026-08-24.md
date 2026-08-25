@@ -1,7 +1,7 @@
 ---
 title: "Settings section renderers"
 type: plan
-status: active
+status: done
 date: 2026-08-24
 tags: [openagent, plan, architecture, settings, refactor]
 ---
@@ -15,13 +15,15 @@ class. This plan moves the **self-contained** section renderers out into
 `src/settings/sections/`, leaving `OpenAgentSettingTab` as the owner of data,
 persistence, navigation, and every renderer that still mutates class state.
 
-It is the second Stage 6 target, selected by the owner on 2026-08-24 after the
-[smoke/harness split](smoke-harness-split-2026-08-24.md) finished. Scope for
-this session: **batch** — the largest self-contained renderers, not a pilot and
-not the whole class.
+It was the second Stage 6 target, selected by the owner on 2026-08-24 after the
+[smoke/harness split](smoke-harness-split-2026-08-24.md) finished. Its approved
+**batch** scope is complete: the largest self-contained renderers moved, not the
+whole class.
 
-Like the smoke split, this is an ownership change, not a rewrite. No user-facing
-behavior changes, no control moves between sections, no setting is renamed.
+Like the smoke split, this was an ownership change, not a rewrite. No
+user-facing behavior changed, no control moved between sections, and no setting
+was renamed. The resulting ownership boundary is now the baseline for any
+future settings refactor.
 
 ## Why these renderers, measured
 
