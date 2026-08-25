@@ -70,7 +70,7 @@ apa pun — audit dulu, implementasi belakangan:
    dan riwayatnya.
 2. **Verifikasi artefak handoff kunci.** Cek keberadaan: `.github/workflows/ci.yml`,
    `scripts/check-docs.mjs`, `package.json` script `check:docs`, README
-   "21 tools in 9 toggleable toolsets", `docs/working-agreement.md`
+   "25 tools in 10 toggleable toolsets", `docs/working-agreement.md`
    "Bootstrap sesi GitHub" + Lesson 117, dan `agents/skills/internal/openagent-ui/SKILL.md`
    menunjuk `preview/index.html`. Yang hilang = pekerjaan rekonstruksi.
 3. **Baca dokumen & skill binding.** `docs/working-agreement.md` (seluruh
