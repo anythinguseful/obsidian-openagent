@@ -105,6 +105,7 @@ Audits of the plugin itself (our own surface, not upstream).
 
 | Document | Status | Summary |
 | --- | --- | --- |
+| [Repo condition audit 2026-08-30](audits/repo-condition-audit-2026-08-30.md) | done | Read-only post-v0.1.155 condition audit: version chain, release proof, hygiene, and Lessons log verify clean; three non-code findings (unshipped branch commit, tagless v0.1.154, stale RELEASES.md lines). |
 | [Plugin audit 2026-08-09](audits/audit-2026-08-09.md) | done | Full plugin audit after v0.1.127. |
 | [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | done | Repo-wide sweep closed after all documented dimensions were verified and its recorded findings received regression guards. |
 | [Documentation consistency audit 2026-08-23](audits/documentation-consistency-audit-2026-08-23.md) | done | v0.1.151 source/test/release truth versus stale plan status, hub coverage, and release-proof contracts. |
