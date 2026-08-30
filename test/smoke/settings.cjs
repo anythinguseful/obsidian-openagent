@@ -243,11 +243,13 @@ module.exports = function settingsGuards() {
 			!tab.includes("s.compressionThreshold =") &&
 			!tab.includes("s.compressionProtectLastN =") &&
 			!tab.includes("s.compressionEnabled =") &&
-			/* Context window jadi baris PERTAMA grup Compression (keputusan
-			   owner; Hermes menaruhnya di section Model) — subheading harus
-			   muncul sebelum row-nya. */
-			mem.indexOf('"Compression",') < mem.indexOf('.setName("Context window")') &&
-			mem.indexOf('.setName("Context window")') < mem.indexOf('.setName("Auto-compression")');
+			/* 2026-08-30: Context window tinggal di grup Context (baris PERTAMA,
+			   di atas Context file) — keputusan owner baru yang menggantikan
+			   penempatan 2026-08-24 di kepala grup Compression. Subheading
+			   Context harus muncul sebelum row-nya. */
+			mem.indexOf('"Context",') < mem.indexOf('.setName("Context window")') &&
+			mem.indexOf('.setName("Context window")') < mem.indexOf('.setName("Context file")') &&
+			mem.indexOf('"Compression",') < mem.indexOf('.setName("Auto-compression")');
 		if (ok) {
 			console.log("✓ v0.1.193: context/compression knobs have one owner (Memory & Context), aux model slot stays, sentence-case labels");
 		} else {
@@ -616,10 +618,11 @@ module.exports = function settingsGuards() {
 			   tab Model (slot model kompresi — sengaja tinggal). Subjek guard ini
 			   adalah blok Memory & Context, jadi pin positif harus ke modulnya;
 			   pin negatif memastikan duplikat lama tidak hidup lagi. */
-			/* 2026-08-24: labels re-pointed at Hermes FIELD_LABELS (verified in
-			   apps/desktop/src/app/settings/constants.ts), sentence-cased for
-			   Obsidian. "Context window" joined this group as its first row and
-			   the duplicate Model-tab block was deleted. */
+		/* 2026-08-24: labels re-pointed at Hermes FIELD_LABELS (verified in
+		   apps/desktop/src/app/settings/constants.ts), sentence-cased for
+		   Obsidian. "Context window" joined the Memory & Context tab and the
+		   duplicate Model-tab block was deleted (2026-08-30: the row now
+		   lives in the Context group, pinned by the v0.1.193 guard). */
 			mem.includes('"Auto-compression"') &&
 			mem.includes('"Compression threshold"') &&
 			mem.includes('"Compression target"') &&
@@ -655,8 +658,9 @@ module.exports = function settingsGuards() {
 			tab.includes('setIcon("rotate-ccw")') &&
 			tab.includes('setTooltip("Reset to default")') &&
 			tab.includes("this.resetButton(stMaxTokens, \"maxTokens\")") &&
-			/* 2026-08-24: Context window pindah ke Memory & Context (baris pertama
-			   grup Compression) — pemilik reset-nya ikut pindah ke modul. */
+			/* 2026-08-24: Context window pindah ke Memory & Context (sejak
+			   2026-08-30 baris pertama grup Context) — pemilik reset-nya
+			   ikut pindah ke modul. */
 			mem187.includes("ctx.resetButton(stContextWindow, \"modelContextLength\")") &&
 			!tab.includes("this.resetButton(stContextWindow") &&
 			read("src/settings/sections/advanced.ts").includes("ctx.resetButton(stRequestTimeout, \"requestTimeoutMs\")") && // moved 2026-08-24 (Phase 5)

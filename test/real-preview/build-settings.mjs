@@ -1238,7 +1238,8 @@ async function main() {
 		// of three of these rows, writing the SAME setting keys from two
 		// places). This half of the old F15 asserts the knobs survived the
 		// move with the Hermes-aligned defaults (threshold 0.50,
-		// protect_last_n 20) and that "Context window" leads the group.
+		// protect_last_n 20). 2026-08-30: "Context window" leads the CONTEXT
+		// group (above "Context file") instead of the Compression group.
 		{
 			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory-knobs");
 			const findRowM = `(name) => [...document.querySelectorAll(".setting-item")].find((el) => el.querySelector(".setting-item-name")?.textContent?.trim() === name)`;
@@ -1249,8 +1250,9 @@ async function main() {
 				const thr = findRow("Compression threshold")?.querySelector('input[type="range"]');
 				const prot = findRow("Protected recent messages")?.querySelector('input[type="range"]');
 				const protNum = findRow("Protected recent messages")?.querySelector('input[type="number"]');
-				/* row order inside the Compression group: the threshold is a
-				   percentage OF the context window, so the window comes first */
+				/* row order 2026-08-30: "Context window" opens the CONTEXT group
+				   (above the context file); the compression knobs follow in
+				   their own group */
 				const rows = [...document.querySelectorAll(".setting-item-name")].map((n) => n.textContent?.trim());
 				return {
 					ctx: !!ctx && ctx.placeholder === "0 = auto",
@@ -1260,8 +1262,8 @@ async function main() {
 					protNum: protNum?.value ?? null,
 					order:
 						rows.indexOf("Context window") >= 0 &&
-						rows.indexOf("Context window") < rows.indexOf("Auto-compression") &&
-						rows.indexOf("Auto-compression") < rows.indexOf("Compression threshold"),
+						rows.indexOf("Context window") < rows.indexOf("Context file") &&
+						rows.indexOf("Context file") < rows.indexOf("Auto-compression"),
 					/* the Model tab's duplicate is asserted by F15.gone, which runs
 					   ON that page; a constant here would assert nothing. */
 				};

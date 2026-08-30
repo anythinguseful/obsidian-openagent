@@ -176,8 +176,27 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	/* Context (owner directive 2026-07-30, Hermes Desktop parity — official
 	   groups context.* under "Memory & Context"): what gets injected into
 	   every conversation. Rows moved here verbatim: "Context file" from
-	   Chat (was Agent), "Attach active note by default" from General. */
+	   Chat (was Agent), "Attach active note by default" from General.
+	   2026-08-30: "Context window" joined as the first row (owner call —
+	   it replaces the 2026-08-24 placement at the head of Compression). */
 	ctx.subheading(containerEl, "Context", "What gets injected into every conversation.");
+
+	/* 2026-08-30: moved verbatim from the Compression group — the owner
+	   wants the window in the Context group, above the context file. */
+	const stContextWindow = new Setting(containerEl)
+		.setName("Context window")
+		.setDesc("Tokens the model can see at once. 0 = auto-detect (falls back to 256000).")
+		.addText((t) => {
+			t.setPlaceholder("0 = auto")
+				.setValue(s.modelContextLength > 0 ? String(s.modelContextLength) : "")
+				.onChange(async (v) => {
+					s.modelContextLength = Math.max(0, Math.floor(Number(v.trim()) || 0));
+					ctx.plugin.saveSettingsSafe();
+				});
+			t.inputEl.setAttribute("aria-label", "Context window");
+		});
+	markModified(stContextWindow, ctx.plugin.settings, "modelContextLength");
+	ctx.resetButton(stContextWindow, "modelContextLength");
 
 	const stContextFile = new Setting(containerEl)
 		.setName("Context file")
@@ -212,10 +231,13 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 
 	   2026-08-24: the Model tab carried a second, older copy of three of
 	   these rows plus "Context window" (a duplicate dating to v0.1.17, noted
-	   in Lesson 172). That block is gone; "Context window" moved here as the
-	   first row because the threshold below is a percentage OF it — owner
-	   decision, a deliberate deviation from Hermes, which keeps
-	   model_context_length in its Model section.
+	   in Lesson 172). That block is gone; "Context window" initially moved
+	   here as the first row (owner decision at the time, a deliberate
+	   deviation from Hermes, which keeps model_context_length in its Model
+	   section).
+
+	   2026-08-30: "Context window" moved again, to the top of the Context
+	   group above — same owner, updated placement.
 
 	   Labels follow Hermes FIELD_LABELS (apps/desktop/src/app/settings/
 	   constants.ts, verified 2026-08-24) but re-cased: Obsidian's plugin
@@ -225,21 +247,6 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 		"Compression",
 		"What happens when a long conversation nears the context limit."
 	);
-
-	const stContextWindow = new Setting(containerEl)
-		.setName("Context window")
-		.setDesc("Tokens the model can see at once. 0 = auto-detect (falls back to 256000).")
-		.addText((t) => {
-			t.setPlaceholder("0 = auto")
-				.setValue(s.modelContextLength > 0 ? String(s.modelContextLength) : "")
-				.onChange(async (v) => {
-					s.modelContextLength = Math.max(0, Math.floor(Number(v.trim()) || 0));
-					ctx.plugin.saveSettingsSafe();
-				});
-			t.inputEl.setAttribute("aria-label", "Context window");
-		});
-	markModified(stContextWindow, ctx.plugin.settings, "modelContextLength");
-	ctx.resetButton(stContextWindow, "modelContextLength");
 
 	const stCompressionEnabled = new Setting(containerEl)
 		.setName("Auto-compression")
