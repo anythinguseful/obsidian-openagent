@@ -36,15 +36,6 @@ export function general(ctx: SectionContext, containerEl: HTMLElement): void {
 		);
 	markModified(stEnterToSend, ctx.plugin.settings, "enterToSend");
 
-	const stShowTimestamps = new Setting(containerEl).setName("Show message timestamps").addToggle((t) =>
-		t.setValue(s.showTimestamps).onChange(async (v) => {
-			s.showTimestamps = v;
-			ctx.plugin.saveSettingsSafe();
-			ctx.plugin.refreshViews();
-		})
-	);
-	markModified(stShowTimestamps, ctx.plugin.settings, "showTimestamps");
-
 	const stChatLeafLocation = new Setting(containerEl)
 		.setName("Chat panel location")
 		.setDesc("Where the chat panel opens. Changing this moves an open panel there right away.")

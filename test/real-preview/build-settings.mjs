@@ -1597,21 +1597,10 @@ async function main() {
 				};
 			})();
 
-			// F20 — modified dot on the canned non-default row, none on a
-			// pristine sibling. v0.1.127 amended: subjek & saudara BERTUKAR
-			// karena bawaan enterToSend dibalik jadi false (Show timestamps
-			// sekarang yang non-default, Enter-send mengukur default pristine).
-			probes.F20 = await page.evaluate(() => {
-				const item = [...document.querySelectorAll(".setting-item")];
-				const byName = (t) => item.find((el) => (el.querySelector(".setting-item-name")?.textContent ?? "").includes(t));
-				const dot = byName("Show message timestamps")?.querySelector(".oa-mod-dot");
-				const etsDot = byName("Enter sends message")?.querySelector(".oa-mod-dot");
-				return {
-					fixed: !!dot && dot.getAttribute("aria-label") === "Changed from default" && !etsDot,
-					dotA11y: dot?.getAttribute("aria-label") ?? null,
-					dotsOnPane: document.querySelectorAll(".oa-mod-dot").length,
-				};
-			});
+			// F20 — moved out of this block on 2026-08-30: the dot subject row
+			// "Show message timestamps" no longer renders on the general page
+			// (it moved to Appearance), so its probe opens the appearance page
+			// directly below.
 
 			// F21 — search chrome a11y: role=search, labelled input & clear,
 			// live status region.
@@ -1679,6 +1668,26 @@ async function main() {
 				return { fixed: before > 0 && r.rows === 0 && r.stripVisible && r.contentVisible, before, ...r };
 			})();
 
+			await page.close();
+		}
+
+		/* F20 — modified dot (v0.1.94, moved 2026-08-30): the dot subject row
+		   "Show message timestamps" moved from General to Appearance, so the
+		   probe follows it there. Pristine sibling: "Tool calls" (seed keeps
+		   it at its default). */
+		{
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "appearance"), "appearance");
+			probes.F20 = await page.evaluate(() => {
+				const item = [...document.querySelectorAll(".setting-item")];
+				const byName = (t) => item.find((el) => (el.querySelector(".setting-item-name")?.textContent ?? "").includes(t));
+				const dot = byName("Show message timestamps")?.querySelector(".oa-mod-dot");
+				const siblingDot = byName("Tool calls")?.querySelector(".oa-mod-dot");
+				return {
+					fixed: !!dot && dot.getAttribute("aria-label") === "Changed from default" && !siblingDot && document.querySelectorAll(".oa-mod-dot").length === 1,
+					dotA11y: dot?.getAttribute("aria-label") ?? null,
+					dotsOnPane: document.querySelectorAll(".oa-mod-dot").length,
+				};
+			});
 			await page.close();
 		}
 

@@ -1775,6 +1775,10 @@ module.exports = function settingsGuards() {
 		const chat = read("src/ui/ChatApp.tsx");
 		const reason = read("src/ui/components/reasoning.tsx");
 		const appearanceMod = read("src/settings/sections/appearance.ts"); // renderer pindah 2026-08-24 (Phase 5)
+		/* 2026-08-30: "Show message timestamps" pindah General → Appearance.
+		   Kepemilikan dipin dua arah: wajib ada di modul appearance, wajib
+		   HILANG dari modul general (pola absence-guard Lesson 72). */
+		const generalMod = read("src/settings/sections/general.ts");
 		const css = read("styles.css");
 		/* Every tab in the SECTIONS registry must have a matching case in
 		   renderSectionBody — a key without a case renders an EMPTY tab (the
@@ -1794,13 +1798,18 @@ module.exports = function settingsGuards() {
 			!tab.includes('private appearance(') &&
 			tab.includes('case "appearance":\n\t\t\tappearanceSection(this.sectionContext(), host);') &&
 			everyKeyHasCase &&
-			/* v0.1.199 (Phase 5): the five rows live in appearance.ts; the tab must
-			   no longer own them, or a duplicate could drift back in unnoticed. */
+			/* v0.1.199 (Phase 5): the rows live in appearance.ts; the tab must
+			   no longer own them, or a duplicate could drift back in unnoticed.
+			   2026-08-30: sixth row "Show message timestamps" moved here from
+			   General. */
 			appearanceMod.includes('setName("Tool calls")') &&
 			appearanceMod.includes('setName("Reasoning")') &&
 			appearanceMod.includes('setName("Session list density")') &&
 			appearanceMod.includes('setName("Intro screen")') &&
 			appearanceMod.includes('setName("Reaction buttons")') &&
+			appearanceMod.includes('setName("Show message timestamps")') &&
+			appearanceMod.includes("markModified(stShowTimestamps") &&
+			!generalMod.includes('setName("Show message timestamps")') &&
 			!tab.includes('setName("Session list density")') &&
 			chat.includes('settings.toolViewMode === "hidden"') &&
 			chat.includes('defaultOpen={settings.toolViewMode === "expanded"}') &&
@@ -1813,7 +1822,7 @@ module.exports = function settingsGuards() {
 			!(tab + appearanceMod).includes("zoomPercent") &&
 			!(tab + appearanceMod).includes("translucency");
 		if (ok) {
-			console.log("✓ v0.1.150: Appearance tab — five self-owned chat-surface controls, Obsidian's theme untouched");
+			console.log("✓ v0.1.150: Appearance tab — six self-owned chat-surface controls, Obsidian's theme untouched");
 		} else {
 			console.error("✗ v0.1.150 Appearance tab drifted");
 			failed++;
@@ -2197,7 +2206,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts") + read("src/settings/sections/safety.ts") + read("src/settings/sections/appearance.ts") + read("src/settings/sections/advanced.ts") + read("src/settings/sections/notifications.ts")).match(/markModified\(/g) || []).length === 63 && // 15 tab + 17 memory + 5 command + 5 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety + 3 general + 1 mcp (2026-08-24 Phase 5: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts") + read("src/settings/sections/safety.ts") + read("src/settings/sections/appearance.ts") + read("src/settings/sections/advanced.ts") + read("src/settings/sections/notifications.ts")).match(/markModified\(/g) || []).length === 63 && // 16 tab + 16 memory + 5 command + 6 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety + 2 general + 1 mcp — dihitung dari grep per file 2026-08-30 (komentar lama menulis "15 tab + 17 memory": dua angka salah yang saling menutup, total 63 tetap benar); 2026-08-30: dot timestamps pindah general→appearance; TOTAL wajib tetap 63 — bukti tidak ada satu dot pun yang hilang di perjalanan
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&

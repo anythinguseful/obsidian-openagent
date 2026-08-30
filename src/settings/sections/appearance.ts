@@ -89,4 +89,15 @@ export function appearance(ctx: SectionContext, containerEl: HTMLElement): void 
 			})
 		);
 	markModified(stReactions, ctx.plugin.settings, "showReactions");
+
+	/* 2026-08-30: moved verbatim from General — a message-display toggle
+	   belongs with the other chat-surface rows. */
+	const stShowTimestamps = new Setting(containerEl).setName("Show message timestamps").addToggle((t) =>
+		t.setValue(s.showTimestamps).onChange(async (v) => {
+			s.showTimestamps = v;
+			ctx.plugin.saveSettingsSafe();
+			ctx.plugin.refreshViews();
+		})
+	);
+	markModified(stShowTimestamps, ctx.plugin.settings, "showTimestamps");
 }
