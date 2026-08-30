@@ -2157,9 +2157,6 @@
 		align-items: flex-start;
 		flex-wrap: wrap;
 	}
-	.oa-settings .oa-provider-route .oa-mini-btn {
-		margin-left: 39px;
-	}
 	.oa-settings .oa-provider-url {
 		display: none;
 	}
@@ -6654,3 +6651,12 @@
 .oa-app .oa-clarify-summary-choices,
 .oa-app .oa-clarify-summary-answer { margin-top: 4px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .oa-app .oa-clarify-summary.is-interrupted .oa-clarify-summary-head > span:last-child { color: var(--text-warning); }
+
+/* 2026-08-30 (owner): provider-route action row — the mini button sits at
+   the bottom-right, after the route description, instead of floating at
+   mid-card height. Used by the Providers card and the Model route card. */
+.oa-settings .oa-provider-route-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 6px;
+}

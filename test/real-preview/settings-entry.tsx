@@ -197,7 +197,7 @@ function makePlugin(settings: OpenAgentSettings): Record<string, unknown> {
 	return {
 		manifest: {
 			name: "Open Agent",
-			version: "0.1.155",
+			version: "0.1.156",
 			minAppVersion: "1.5.0",
 			description:
 				"A self-improving AI agent for your vault. Agent framework modeled after Hermes Agent, settings after Hermes Desktop, and a chat UI built with prompt-kit components.",

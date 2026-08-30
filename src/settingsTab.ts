@@ -672,7 +672,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				? `Profile “${activeProfile.name}” overrides the global ${overriddenPart}. Global default: ${globalProvider?.name ?? s.activeProviderId}${s.model ? ` · ${s.model}` : ""}.`
 				: "Choose the provider + model pair in the Model tab. Connection settings below do not switch chat.",
 		});
-		const routeBtn = route.createEl("button", {
+		/* 2026-08-30: the action moved into a bottom-right row after the
+		   description (owner request) instead of floating mid-card height. */
+		const routeActions = routeMain.createDiv({ cls: "oa-provider-route-actions" });
+		const routeBtn = routeActions.createEl("button", {
 			cls: "oa-mini-btn",
 			text: profileOverridesRoute ? "Manage profile pin" : "Choose provider & model",
 			attr: { type: "button" },
@@ -939,7 +942,10 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 				: "This chat follows the global default. Apply below switches the provider + model pair together.",
 		});
 		if (profileOverridesRoute) {
-			const routeBtn = route.createEl("button", {
+			/* 2026-08-30: bottom-right action row after the description, same
+			   placement as the Providers card. */
+			const routeActions = routeMain.createDiv({ cls: "oa-provider-route-actions" });
+			const routeBtn = routeActions.createEl("button", {
 				cls: "oa-mini-btn",
 				text: "Manage profile pin",
 				attr: { type: "button" },

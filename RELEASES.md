@@ -8,6 +8,17 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.156 — Settings placement tidy-up
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **Provider route card action moved.** The button on the routing card (Providers and Model tabs) now sits at the bottom-right, after the description, instead of floating at mid-card height.
+- **"Show message timestamps" lives in Appearance.** The toggle moved from General into the Chat surface group; behavior is unchanged.
+- **"Context window" leads the Context group.** In Memory & Context the window sits above "Context file", no longer at the head of Compression; behavior and values are unchanged.
+- **unreal-engine removed from the MCP install catalog.** The one-click template is gone; a previously installed server keeps working from its saved configuration.
+
+---
+
 # Open Agent v0.1.155 — Development skills live under agents/
 
 **Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.

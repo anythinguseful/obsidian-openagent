@@ -137,7 +137,7 @@ module.exports = function agentGuards() {
 			sk.includes("getAllLoadedFiles()") && // supporting files non-md ikut terlihat
 			tp.includes("manage_skill delete trashes the WHOLE skill folder") &&
 			tp.includes("view_skill file= refuses .. traversal") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.156"');
 		if (ok) {
 			console.log("✓ v0.1.132: skills ⅔→3/3 — view_skill + manage_skill (patch/update/delete/write_file/remove_file) · traversal-guarded · store asli diuji end-to-end");
 		} else {

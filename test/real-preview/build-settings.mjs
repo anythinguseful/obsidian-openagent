@@ -472,6 +472,19 @@ async function main() {
 				)?.textContent ?? null;
 				const route = document.querySelector(".oa-provider-route");
 				const buttons = [...document.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim());
+				/* 2026-08-30: the route action must sit at the bottom-right, after
+				   the description (owner placement) — measured, not eyeballed
+				   (Lesson 44 family). */
+				const descEl = route?.querySelector(".oa-provider-route-desc");
+				const btnEl = route?.querySelector(".oa-mini-btn");
+				const dRect = descEl?.getBoundingClientRect();
+				const bRect = btnEl?.getBoundingClientRect();
+				const rRect = route?.getBoundingClientRect();
+				const routeGeom = dRect && bRect && rRect ? {
+					btnBelowDesc: bRect.top >= dRect.bottom - 2,
+					btnInsideCard: bRect.top > rRect.top && bRect.bottom <= rRect.bottom + 1,
+					rightPadDelta: Math.round((rRect.right - bRect.right) * 10) / 10,
+				} : null;
 				const inUseRow = [...document.querySelectorAll(".oa-provider-row")].find((row) =>
 					row.querySelector(".oa-provider-status.is-in-use")
 				);
@@ -486,6 +499,7 @@ async function main() {
 					viewedRows: document.querySelectorAll(".oa-provider-row.is-viewed").length,
 					inUseProvider: inUseRow?.querySelector(".oa-provider-name")?.textContent ?? null,
 					editingField: [...document.querySelectorAll(".setting-item .setting-item-name")].map((el) => el.textContent).filter((t) => (t ?? "").includes("base URL"))[0] ?? null,
+					routeGeom,
 				};
 			});
 			await page.getByRole("button", { name: "Manage profile pin" }).click();
@@ -522,6 +536,10 @@ async function main() {
 					mid.routeText.includes("Profile override") &&
 					mid.routeText.includes("Global default: LM Studio (local)") &&
 					mid.hasManagePin &&
+					mid.routeGeom !== null &&
+					mid.routeGeom.btnBelowDesc && // 2026-08-30: action after the description
+					mid.routeGeom.btnInsideCard &&
+					mid.routeGeom.rightPadDelta >= 6 && mid.routeGeom.rightPadDelta <= 20 && // right-aligned to the card padding
 					!mid.hasSetActive && // activation control no longer competes with setup
 					mid.viewedRows === 1 &&
 					mid.inUseProvider === "OpenRouter" &&
@@ -823,7 +841,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.155") &&
+					blob.includes("Open Agent v0.1.156") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
