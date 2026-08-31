@@ -10,7 +10,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 # Open Agent v0.1.158 — Vault-folder fields no longer truncate
 
-**Release archive:** prepared — publication route: merge the settings PR, then run the **Publish GitHub Release** workflow on `main` (steps in `docs/release-handoff-2026-08-31.md`).
+**Release archive:** published 2026-08-31 — full asset set on GitHub Releases (tag v0.1.158).
 
 - **Folder paths read in full.** Memory folder and Skills folder — the last two settings fields whose values were clipped by the narrow right-aligned input (the audit measured 34px and 11px missing) — now stack full-width below their labels, the same treatment as the MCP server fields in v0.1.157. Validation behavior is unchanged (invalid paths still revert with a notice).
 
