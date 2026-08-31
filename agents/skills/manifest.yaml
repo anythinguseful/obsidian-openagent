@@ -70,15 +70,3 @@ vendor:
     upstream: vercel-labs/agent-skills
     commit: dd089a8c752c966dee8bf0f27cb625ba193ffd9e
     required_for: [docs-review, prose-review]
-  - name: adhd
-    path: agents/skills/vendor/uditakhourii/adhd/SKILL.md
-    upstream: UditAkhourii/adhd
-    commit: 16dc239ff186b869372e75095cfa58fc0ee89927
-    required_for: [divergent-ideation, architecture-brainstorm, open-ended-design]
-    adapter: agents/arena/workflows/adhd.md
-  - name: design-taste-frontend
-    path: agents/skills/vendor/leonxlnx/taste-skill/SKILL.md
-    upstream: Leonxlnx/taste-skill
-    commit: ccbc15639c97057cbfcf32ecebc38ef716e4bb37
-    required_for: [landing-page, portfolio, marketing-redesign]
-    adapter: agents/arena/workflows/taste-skill.md

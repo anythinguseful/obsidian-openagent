@@ -37,8 +37,6 @@ contract, security boundaries, documentation conventions, or release process.
 | [`diagnosing-bugs`](vendor/mattpocock/diagnosing-bugs/SKILL.md) | Matt Pocock | Evidence-led diagnosis of bugs and performance regressions |
 | [`web-design-guidelines`](vendor/vercel/web-design-guidelines/SKILL.md) | Vercel | UI accessibility, UX, and interface review |
 | [`writing-guidelines`](vendor/vercel/writing-guidelines/SKILL.md) | Vercel | Documentation and prose review, after project docs rules |
-| [`adhd`](vendor/uditakhourii/adhd/SKILL.md) | UditAkhourii | Parallel divergent ideation; Arena adapter required |
-| [`design-taste-frontend`](vendor/leonxlnx/taste-skill/SKILL.md) | Leonxlnx | Anti-slop landing/portfolio pages; **loses to `openagent-ui` on plugin chrome** |
 
 Every vendor snapshot is pinned in [`manifest.yaml`](manifest.yaml) and has an
 `UPSTREAM.md` beside its vendor directory. Do not silently pull from upstream

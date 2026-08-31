@@ -22,8 +22,6 @@ including Arena Agent. Read it before inspecting or changing code.
 | --- | --- |
 | Any UI, CSS, visual state, or interface copy | `agents/skills/internal/openagent-ui/SKILL.md` **first**; then `frontend-design`, `functional-ui`, and `web-design-guidelines` as applicable |
 | Visual direction, typography, or layout | `agents/skills/vendor/anthropics/frontend-design/SKILL.md` |
-| Landing page, portfolio, or marketing redesign (not plugin chrome) | `agents/skills/vendor/leonxlnx/taste-skill/SKILL.md`; `agents/arena/workflows/taste-skill.md` — **`openagent-ui` still wins on plugin UI** |
-| Open-ended ideation (`/adhd`, architecture/naming brainstorm) | `agents/skills/vendor/uditakhourii/adhd/SKILL.md`; `agents/arena/workflows/adhd.md` |
 | Chat, Settings, dashboard, or other functional surface | `agents/skills/internal/functional-ui/SKILL.md` |
 | UI accessibility or UX review | `agents/skills/vendor/vercel/web-design-guidelines/SKILL.md` |
 | User-facing behavior or documentation | `agents/skills/internal/openagent-docs/SKILL.md`; `docs/working-agreement.md`; `docs/README.md` |
