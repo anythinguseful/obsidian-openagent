@@ -1,7 +1,7 @@
 ---
 title: "Open Agent — Release handoff v0.1.158"
 type: process
-status: active
+status: done
 date: 2026-08-31
 tags: [openagent, process, release]
 ---
@@ -68,3 +68,13 @@ sha256 + clean-source + manifest + final report — persis pola v0.1.151–155.
 - Temuan audit #2 (v0.1.154 tanpa artefak): dianotasi *accepted intermediate*.
 - Temuan audit #3 (baris arsip basi): semua baris `Release archive` di
   `RELEASES.md` kini mencerminkan status terbit/intermediate yang sebenarnya.
+
+## Hasil (2026-08-31)
+
+Selesai dieksekusi: **v0.1.158 terbit publik** `2026-08-31T02:31:30Z` dari
+commit `e1731be` (workflow run `33350731994`, `workflow_dispatch` oleh owner,
+±4m2s). CI push-to-main `33350699087` hijau sebelum publikasi. Keenam aset
+(ZIP + sha256, clean source + sha256, source manifest, final report)
+terverifikasi oleh workflow ("Publish and independently verify GitHub assets"
+success), release bukan draft. Baris `Release archive` v0.1.158 di
+`RELEASES.md` diperbarui menjadi *published* dalam PR penutup ini.
