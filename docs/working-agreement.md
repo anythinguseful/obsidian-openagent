@@ -51,7 +51,7 @@ Penjelasan untuk owner harus langsung dipahami:
 | Perfectionist · teliti | Pipeline penuh (`npm run release`) setelah **setiap** perubahan kode; laporan "selesai" hanya jika typecheck ✓ + 10 suite ✓ + ZIP SYNCED ✓. Tidak ada "harusnya aman". |
 | Konsisten | Kontrak gaya SKILL.md (class `oa-`, variabel CSS Obsidian, blok CSS baru di akhir file dsb.); API komponen mengikuti source official, bukan improvisasi. |
 | Periksa docs/source resmi | **Aturan tool.tsx**: klaim tentang library/framework hanya setelah menarik **source mentah resmi** (jsDelivr/raw CDN/repo), bukan sekadar halaman docs. Temuan diarsipkan di ringkasan sesi. |
-| Menaati prosedur | Workflow: study → keputusan binding via `ask_user` → plan → greenlight → implement → pipeline → commit per logical change → present. Ritual release sebelum present. |
+| Menaati prosedur | Kerja adaptif/rapi: study → implement → pipeline → commit. `ask_user` / greenlight **hanya** jika dua arah produk besar bersaing (Lesson 223). Ritual release sebelum klaim rilis, bukan sebelum setiap kalimat. |
 | Tanpa halusinasi | Setiap klaim teknis diverifikasi (grep / test / screenshot pixel). Pisahkan eksplisit **fakta vs hipotesis** (contoh: insiden LM Studio 180-token tetap 3 hipotesis sampai user konfirmasi). |
 | Logis | Premis dinyatakan, kesimpulan diturunkan; premis goyang → berhenti, verifikasi dulu, baru lanjut. |
 | Tak mengulang kesalahan | Setiap bug/kegagalan mendapat **regression guard** di smoke test + dicatat di Lessons log di bawah. Bug tanpa guard = utang. |
@@ -260,9 +260,10 @@ isi ke sini).
 16. **Giliran teks-saja bisa tak ter-render untuk owner** (2026-07-21) — dua
     kali berturut balasan berisi hanya teks tidak sampai ("chat hilang"),
     sedangkan balasan dengan tool call (ask_user / present_file) selalu
-    tampil. → Tutup setiap giliran dengan tool call bermakna (pertanyaan,
-    presentasi hasil, atau aksi), bukan paragraf telanjang — dan sampaikan
-    keputusan penting di label/opsi ask_user, bukan hanya di narasi.
+    tampil. Itu bug **host Arena lama**, bukan aturan percakapan.
+    **Superseded 2026-08-31 (Lesson 224):** jangan paksa setiap balasan
+    ditutup tool. Teks biasa sah. Pakai ask_user / present_file hanya
+    kalau memang ada pertanyaan atau file yang harus dilihat.
 
 17. **Build tak teridentifikasi = diagnosis buta** (2026-07-22) — owner dua
     kali melaporkan "masih tidak bisa upload" padahal fix sudah di-zip: ia
@@ -1179,20 +1180,14 @@ isi ke sini).
     tempat membendungnya, dengan saksi lane pada sumber yang TIBA.
 
 88. "Apakah perlu proper docs?" — ukur AUDIENS dulu, rot dulu, baru
-    pekerjakan: untuk repo personal yang tidak dipublish, dokumen besar
-    USER-GUIDE/DEVELOPER adalah hutang bukan aset — pembacanya tidak ada,
-    dan dokumen tanpa pembaca membusuk (kita baru saja menghapus checklist
-    yang basi karena alasan identik). Bukti hidup satu pintu: README kita
-    sendiri sudah melenceng dari realitas (slash list 11 dari 24; web tool
-    salah nama; quick-ask tak tercatat) — jika SATU dokumen saja bisa
-    basi, sepuluh dokumen akan basi sepuluh kali. Aturan kerjanya:
-    (1) pemakaian pribadi → manual hidup di DALAM produk (/help, settings
-    yang bisa dicari, deskripsi tool) + working-agreement sebagai memori
-    proses; (2) yang layak dikerjakan hanya sinkronisasi README yang
-    TERVERIFIKASI ke registry nyata — grep daftar nama dari kode, jangan
-    tulis dari ingatan; (3) dokumen proper untuk audiens luar ditulis
-    TEPAT SAAT audiensnya ada (trigger: publish/zip dibagikan), tidak
-    lebih awal.
+    pekerjakan: dokumen besar USER-GUIDE/DEVELOPER tanpa pembaca adalah
+    hutang (checklist basi sudah pernah dihapus). README yang salah
+    angka tool adalah bukti drift. **Fleksibel 2026-08-31 (Lesson 224):**
+    (1) perilaku user-facing tetap update `docs/` di commit yang sama
+    (aturan dokumentasi di atas) — jangan ditahan sampai "publish";
+    (2) README harus verifikasi ke source, bukan ingatan;
+    (3) manual raksasa tetap tidak wajib; tulis yang dipakai, skip yang
+    akan membusuk.
 
 89. Port komponen dari library React ke DOM vanila = petakan KONTRAK
     behavior, bukan salin JSX — dan inventarisasi pohon dulu saat
@@ -2323,3 +2318,17 @@ Yang **tidak** saya ubah tanpa ditanya (masih bisa janggal nanti):
 Lesson 16 (setiap giliran wajib tool call), Lesson 88 (tahan docs
 user-facing), ritual `ask_user`→greenlight di mekanisme penegakan,
 anti-slop letter-spacing. Itu proses/agen, bukan UI yang baru dikoreksi.
+
+## Lesson 224 — (2026-08-31) Lesson 16 bukan hukum chat; docs tidak ditahan; greenlight bukan gerbang setiap edit
+
+Owner: "wajib akhiri balasan dengan tool" tidak relevan; docs jangan
+kaku; alur tanya→greenlight→kode bertabrakan dengan "langsung kerjakan
+yang adaptif."
+
+1. Lesson 16 = workaround host yang sempat menelan teks polos. Arena
+   sekarang menampilkan teks. Balasan tanpa tool **sah**.
+2. Lesson 88 tidak menahan docs sampai rilis publik. Aturan dokumentasi
+   (update `docs/` saat perilaku user-facing berubah) yang menang.
+   Yang ditahan hanya ensiklopedia yang tidak ada pembacanya.
+3. Tabel "Menaati prosedur" diamend: adaptif/rapi tanpa kartu; tanya
+   hanya dua arah produk besar.
