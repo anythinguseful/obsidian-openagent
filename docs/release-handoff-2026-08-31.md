@@ -1,3 +1,10 @@
+---
+title: "Open Agent — Release handoff v0.1.158"
+type: process
+status: active
+date: 2026-08-31
+tags: [openagent, process, release]
+---
 # Serah terima publikasi — v0.1.158 (2026-08-31)
 
 Untuk owner. Semua yang perlu dilakukan **dari GitHub UI**, tanpa sesi agent.
