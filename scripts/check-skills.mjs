@@ -126,6 +126,13 @@ const required = [
 ];
 check(required.every((name) => names.has(name)), "required internal and approved vendor skills are registered", `missing required skills: ${required.filter((name) => !names.has(name)).join(", ")}`);
 
+const uiSkill = isProjectFile("agents/skills/internal/openagent-ui/SKILL.md") ? read("agents/skills/internal/openagent-ui/SKILL.md") : "";
+check(
+	uiSkill.includes("cancelled change is not a category ban") && uiSkill.includes("Settings **may** be reskinned"),
+	"openagent-ui allows Settings reskin; cancel ≠ category ban",
+	"openagent-ui constraint 5 must record that Settings may be reskinned (Lesson 221)",
+);
+
 const agents = isProjectFile("AGENTS.md") ? read("AGENTS.md") : "";
 for (const needle of [
 	"docs/working-agreement.md",

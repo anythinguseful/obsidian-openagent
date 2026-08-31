@@ -37,7 +37,7 @@ found and are documented honestly below.
 | 2 | No heavy gradients | ✅ | only 2: prompt-kit shimmer (approved) + a `mask-image` fade (not decorative) |
 | 3 | No emoji in production UI | ✅ | 0 emoji in `src/**/*.ts(x)` |
 | 4 | Plugin name "Open Agent" (space), `openagent` id/folders | ✅ | verified in copy + data layout |
-| 5 | Never re-apply reverted reskins | ✅ | settings rail unchanged; additions only (Appearance/Advanced rows, empty states, skeleton) |
+| 5 | Never re-apply reverted reskins | ✅ *as of 2026-08-20* | settings rail unchanged; additions only. **Superseded 2026-08-31 (Lesson 221):** Settings may be reskinned; a cancelled pass is not a category ban. |
 | 6 | `transition` lists properties, never `all` | ✅ | 0 `transition: all` |
 | 7 | No `…`→`...` drift (ellipsis char) | ✅ | no three-dot in UI copy; `…` used |
 | 8 | Semantic `<button>` for actions | ✅ | provider rows are `<button type="button" aria-pressed aria-label>`; disclosure heads are `<button aria-expanded>`; snippet actions/grip have aria-label/title |
@@ -56,8 +56,9 @@ found and are documented honestly below.
    `.oa-model-menu-sect`, `.oa-vis-group-label`, `.oa-intro-wordmark`.
    The anti-slop list names "letter-spacing tweaks" as an AI-slop fingerprint.
    These are **consistent, deliberate** (and the wordmark is brand). Changing
-   them is a reskin, which constraint 5 forbids. **Recommendation: leave as-is;**
-   record the decision here so it isn't re-litigated.
+   them is a reskin. As of 2026-08-20 that was read as forbidden; **Lesson 221
+   (2026-08-31) allows Settings reskin.** This warn remains: do not treat
+   small-caps as a defect that must be ripped out in an unrelated pass.
 2. **`aria-live` only on 2 surfaces** (settings search status, Quick Ask foot).
    Transient `Notice` toasts are Obsidian-owned and don't announce — outside our
    control. Acceptable residual.

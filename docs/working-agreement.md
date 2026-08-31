@@ -105,8 +105,8 @@ Sebelum `git add` skill apa pun ke `agents/skills/vendor/`:
      Next/Tailwind / portfolio?
    - Apakah metode utamanya bisa dijalankan di Arena (bukan fan-out
      Agent/Task Claude Code, bukan CLI yang tidak kita pin)?
-   - Apakah ia bertarung dengan `openagent-ui` (palet, font, ikon, reskin
-     Settings)?
+   - Apakah ia bertarung dengan `openagent-ui` (palet hardcode, font
+     custom, emoji-as-icon)? Settings **boleh** di-reskin (Lesson 221).
 3. Tidak cocok → beri tahu owner, **jangan vendor**. Keputusan "batalkan"
    dicatat (kelas Lesson 119 / 220), bukan dipasang dulu lalu dicabut.
 4. Cocok → snapshot ter-pin + `UPSTREAM.md` + baris `manifest.yaml` +
@@ -1652,7 +1652,7 @@ isi ke sini).
 
 ### 142. (2026-08-20) Bug-bounty audit kontrak UI: 14 aturan terverifikasi HIJAU, 3 WARN rendah, dan satu "kontrak over-promise" milik saya sendiri dikoreksi — fallback var() harus di-scope, bukan "absolute"
 - Owner minta audit + "bug bounty". Hasil (bukti grep + DOM): tanpa emoji (0), tanpa transition:all (0), tanpa gradien berat (2 = shimmer resmi + mask), tanpa font/palette hardcode, tombol semantik + aria, fokus-visible 29, radius ber-fallback 98, reduced-motion ada, wiring settings 14/14, ellipsis `…` konsisten. Jadi kontrak TERIMPLEMENTASI.
-- 3 WARN rendah: (a) 9 label small-caps `uppercase+letter-spacing` (subsection/panel-group/steer/wordmark) — sidik anti-slop, tapi konsisten+deliberate; mengubahnya = reskin (dilarang constraint 5) → biarkan, dicatat; (b) aria-live cuma 2 permukaan (Notice = milik Obsidian); (c) 32 `--color-*` tanpa fallback — core-defined, bukan bug (swatch yang rusak itu bug SPESIFISITAS, sudah diperbaiki v0.1.153).
+- 3 WARN rendah: (a) 9 label small-caps `uppercase+letter-spacing` (subsection/panel-group/steer/wordmark) — sidik anti-slop, tapi konsisten+deliberate; mengubahnya = reskin visual; boleh, tapi bukan bagian audit itu → biarkan, dicatat; (b) aria-live cuma 2 permukaan (Notice = milik Obsidian); (c) 32 `--color-*` tanpa fallback — core-defined, bukan bug (swatch yang rusak itu bug SPESIFISITAS, sudah diperbaiki v0.1.153).
 - Temuan jujur: aturan yang SAYA tulis 2026-08-20 "Every var() carries a fallback — absolute" = over-promise. Codebase ~1.200 var() tanpa fallback (`--text-*`, `--font-*`, `--background-*`, `--interactive-accent`) dan itu BENAR (core Obsidian, hardcode malah melanggar). Yang berisiko (`-rgb` + `--radius-*` + var buatan) SUDAH ber-fallback semua. SKILL.md diamend jadi scope jujur: REQUIRED (-rgb/radius/self-owned), RECOMMENDED (`--color-*`), NOT REQUIRED (core). Prinsip: audit harus menemukan kesalahan aturan juga, bukan cuma kesalahan kode.
 
 ### 141. (2026-08-20) A7 Skeleton: "Loading…" teks diganti baris shimmer; dan jebakan probe — CSS ter-scope `.oa-settings` berarti inject DI LUAR scope = tinggi 0, "element not visible"
@@ -2181,8 +2181,9 @@ shells anyway was a skill-contract miss, not a missing visual language.
 Fix (v0.1.154): remove `groupSubsections()` and the group-shell CSS. MCP
 server cards stay (they are managed objects). Guards invert: smoke pins
 absence of the wrapper class; F49 now requires zero group shells and
-direct-child subsections. Do not re-skin Settings behind a "unify the system"
-story without owner greenlight on a real screenshot.
+direct-child subsections. The group-shell pass stays cancelled; Settings
+reskin as a category is not banned (Lesson 221). A new pass still needs
+a real screenshot / real-DOM harness, not a unify-the-system story alone.
 
 ## Lesson 218 — (2026-08-26) Development skills belong under agents/; vault skills do not move with them
 
@@ -2249,10 +2250,33 @@ Aturan:
    adapter. Cukup bilang tidak.
 3. Owner juga mengizinkan agen **sendiri** menambah skill vendor dan
    riset dalam bila ada gap nyata — gerbang yang sama. Bukan lisensi
-   reskin atau skill yang tidak bisa dijalankan di host ini.
+   skill yang tidak bisa dijalankan di host ini. Reskin Settings
+   **boleh** (Lesson 221); yang dilarang adalah memasang skill yang
+   kalah uji kecocokan.
 4. Keputusan batal dicatat di Lessons (ini), bukan diulang sebagai
    tawaran di sesi berikutnya.
 
 Guard: `scripts/check-skills.mjs` menolak folder vendor
 `uditakhourii` dan `leonxlnx` (pasangan yang sempat masuk lalu dicabut).
 Skill baru yang lolos gerbang tetap boleh ditambah lewat manifest.
+
+## Lesson 221 — (2026-08-31) Membatalkan satu reskin ≠ melarang reskin
+
+Owner: "Settings tidak di-reskin" yang sempat tertulis di kontrak UI
+**bukan** larangan. Membatalkan atau me-revert satu pass (polish/flat,
+kartu B+, group shells) berarti pass itu salah atau belum siap — bukan
+bahwa kategori Settings chrome dibekukan.
+
+Aturan:
+
+1. Baca keputusan batal sebagai *keputusan tentang artefak itu*, bukan
+   sebagai undang-undang untuk semua pekerjaan sejenis berikutnya.
+2. Settings **boleh** di-reskin. Ajukan pass baru dengan harness
+   real-DOM; jangan menghidupkan patch yang sudah di-revert seolah masih
+   disetujui.
+3. Constraint 5 di `openagent-ui` diamend ke aturan ini. Audit 2026-08-20
+   yang mem-pin "additions only" adalah foto tanggal itu, bukan hukum
+   sekarang.
+
+Guard: teks constraint 5 menyebut "cancelled change is not a category
+ban" dan "Settings **may** be reskinned".
