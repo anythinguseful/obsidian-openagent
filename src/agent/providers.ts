@@ -244,7 +244,10 @@ function buildBody(
 			body.reasoning_effort = effort;
 		}
 	}
-	if (stream) body.stream_options = { include_usage: true };
+	// OpenAI-only; llama.cpp / LM Studio / Ollama reject or mishandle it.
+	if (stream && (provider.id === "openai" || provider.id === "openrouter" || provider.id === "nous-portal")) {
+		body.stream_options = { include_usage: true };
+	}
 	return JSON.stringify(body);
 }
 
@@ -555,7 +558,18 @@ export async function chatCompletion(
 	};
 	if (settings.streaming) {
 		try {
-			return await streamingCompletion(provider, settings, messages, tools, tracked);
+			const streamed = await streamingCompletion(provider, settings, messages, tools, tracked);
+			const empty =
+				!streamed.content.trim() &&
+				!streamed.reasoning.trim() &&
+				streamed.toolCalls.length === 0;
+			if (empty) {
+				throw new ProviderStreamTransportError(
+					new Error("stream completed with no content"),
+					streamed.diagnostics
+				);
+			}
+			return streamed;
 		} catch (err) {
 			if (cb.signal?.aborted) throw err;
 			// An HTTP status travels with the error — a buffered retry would hit
@@ -608,7 +622,7 @@ async function bufferedCompletion(
 		provider
 	);
 	if (resp.status >= 400) {
-		throw new ProviderHttpError(resp.status, `HTTP ${resp.status}: ${(resp.text ?? "").slice(0, 300)}`);
+		throw new ProviderHttpError(resp.status, describeHttpError(resp.status, resp.text ?? ""));
 	}
 	const data = resp.json;
 	const choice = data?.choices?.[0];
@@ -699,9 +713,12 @@ async function streamingCompletion(
 			body: buildBody(provider, settings, messages, tools, true),
 			signal: ctl.signal,
 		});
-		if (!resp.ok || !resp.body) {
+		if (!resp.ok) {
 			const errText = await resp.text().catch(() => "");
 			throw new ProviderHttpError(resp.status, describeHttpError(resp.status, errText));
+		}
+		if (!resp.body) {
+			throw new ProviderStreamTransportError(new Error("streaming response had no body"), attemptDiagnostics());
 		}
 
 		const reader = resp.body.getReader();
@@ -810,7 +827,11 @@ async function streamingCompletion(
 				}
 			}
 		}
-		if (!done && buffer.length > 0) handleLine(buffer);
+		if (!done && buffer.length > 0) {
+			for (const line of buffer.split("\n")) {
+				if (handleLine(line)) break;
+			}
+		}
 		if (malformedEvents > 0) throw new ProviderStreamProtocolError(malformedEvents, attemptDiagnostics());
 		/* Gemma 4 on LM Studio/llama.cpp often streams only reasoning_content
 		   (content stays ""). Promote it so the chat bubble is not blank. */
