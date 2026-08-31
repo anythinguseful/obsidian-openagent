@@ -266,6 +266,24 @@ export function textFromMessageContent(content: unknown): string {
 	return out;
 }
 
+function describeHttpError(status: number, body: string): string {
+	const slice = body.slice(0, 400);
+	try {
+		const parsed = JSON.parse(body) as { error?: { message?: string; type?: string; n_prompt_tokens?: number; n_ctx?: number } };
+		const e = parsed?.error;
+		if (e && (e.type === "exceed_context_size_error" || /exceeds the available context/i.test(e.message ?? ""))) {
+			const used = e.n_prompt_tokens;
+			const ctx = e.n_ctx;
+			const span = used && ctx ? ` (${used} tokens into a ${ctx}-token window)` : "";
+			return `Prompt is larger than the model's context window${span}. Shorten the system prompt / tools, raise LM Studio context length, or turn on context compression.`;
+		}
+		if (typeof e?.message === "string" && e.message.trim()) return `HTTP ${status}: ${e.message}`;
+	} catch {
+		/* raw body */
+	}
+	return `HTTP ${status}: ${slice}`;
+}
+
 function normalizeUsage(u: any): TokenUsage | null {
 	if (!u) return null;
 	return {
@@ -595,8 +613,13 @@ async function bufferedCompletion(
 	const data = resp.json;
 	const choice = data?.choices?.[0];
 	const msg = choice?.message ?? {};
-	const reasoning = msg.reasoning_content ?? msg.reasoning ?? "";
-	const content = msg.content ?? "";
+	const reasoning =
+		(typeof msg.reasoning_content === "string" ? msg.reasoning_content : "") ||
+		(typeof msg.reasoning === "string" ? msg.reasoning : "") ||
+		textFromMessageContent(msg.reasoning_content ?? msg.reasoning);
+	let content = textFromMessageContent(msg.content);
+	// Gemma 4 / llama.cpp: all tokens in reasoning_content, content empty.
+	if (!content.trim() && reasoning.trim()) content = reasoning;
 	// Single-shot emission so event-driven UIs (chat) show the full reply
 	// even when streaming was off or the stream failed before any token.
 	if (cb && reasoning) cb.onReasoning?.(reasoning);
@@ -678,7 +701,7 @@ async function streamingCompletion(
 		});
 		if (!resp.ok || !resp.body) {
 			const errText = await resp.text().catch(() => "");
-			throw new ProviderHttpError(resp.status, `HTTP ${resp.status}: ${errText.slice(0, 300)}`);
+			throw new ProviderHttpError(resp.status, describeHttpError(resp.status, errText));
 		}
 
 		const reader = resp.body.getReader();
@@ -721,8 +744,24 @@ async function streamingCompletion(
 				finishReason = choice.finish_reason;
 				sawFinishReason = true;
 			}
-			const delta = choice.delta ?? {};
-			const token = textFromMessageContent(delta.content);
+			if (json.error) {
+				const errObj = json.error;
+				const errMsg =
+					typeof errObj === "string"
+						? errObj
+						: typeof errObj?.message === "string"
+							? errObj.message
+							: JSON.stringify(errObj).slice(0, 300);
+				throw new ProviderHttpError(
+					typeof errObj?.code === "number" ? errObj.code : 400,
+					errMsg
+				);
+			}
+			const delta = choice.delta ?? choice.message ?? {};
+			const token =
+				textFromMessageContent(delta.content) ||
+				(typeof delta.text === "string" ? delta.text : "") ||
+				(typeof choice.text === "string" ? choice.text : "");
 			if (token.length > 0) {
 				content += token;
 				cb.onToken?.(token);
@@ -773,6 +812,12 @@ async function streamingCompletion(
 		}
 		if (!done && buffer.length > 0) handleLine(buffer);
 		if (malformedEvents > 0) throw new ProviderStreamProtocolError(malformedEvents, attemptDiagnostics());
+		/* Gemma 4 on LM Studio/llama.cpp often streams only reasoning_content
+		   (content stays ""). Promote it so the chat bubble is not blank. */
+		if (!content.trim() && reasoning.trim()) {
+			content = reasoning;
+			cb.onToken?.(reasoning);
+		}
 		const eofWithoutCompletion = !sawDone && !sawFinishReason;
 		if (settings.debugMode && (!sawDone || eofWithoutCompletion)) {
 			/* Metadata only: never log token/content payloads. EOF without an
