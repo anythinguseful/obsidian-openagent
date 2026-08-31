@@ -31,7 +31,7 @@ function t(name, fn) {
 t("catalog ships exactly the installable-now entries", () => {
 	assert.deepStrictEqual(
 		MCP_CATALOG.map((e) => e.name).sort(),
-		["n8n", "unreal-engine"],
+		["n8n"],
 	);
 	// names are unique
 	const names = MCP_CATALOG.map((e) => e.name);
@@ -40,7 +40,6 @@ t("catalog ships exactly the installable-now entries", () => {
 
 t("catalogEntryFor finds by name", () => {
 	assert.strictEqual(catalogEntryFor("n8n").name, "n8n");
-	assert.strictEqual(catalogEntryFor("unreal-engine").name, "unreal-engine");
 	assert.strictEqual(catalogEntryFor("notion"), undefined);
 });
 
@@ -73,12 +72,9 @@ t("n8n auth is api_key with N8N_BASE_URL + N8N_API_KEY", () => {
 	assert.strictEqual(key.required, true);
 });
 
-t("unreal-engine is http + no auth + no install", () => {
-	const ue = catalogEntryFor("unreal-engine");
-	assert.strictEqual(ue.transport.type, "http");
-	assert.strictEqual(ue.transport.url, "http://127.0.0.1:8000/mcp");
-	assert.strictEqual(ue.auth.type, "none");
-	assert.strictEqual(ue.install, undefined);
+t("unreal-engine was removed from the catalog (owner decision 2026-08-30) and stays absent", () => {
+	assert.strictEqual(catalogEntryFor("unreal-engine"), undefined);
+	assert.ok(!MCP_CATALOG.some((e) => e.name === "unreal-engine"));
 });
 
 t("every entry is structurally valid", () => {
@@ -119,8 +115,18 @@ t("buildServerConfig: stdio substitutes INSTALL_DIR in command+args", () => {
 });
 
 t("buildServerConfig: http copies url, no command", () => {
-	const ue = catalogEntryFor("unreal-engine");
-	const cfg = buildServerConfig(ue);
+	/* Synthetic http entry — the catalog itself no longer ships an http
+	   entry (unreal-engine removed 2026-08-30), but the http branch must
+	   stay covered for user-configured http servers. */
+	const http = {
+		name: "example-http",
+		description: "synthetic http entry",
+		source: "https://example.invalid",
+		transport: { type: "http", url: "http://127.0.0.1:8000/mcp" },
+		auth: { type: "none", env: [] },
+		tools: {},
+	};
+	const cfg = buildServerConfig(http);
 	assert.strictEqual(cfg.transport, "http");
 	assert.strictEqual(cfg.url, "http://127.0.0.1:8000/mcp");
 	assert.strictEqual(cfg.command, undefined);

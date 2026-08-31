@@ -70,7 +70,7 @@ apa pun — audit dulu, implementasi belakangan:
    dan riwayatnya.
 2. **Verifikasi artefak handoff kunci.** Cek keberadaan: `.github/workflows/ci.yml`,
    `scripts/check-docs.mjs`, `package.json` script `check:docs`, README
-   "21 tools in 9 toggleable toolsets", `docs/working-agreement.md`
+   "25 tools in 10 toggleable toolsets", `docs/working-agreement.md`
    "Bootstrap sesi GitHub" + Lesson 117, dan `agents/skills/internal/openagent-ui/SKILL.md`
    menunjuk `preview/index.html`. Yang hilang = pekerjaan rekonstruksi.
 3. **Baca dokumen & skill binding.** `docs/working-agreement.md` (seluruh
@@ -1786,7 +1786,7 @@ isi ke sini).
 - Yang dilihat owner cuma satu toggle kembar, tapi cakupannya lebih luas: blok `Context & compression` di tab Model (`settingsTab.ts` L1510-1574, warisan v0.1.17) merender **empat** baris, dan **tiga** di antaranya menulis key yang sama persis dengan blok Compression di Memory & Context yang ditambahkan v0.1.175 — `compressionEnabled`, `compressionThreshold`, `compressionProtectLastN`. Hanya `modelContextLength` yang tidak punya kembaran. Efek nyatanya bukan sekadar jelek: dua penulis pada satu key berarti mengubah nilai di satu tab meninggalkan tab satunya menampilkan angka basi sampai ia dirender ulang, dan tombol ↺ dipasang **dua kali** untuk key yang sama (tercatat di Lesson 172 sebagai temuan terbuka, akhirnya ditutup di sini).
 - Duplikat itu lahir karena v0.1.175 mengejar paritas Hermes Desktop (`SECTIONS.id=="memory"` memang memuat `compression.*`) tanpa lebih dulu menyapu apakah key-nya sudah punya UI di tempat lain. Aturan: **sebelum menambah baris settings, grep key-nya, bukan label-nya.** Label boleh beda ("Enable compression" vs "Compression"), key-nya yang menentukan apakah itu baris baru atau baris kedua.
 - Penamaan diverifikasi ke sumbernya, bukan ke ingatan: `apps/desktop/src/app/settings/constants.ts` (`FIELD_LABELS`) memakai `Context Window` / `Auto-Compression` / `Compression Threshold` / `Compression Target` / `Protected Recent Messages`. Title Case itu **tidak** disalin mentah — pedoman plugin Obsidian mewajibkan sentence case ("only the first word in a sentence, and proper nouns, should be capitalized"). Jadi paritas diambil pada tingkat *istilah*, casing mengikuti platform tempat kita ship. Guard `v0.1.193` memasang larangan eksplisit pada ketiga bentuk Title Case supaya salin-tempel dari upstream tidak diam-diam masuk lagi.
-- Penempatan `Context window` sengaja **menyimpang** dari Hermes (di sana ia tinggal di section Model): threshold adalah persentase *dari* context window, jadi menaruh keduanya berjauhan memaksa pengguna menghitung di kepala. Keputusan owner, dicatat sebagai deviasi sadar, dan urutannya dikunci guard (`indexOf` subheading < `Context window` < `Auto-compression`) — bukan sekadar "ada baris"-nya.
+- Penempatan `Context window` sengaja **menyimpang** dari Hermes (di sana ia tinggal di section Model): threshold adalah persentase *dari* context window, jadi menaruh keduanya berjauhan memaksa pengguna menghitung di kepala. Keputusan owner, dicatat sebagai deviasi sadar, dan urutannya dikunci guard (`indexOf` subheading < `Context window` < `Auto-compression`) — bukan sekadar "ada baris"-nya. **Superseded 2026-08-30 (Lesson 219):** owner memindahkan `Context window` ke grup Context, posisi pertama di atas "Context file"; deviasi dari Hermes (tetap di Memory & Context, bukan tab Model) tetap berlaku, guard urutannya kini pin v0.1.193.
 - Default `compression.threshold` 0.8 dan `protect_last_n` 4 ternyata juga menyimpang dari Hermes (`0.50` / `20`). Pada 0.8/4 kompresi baru menyala saat konteks nyaris penuh lalu menyisakan empat pesan — persis kondisi yang bisa meluap di tengah tool-call. Diselaraskan ke 0.50/20. Vault yang sudah menyimpan nilai legal **tidak** dimigrasi paksa; hanya install baru dan tombol ↺ yang mendarat di angka baru, dan itu dipin dua-duanya di `test/settings.test.cjs`.
 - Jebakan yang nyaris terulang: default hidup di **dua** literal — `DEFAULT_SETTINGS` dan fallback di `normalizeLoadedSettings`. Mengubah satu saja membuat nilai tolak-balik menunjuk angka pensiunan, dan tidak ada test yang otomatis mengeluh. Fallback-nya kini membaca `DEFAULT_SETTINGS.<key>` sehingga sumber kebenarannya tinggal satu; red-proof mengganti literal itu kembali ke `0.8` untuk membuktikan pin-nya memang menangkap.
 - Menghapus baris UI = menyapu **empat** kelas guard sekaligus, bukan cuma yang menyebut label: (a) pin label (`v0.1.183`, `v0.1.175`), (b) pin subheading (`v0.1.17`), (c) assertion **hitungan** lintas-file (`resetButton(st` 22→20, `markModified(` 66→63 — dan hitungannya harus dihitung ulang dari `grep -c` di kedua file, bukan diaritmatikakan dari ingatan), (d) probe real-preview yang menanyakan DOM lewat `aria-label` (`F15` dipecah jadi `F15knobs` di halaman memory + `F15` slot aux di halaman model; `F45pctSlider` ikut ganti nama baris dan nilai harapannya). Yang (d) paling mudah terlewat karena `grep` label di `src/` tidak menyentuh `test/real-preview/`.
@@ -2177,3 +2177,33 @@ Fix (v0.1.155): `git mv skills agents/skills`, retarget AGENTS.md /
 working-agreement / check-skills / check-docs. Guard: root `skills/` must
 not exist; `canonical_root` is `agents/skills`. Do not touch
 `src/agent/skills.ts` or `openagent/openagent-skills/`.
+
+## Lesson 219 — (2026-08-30) Owner moves "Context window" to the head of the Context group; a superseded decision note must be marked, not left as truth
+
+Owner: the **Context window** setting sat at the head of the Compression
+group (Memory & Context); it belongs in the **Context** group, first
+position above "Context file". Grouping follows the subject a setting
+configures — the window sizes the context file — not the arithmetic of
+the threshold.
+
+An earlier note in this file recorded a conscious deviation from Hermes:
+keep the window near Auto-compression because the threshold is a
+percentage *of* the window, so separating them forces mental math. The
+Hermes deviation itself stands — the setting still lives in Memory &
+Context, not the Model tab — but the within-section placement it
+justified is superseded. The old note now carries a supersession
+pointer; left unamended, stale rationale reads as current truth.
+
+Fix (v0.1.156, commit `d8da02a`): move the block in
+`src/settings/sections/memory.ts` between the Context group head and
+"Context file"; label and desc unchanged. Guard: smoke v0.1.193 pins the
+source order `"Context",` < `setName("Context window")` <
+`setName("Context file")`, plus `"Compression",` <
+`setName("Auto-compression")`; the real-DOM F15knobs witness asserts the
+same DOM order. markModified stays 63 — a placement move must not
+disturb reset dots.
+
+Rule: an owner decision that overrides a recorded one gets its Lesson
+in the same change as the move. This note was written a day late, after
+two more releases had shipped — that gap is exactly what the rule
+closes.

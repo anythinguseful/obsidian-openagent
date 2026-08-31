@@ -112,13 +112,15 @@ function makeSettings(): OpenAgentSettings {
 		],
 		activeProviderId: "lmstudio",
 		model: MODEL,
-		/* v0.1.94 search/dot audit subject: one value away from
-		   DEFAULT_SETTINGS so the modified-dot probe has something to find
-		   — every other row stays pristine. v0.1.127: subjeknya DIPINDAH ke
-		   showTimestamps (default = false) karena enterToSend kini default
-		   false — row Enter-send JADI pengukur merges-from-DEFAULTS yang
-		   benar-benar pristine (dipakai F34). */
-		showTimestamps: true,
+      /* v0.1.94 search/dot audit subject: one value away from
+         DEFAULT_SETTINGS so the modified-dot probe has something to find
+         — every other row stays pristine. v0.1.127: subjeknya DIPINDAH ke
+         showTimestamps (default = false) karena enterToSend kini default
+         false — row Enter-send JADI pengukur merges-from-DEFAULTS yang
+         benar-benar pristine (probe dot = F19/F20). 2026-08-30: barisnya
+         pindah ke tab Appearance; probe dot F20 kini membuka halaman
+         appearance. */
+      showTimestamps: true,
 		fallbackProviders: [
 			{ providerId: "lmstudio", model: "qwen3-30b-a3b-instruct-2507" },
 			{ providerId: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
@@ -195,7 +197,7 @@ function makePlugin(settings: OpenAgentSettings): Record<string, unknown> {
 	return {
 		manifest: {
 			name: "Open Agent",
-			version: "0.1.155",
+			version: "0.1.158",
 			minAppVersion: "1.5.0",
 			description:
 				"A self-improving AI agent for your vault. Agent framework modeled after Hermes Agent, settings after Hermes Desktop, and a chat UI built with prompt-kit components.",

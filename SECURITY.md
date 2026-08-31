@@ -59,7 +59,7 @@ The MCP runtime connects to the configured servers, so it is gated like Terminal
 
 The catalog installs pinned, curated servers in one step (mirrors Hermes' `optional-mcps/`):
 
-- **Curated and pinned** — only entries the plugin can run end-to-end are offered (currently n8n and unreal-engine). Git installs pin a full commit SHA and are never auto-updated; a reinstall wipes and re-clones at the same SHA.
+- **Curated and pinned** — only entries the plugin can run end-to-end are offered (currently n8n). Git installs pin a full commit SHA and are never auto-updated; a reinstall wipes and re-clones at the same SHA.
 - **Runs third-party code** — `git clone` + checkout + the manifest's bootstrap commands (e.g. `python3 -m venv`, `pip install -r requirements.txt`) execute on this device through `execFile`, with a non-interactive git environment (no credential prompts), hard timeouts, and a bounded output — but **not in a sandbox**. Installing is a trust decision about the publisher.
 - **Desktop-only, lazy Node** — `child_process`/`fs` are acquired lazily, so mobile never runs an install.
 - **Secrets at install time** — api-key entries prompt for values which are stored in the server's `env` in plugin settings (data.json, plaintext on disk). The OAuth-only remote entries in Hermes' catalog are deliberately absent: the plugin has no OAuth browser flow.

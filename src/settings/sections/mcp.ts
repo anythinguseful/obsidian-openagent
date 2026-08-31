@@ -33,7 +33,7 @@ import { McpConsentModal } from "../modals/consent";
 import { McpCatalogModal } from "../modals/mcp-catalog";
 import { kvToLines, linesToKv, parseMcpServersDoc } from "../../settings";
 import { markModified } from "../../settingsModified";
-import { stackedTextArea } from "./helpers";
+import { stackedText, stackedTextArea } from "./helpers";
 import type { SectionContext } from "./context";
 
 export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
@@ -97,15 +97,14 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 					})
 			);
 		if (isHttp) {
-			new Setting(card)
-				.setName("URL")
-				.setDesc("HTTP endpoint of this MCP server.")
-				.addText((t) =>
-					t.setValue(srv.url ?? "").onChange(async (v) => {
-						srv.url = v.trim();
-						ctx.plugin.saveSettingsSafe();
-					})
-				);
+			/* v0.1.157 (owner directive 2026-08-31): URL stacks full-width below
+			   its label (was a narrow right-aligned input that truncated the
+			   endpoint), matching the Headers treatment in the same card. */
+			const urlSetting = new Setting(card).setName("URL").setDesc("HTTP endpoint of this MCP server.");
+			stackedText(urlSetting, { value: srv.url ?? "", ariaLabel: "URL" }, async (v) => {
+				srv.url = v.trim();
+				ctx.plugin.saveSettingsSafe();
+			});
 			const headersSetting = new Setting(card)
 				.setName("Headers")
 				.setDesc("KEY=VALUE pairs, one per line — e.g. Authorization=Bearer …");
@@ -118,24 +117,24 @@ export function mcp(ctx: SectionContext, containerEl: HTMLElement): void {
 				}
 			);
 		} else {
-			new Setting(card)
+			/* v0.1.157 (owner directive 2026-08-31): Command and Arguments stack
+			   full-width below their labels (were narrow right-aligned inputs —
+			   long args truncated), matching the Environment treatment in the
+			   same card. */
+			const commandSetting = new Setting(card)
 				.setName("Command")
-				.setDesc("Executable spawned over stdio, e.g. npx")
-				.addText((t) =>
-					t.setValue(srv.command ?? "").onChange(async (v) => {
-						srv.command = v.trim();
-						ctx.plugin.saveSettingsSafe();
-					})
-				);
-			new Setting(card)
+				.setDesc("Executable spawned over stdio, e.g. npx");
+			stackedText(commandSetting, { value: srv.command ?? "", ariaLabel: "Command" }, async (v) => {
+				srv.command = v.trim();
+				ctx.plugin.saveSettingsSafe();
+			});
+			const argsSetting = new Setting(card)
 				.setName("Arguments")
-				.setDesc("Space-separated arguments passed to the command.")
-				.addText((t) =>
-					t.setValue((srv.args ?? []).join(" ")).onChange(async (v) => {
-						srv.args = v.split(/\s+/).filter(Boolean);
-						ctx.plugin.saveSettingsSafe();
-					})
-				);
+				.setDesc("Space-separated arguments passed to the command.");
+			stackedText(argsSetting, { value: (srv.args ?? []).join(" "), ariaLabel: "Arguments" }, async (v) => {
+				srv.args = v.split(/\s+/).filter(Boolean);
+				ctx.plugin.saveSettingsSafe();
+			});
 			const envSetting = new Setting(card).setName("Environment").setDesc("KEY=VALUE pairs, one per line.");
 			stackedTextArea(
 				envSetting,

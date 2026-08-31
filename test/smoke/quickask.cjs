@@ -389,7 +389,7 @@ module.exports = function quickaskGuards() {
 			previewEntry.includes("mermaidCanonical") &&
 			previewDriver.includes("h.mermaidExactDoublePreamble") &&
 			previewDriver.includes("r.mermaidCanonical") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.144: structural fences · exact Mermaid comments/preamble · canonical chat, Quick Ask, write, and cron boundaries wired");
 		} else {

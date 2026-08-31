@@ -243,11 +243,13 @@ module.exports = function settingsGuards() {
 			!tab.includes("s.compressionThreshold =") &&
 			!tab.includes("s.compressionProtectLastN =") &&
 			!tab.includes("s.compressionEnabled =") &&
-			/* Context window jadi baris PERTAMA grup Compression (keputusan
-			   owner; Hermes menaruhnya di section Model) — subheading harus
-			   muncul sebelum row-nya. */
-			mem.indexOf('"Compression",') < mem.indexOf('.setName("Context window")') &&
-			mem.indexOf('.setName("Context window")') < mem.indexOf('.setName("Auto-compression")');
+			/* 2026-08-30: Context window tinggal di grup Context (baris PERTAMA,
+			   di atas Context file) — keputusan owner baru yang menggantikan
+			   penempatan 2026-08-24 di kepala grup Compression. Subheading
+			   Context harus muncul sebelum row-nya. */
+			mem.indexOf('"Context",') < mem.indexOf('.setName("Context window")') &&
+			mem.indexOf('.setName("Context window")') < mem.indexOf('.setName("Context file")') &&
+			mem.indexOf('"Compression",') < mem.indexOf('.setName("Auto-compression")');
 		if (ok) {
 			console.log("✓ v0.1.193: context/compression knobs have one owner (Memory & Context), aux model slot stays, sentence-case labels");
 		} else {
@@ -616,10 +618,11 @@ module.exports = function settingsGuards() {
 			   tab Model (slot model kompresi — sengaja tinggal). Subjek guard ini
 			   adalah blok Memory & Context, jadi pin positif harus ke modulnya;
 			   pin negatif memastikan duplikat lama tidak hidup lagi. */
-			/* 2026-08-24: labels re-pointed at Hermes FIELD_LABELS (verified in
-			   apps/desktop/src/app/settings/constants.ts), sentence-cased for
-			   Obsidian. "Context window" joined this group as its first row and
-			   the duplicate Model-tab block was deleted. */
+		/* 2026-08-24: labels re-pointed at Hermes FIELD_LABELS (verified in
+		   apps/desktop/src/app/settings/constants.ts), sentence-cased for
+		   Obsidian. "Context window" joined the Memory & Context tab and the
+		   duplicate Model-tab block was deleted (2026-08-30: the row now
+		   lives in the Context group, pinned by the v0.1.193 guard). */
 			mem.includes('"Auto-compression"') &&
 			mem.includes('"Compression threshold"') &&
 			mem.includes('"Compression target"') &&
@@ -655,8 +658,9 @@ module.exports = function settingsGuards() {
 			tab.includes('setIcon("rotate-ccw")') &&
 			tab.includes('setTooltip("Reset to default")') &&
 			tab.includes("this.resetButton(stMaxTokens, \"maxTokens\")") &&
-			/* 2026-08-24: Context window pindah ke Memory & Context (baris pertama
-			   grup Compression) — pemilik reset-nya ikut pindah ke modul. */
+			/* 2026-08-24: Context window pindah ke Memory & Context (sejak
+			   2026-08-30 baris pertama grup Context) — pemilik reset-nya
+			   ikut pindah ke modul. */
 			mem187.includes("ctx.resetButton(stContextWindow, \"modelContextLength\")") &&
 			!tab.includes("this.resetButton(stContextWindow") &&
 			read("src/settings/sections/advanced.ts").includes("ctx.resetButton(stRequestTimeout, \"requestTimeoutMs\")") && // moved 2026-08-24 (Phase 5)
@@ -1037,7 +1041,7 @@ module.exports = function settingsGuards() {
 			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
 			bs126.includes("workspaceMovedOut") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ Notifications IA: native/sound tab is in tabs/search; Appearance present after Chat; About last tab with renderer; Workspace/Safety and audited sliders remain");
 		} else {
@@ -1775,6 +1779,10 @@ module.exports = function settingsGuards() {
 		const chat = read("src/ui/ChatApp.tsx");
 		const reason = read("src/ui/components/reasoning.tsx");
 		const appearanceMod = read("src/settings/sections/appearance.ts"); // renderer pindah 2026-08-24 (Phase 5)
+		/* 2026-08-30: "Show message timestamps" pindah General → Appearance.
+		   Kepemilikan dipin dua arah: wajib ada di modul appearance, wajib
+		   HILANG dari modul general (pola absence-guard Lesson 72). */
+		const generalMod = read("src/settings/sections/general.ts");
 		const css = read("styles.css");
 		/* Every tab in the SECTIONS registry must have a matching case in
 		   renderSectionBody — a key without a case renders an EMPTY tab (the
@@ -1794,13 +1802,18 @@ module.exports = function settingsGuards() {
 			!tab.includes('private appearance(') &&
 			tab.includes('case "appearance":\n\t\t\tappearanceSection(this.sectionContext(), host);') &&
 			everyKeyHasCase &&
-			/* v0.1.199 (Phase 5): the five rows live in appearance.ts; the tab must
-			   no longer own them, or a duplicate could drift back in unnoticed. */
+			/* v0.1.199 (Phase 5): the rows live in appearance.ts; the tab must
+			   no longer own them, or a duplicate could drift back in unnoticed.
+			   2026-08-30: sixth row "Show message timestamps" moved here from
+			   General. */
 			appearanceMod.includes('setName("Tool calls")') &&
 			appearanceMod.includes('setName("Reasoning")') &&
 			appearanceMod.includes('setName("Session list density")') &&
 			appearanceMod.includes('setName("Intro screen")') &&
 			appearanceMod.includes('setName("Reaction buttons")') &&
+			appearanceMod.includes('setName("Show message timestamps")') &&
+			appearanceMod.includes("markModified(stShowTimestamps") &&
+			!generalMod.includes('setName("Show message timestamps")') &&
 			!tab.includes('setName("Session list density")') &&
 			chat.includes('settings.toolViewMode === "hidden"') &&
 			chat.includes('defaultOpen={settings.toolViewMode === "expanded"}') &&
@@ -1813,7 +1826,7 @@ module.exports = function settingsGuards() {
 			!(tab + appearanceMod).includes("zoomPercent") &&
 			!(tab + appearanceMod).includes("translucency");
 		if (ok) {
-			console.log("✓ v0.1.150: Appearance tab — five self-owned chat-surface controls, Obsidian's theme untouched");
+			console.log("✓ v0.1.150: Appearance tab — six self-owned chat-surface controls, Obsidian's theme untouched");
 		} else {
 			console.error("✗ v0.1.150 Appearance tab drifted");
 			failed++;
@@ -2197,7 +2210,7 @@ module.exports = function settingsGuards() {
 			search21.includes("export function filterSettingsIndex") &&
 			mod21.includes("export function markModified") &&
 			mod21.includes("DEFAULT_SETTINGS") &&
-			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts") + read("src/settings/sections/safety.ts") + read("src/settings/sections/appearance.ts") + read("src/settings/sections/advanced.ts") + read("src/settings/sections/notifications.ts")).match(/markModified\(/g) || []).length === 63 && // 15 tab + 17 memory + 5 command + 5 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety + 3 general + 1 mcp (2026-08-24 Phase 5: tiap ekstraksi memindahkan dot antar-file; TOTALNYA wajib tetap 63 — itulah buktinya tidak ada satu dot pun yang hilang di perjalanan)
+			((tab21 + read("src/settings/sections/memory.ts") + read("src/settings/sections/terminal.ts") + read("src/settings/sections/general.ts") + read("src/settings/sections/mcp.ts") + read("src/settings/sections/workspace.ts") + read("src/settings/sections/command.ts") + read("src/settings/sections/safety.ts") + read("src/settings/sections/appearance.ts") + read("src/settings/sections/advanced.ts") + read("src/settings/sections/notifications.ts")).match(/markModified\(/g) || []).length === 63 && // 16 tab + 16 memory + 5 command + 6 appearance + 5 advanced + 4 terminal + 4 workspace + 4 safety + 2 general + 1 mcp — dihitung dari grep per file 2026-08-30 (komentar lama menulis "15 tab + 17 memory": dua angka salah yang saling menutup, total 63 tetap benar); 2026-08-30: dot timestamps pindah general→appearance; TOTAL wajib tetap 63 — bukti tidak ada satu dot pun yang hilang di perjalanan
 			tail21.includes(".oa-mod-dot") &&
 			tail21.includes(".oa-settings-search-result") &&
 			tail21.includes(".oa-settings-flash") &&
@@ -2237,7 +2250,7 @@ module.exports = function settingsGuards() {
 			st2.includes("clarify: true,") && st2.includes("todo: true,") &&
 			tb.includes('key: "todo"') &&
 			tp.includes("todo dedupe: last occurrence wins") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.133: todo tool (port Hermes 1:1) — ride session file · injeksi lintas kompresi hanya item aktif · ephemeral di headless/quick-ask · 18 cek unit hijau");
 		} else {
@@ -2269,7 +2282,7 @@ module.exports = function settingsGuards() {
 			cm.includes('"webExtract" | "vision"') &&
 			tp.includes("vision source: vault path") &&
 			al.includes("vision: provider request carries pixels inside the tool message") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.134: vision_analyze — native pixels ride tool result (bypass 20k clipper) · legacy aux+template mereka · magic-byte detect · witness wire-level hijau");
 		} else {
@@ -2305,7 +2318,7 @@ module.exports = function settingsGuards() {
 			tp.includes("runPooled(3, workers)") &&
 			al.includes("delegation: consolidated batch result lands on the wire") &&
 			plan.includes("DELEGATE_BLOCKED_TOOLS") &&
-			read("manifest.json").includes('"version": "0.1.155"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.135+: delegate_task — child/headless fail-closed allowlists · pool 3 · consolidated index-sorted · orchestrator/output_schema ditolak jujur · gap 🟡 TUNTAS SEMUA");
 		} else {
@@ -2439,7 +2452,7 @@ module.exports = function settingsGuards() {
 		const tab = read("src/settingsTab.ts");
 		const css = read("styles.css");
 		const ok =
-			read("manifest.json").includes('"version": "0.1.155"') &&
+			read("manifest.json").includes('"version": "0.1.158"') &&
 			!tab.includes("groupSubsections") &&
 			!tab.includes("oa-settings-group") &&
 			!/\n\.oa-settings \.oa-settings-group\s*\{/.test(css) &&
@@ -2451,6 +2464,48 @@ module.exports = function settingsGuards() {
 			console.log("✓ v0.1.154: Settings grouping shells gone — native rows + MCP object cards");
 		} else {
 			console.error("✗ v0.1.154 Settings grouping revert drifted");
+			failed++;
+		}
+	}
+	/* v0.1.157 (owner directive 2026-08-31): MCP server card text fields stack
+	   full-width below their labels — Command/Arguments/URL go through the
+	   shared stackedText helper; no control-column addText left in the
+	   section; the CSS carries the stacked input geometry + neutral focus. */
+	{
+		const mcp = read("src/settings/sections/mcp.ts");
+		const helpers = read("src/settings/sections/helpers.ts");
+		const css = read("styles.css");
+		const ok =
+			helpers.includes("export function stackedText(") &&
+			mcp.includes("stackedText(urlSetting") &&
+			mcp.includes("stackedText(commandSetting") &&
+			mcp.includes("stackedText(argsSetting") &&
+			!mcp.includes(".addText(") &&
+			css.includes('.oa-settings .setting-item.oa-has-stacked input[type="text"]') &&
+			css.includes('.oa-settings .setting-item.oa-has-stacked input[type="text"]:focus-visible');
+		if (ok) {
+			console.log("✓ v0.1.157: MCP server card fields stack full-width below their labels");
+		} else {
+			console.error("✗ v0.1.157 MCP stacked field contract drifted");
+			failed++;
+		}
+	}
+	/* v0.1.158 (owner directive 2026-08-31): the two vault-folder path fields
+	   (Memory folder, Skills folder) stack full-width via stackedText — they
+	   were the last control-column inputs truncating long values. Their
+	   canonicalVaultPath revert-on-error contract must survive the move. */
+	{
+		const memory = read("src/settings/sections/memory.ts");
+		const tab = read("src/settingsTab.ts");
+		const ok =
+			memory.includes("memoryFolderInput = stackedText(") &&
+			memory.includes('canonicalVaultPath(v.trim() || "openagent/openagent-memory", { label: "Memory folder" })') &&
+			tab.includes("skillsFolderInput = stackedText(") &&
+			tab.includes('canonicalVaultPath(v.trim() || "openagent/openagent-skills", { label: "Skills folder" })');
+		if (ok) {
+			console.log("✓ v0.1.158: vault-folder fields stack full-width, canonicalization intact");
+		} else {
+			console.error("✗ v0.1.158 vault-folder stacked field contract drifted");
 			failed++;
 		}
 	}

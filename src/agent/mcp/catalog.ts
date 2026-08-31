@@ -7,7 +7,10 @@
  *   · Entries ship here as data (no per-entry YAML files — this is a plugin,
  *     not a repo with a review pipeline).
  *   · Only entries the plugin can actually run end-to-end are included:
- *     n8n (stdio + git clone + api-key env) and unreal-engine (http + none).
+ *     n8n (stdio + git clone + api-key env). unreal-engine was removed from
+ *     the catalog on 2026-08-30 by owner decision (not a parity failure —
+ *     it worked); a previously installed server keeps running from its
+ *     saved `mcpServers` config, which is independent of this catalog.
  *   · The remote OAuth entries in Hermes' catalog (airtable, asana, notion,
  *     linear, stripe, …) are deliberately absent: the plugin has no OAuth
  *     2.1 browser-flow runtime, so those servers would be installed but
@@ -138,16 +141,6 @@ export const MCP_CATALOG: McpCatalogEntry[] = [
 		},
 		post_install:
 			"The n8n bridge expects a running n8n instance at the URL you provided. Generate an API key in n8n under Settings → API. Workflow activate/deactivate calls are real mutations against your live n8n — treat them carefully.",
-	},
-	{
-		name: "unreal-engine",
-		description: "Drive the Unreal Engine 5.8 editor over its local MCP server.",
-		source: "https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor",
-		transport: { type: "http", url: "http://127.0.0.1:8000/mcp" },
-		auth: { type: "none", env: [] },
-		tools: {},
-		post_install:
-			"This connects to Epic's official Unreal MCP plugin, which runs INSIDE the Unreal Editor. Enable it (Edit → Plugins → search “Unreal MCP”), restart the editor, then turn on “Auto Start Server” under Editor Preferences → General → Model Context Protocol. It binds to http://127.0.0.1:8000/mcp by default; if you change the port or path, update the URL here. Epic ships this as experimental — the server runs tool calls serially on the game thread.",
 	},
 ];
 

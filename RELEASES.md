@@ -8,9 +8,36 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.158 — Vault-folder fields no longer truncate
+
+**Release archive:** prepared — publication route: merge the settings PR, then run the **Publish GitHub Release** workflow on `main` (steps in `docs/release-handoff-2026-08-31.md`).
+
+- **Folder paths read in full.** Memory folder and Skills folder — the last two settings fields whose values were clipped by the narrow right-aligned input (the audit measured 34px and 11px missing) — now stack full-width below their labels, the same treatment as the MCP server fields in v0.1.157. Validation behavior is unchanged (invalid paths still revert with a notice).
+
+---
+
+# Open Agent v0.1.157 — MCP server fields stack full-width
+
+**Release archive:** intermediate — not published separately; its content ships inside v0.1.158.
+
+- **MCP server forms are readable again.** Command, Arguments, and URL on each server card (MCP servers section) now render as full-width fields below their labels — the same stacked treatment as Environment and Headers — instead of narrow right-aligned inputs that truncated long values like `npx -y @modelcontextprotocol/server-filesystem …`.
+
+---
+
+# Open Agent v0.1.156 — Settings placement tidy-up
+
+**Release archive:** intermediate — not published separately; its content ships inside v0.1.158.
+
+- **Provider route card action moved.** The button on the routing card (Providers and Model tabs) now sits at the bottom-right, after the description, instead of floating at mid-card height.
+- **"Show message timestamps" lives in Appearance.** The toggle moved from General into the Chat surface group; behavior is unchanged.
+- **"Context window" leads the Context group.** In Memory & Context the window sits above "Context file", no longer at the head of Compression; behavior and values are unchanged.
+- **unreal-engine removed from the MCP install catalog.** The one-click template is gone; a previously installed server keeps working from its saved configuration.
+
+---
+
 # Open Agent v0.1.155 — Development skills live under agents/
 
-**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+**Release archive:** published 2026-08-25 — full asset set on GitHub Releases (tag v0.1.155).
 
 - **Development skills moved.** The tracked agent-skill tree is now `agents/skills/` (sibling of `agents/arena/`), so agent workflow and skills sit in one place.
 - **Runtime vault skills are unchanged.** `openagent/openagent-skills/` and Hub installs still live in the vault. Plugin behavior is the same.
@@ -20,7 +47,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 # Open Agent v0.1.154 — Restore Settings from before grouping
 
-**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+**Release archive:** no standalone artifact — accepted intermediate; its content shipped inside the v0.1.155 asset set (PR #7 bumped two versions in one merge). Do not reconstruct.
 
 - **Settings groups are no longer boxed.** Named subsections go back to native Obsidian rows with spacing and headings — the extra hairline shells from v0.1.153 are gone.
 - **MCP servers stay as object cards.** Those are real managed objects, not decorative wrappers around every setting.
@@ -31,7 +58,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 # Open Agent v0.1.153 — Unified Settings grouping ✦
 
-**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+**Release archive:** published 2026-08-25 — full asset set on GitHub Releases (tag v0.1.153).
 
 - **Settings now reads as one system.** Each named group keeps its title, purpose, and native Obsidian rows inside one quiet hairline shell instead of mixing floating rows and unrelated cards.
 - **MCP servers and scheduled tasks now belong to that same system.** They remain stronger managed-object cards, but share the group border, radius, spacing, and divider language.
@@ -47,7 +74,7 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 # Open Agent v0.1.152 — Fix release: harness saveSettingsSafe, CI crash, & preflight 🔧
 
-**Release archive:** akan diterbitkan di GitHub Releases setelah CI main hijau.
+**Release archive:** published 2026-08-24 — full asset set on GitHub Releases (tag v0.1.152).
 
 - **Fix penyebab kegagalan run 32758294248.** Settings-preview harness (`settings-entry.tsx`) tidak punya `saveSettingsSafe` yang dipakai kode produksi → `moaSave()` crash → semua probe DOM gagal. Shim `chat-entry.tsx` juga ikut diperbaiki.
 - **Probe F14** diperbaiki: tombol "Apply" yang sebelumnya dipindai dari seluruh halaman (termasuk baris Embedding model) kini dibatasi ke baris Global default model.

@@ -472,6 +472,19 @@ async function main() {
 				)?.textContent ?? null;
 				const route = document.querySelector(".oa-provider-route");
 				const buttons = [...document.querySelectorAll("button")].map((b) => (b.textContent ?? "").trim());
+				/* 2026-08-30: the route action must sit at the bottom-right, after
+				   the description (owner placement) — measured, not eyeballed
+				   (Lesson 44 family). */
+				const descEl = route?.querySelector(".oa-provider-route-desc");
+				const btnEl = route?.querySelector(".oa-mini-btn");
+				const dRect = descEl?.getBoundingClientRect();
+				const bRect = btnEl?.getBoundingClientRect();
+				const rRect = route?.getBoundingClientRect();
+				const routeGeom = dRect && bRect && rRect ? {
+					btnBelowDesc: bRect.top >= dRect.bottom - 2,
+					btnInsideCard: bRect.top > rRect.top && bRect.bottom <= rRect.bottom + 1,
+					rightPadDelta: Math.round((rRect.right - bRect.right) * 10) / 10,
+				} : null;
 				const inUseRow = [...document.querySelectorAll(".oa-provider-row")].find((row) =>
 					row.querySelector(".oa-provider-status.is-in-use")
 				);
@@ -486,6 +499,7 @@ async function main() {
 					viewedRows: document.querySelectorAll(".oa-provider-row.is-viewed").length,
 					inUseProvider: inUseRow?.querySelector(".oa-provider-name")?.textContent ?? null,
 					editingField: [...document.querySelectorAll(".setting-item .setting-item-name")].map((el) => el.textContent).filter((t) => (t ?? "").includes("base URL"))[0] ?? null,
+					routeGeom,
 				};
 			});
 			await page.getByRole("button", { name: "Manage profile pin" }).click();
@@ -522,6 +536,10 @@ async function main() {
 					mid.routeText.includes("Profile override") &&
 					mid.routeText.includes("Global default: LM Studio (local)") &&
 					mid.hasManagePin &&
+					mid.routeGeom !== null &&
+					mid.routeGeom.btnBelowDesc && // 2026-08-30: action after the description
+					mid.routeGeom.btnInsideCard &&
+					mid.routeGeom.rightPadDelta >= 6 && mid.routeGeom.rightPadDelta <= 20 && // right-aligned to the card padding
 					!mid.hasSetActive && // activation control no longer competes with setup
 					mid.viewedRows === 1 &&
 					mid.inUseProvider === "OpenRouter" &&
@@ -823,7 +841,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.155") &&
+					blob.includes("Open Agent v0.1.158") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
@@ -1238,7 +1256,8 @@ async function main() {
 		// of three of these rows, writing the SAME setting keys from two
 		// places). This half of the old F15 asserts the knobs survived the
 		// move with the Hermes-aligned defaults (threshold 0.50,
-		// protect_last_n 20) and that "Context window" leads the group.
+		// protect_last_n 20). 2026-08-30: "Context window" leads the CONTEXT
+		// group (above "Context file") instead of the Compression group.
 		{
 			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory-knobs");
 			const findRowM = `(name) => [...document.querySelectorAll(".setting-item")].find((el) => el.querySelector(".setting-item-name")?.textContent?.trim() === name)`;
@@ -1249,8 +1268,9 @@ async function main() {
 				const thr = findRow("Compression threshold")?.querySelector('input[type="range"]');
 				const prot = findRow("Protected recent messages")?.querySelector('input[type="range"]');
 				const protNum = findRow("Protected recent messages")?.querySelector('input[type="number"]');
-				/* row order inside the Compression group: the threshold is a
-				   percentage OF the context window, so the window comes first */
+				/* row order 2026-08-30: "Context window" opens the CONTEXT group
+				   (above the context file); the compression knobs follow in
+				   their own group */
 				const rows = [...document.querySelectorAll(".setting-item-name")].map((n) => n.textContent?.trim());
 				return {
 					ctx: !!ctx && ctx.placeholder === "0 = auto",
@@ -1260,8 +1280,8 @@ async function main() {
 					protNum: protNum?.value ?? null,
 					order:
 						rows.indexOf("Context window") >= 0 &&
-						rows.indexOf("Context window") < rows.indexOf("Auto-compression") &&
-						rows.indexOf("Auto-compression") < rows.indexOf("Compression threshold"),
+						rows.indexOf("Context window") < rows.indexOf("Context file") &&
+						rows.indexOf("Context file") < rows.indexOf("Auto-compression"),
 					/* the Model tab's duplicate is asserted by F15.gone, which runs
 					   ON that page; a constant here would assert nothing. */
 				};
@@ -1597,21 +1617,10 @@ async function main() {
 				};
 			})();
 
-			// F20 — modified dot on the canned non-default row, none on a
-			// pristine sibling. v0.1.127 amended: subjek & saudara BERTUKAR
-			// karena bawaan enterToSend dibalik jadi false (Show timestamps
-			// sekarang yang non-default, Enter-send mengukur default pristine).
-			probes.F20 = await page.evaluate(() => {
-				const item = [...document.querySelectorAll(".setting-item")];
-				const byName = (t) => item.find((el) => (el.querySelector(".setting-item-name")?.textContent ?? "").includes(t));
-				const dot = byName("Show message timestamps")?.querySelector(".oa-mod-dot");
-				const etsDot = byName("Enter sends message")?.querySelector(".oa-mod-dot");
-				return {
-					fixed: !!dot && dot.getAttribute("aria-label") === "Changed from default" && !etsDot,
-					dotA11y: dot?.getAttribute("aria-label") ?? null,
-					dotsOnPane: document.querySelectorAll(".oa-mod-dot").length,
-				};
-			});
+			// F20 — moved out of this block on 2026-08-30: the dot subject row
+			// "Show message timestamps" no longer renders on the general page
+			// (it moved to Appearance), so its probe opens the appearance page
+			// directly below.
 
 			// F21 — search chrome a11y: role=search, labelled input & clear,
 			// live status region.
@@ -1679,6 +1688,26 @@ async function main() {
 				return { fixed: before > 0 && r.rows === 0 && r.stripVisible && r.contentVisible, before, ...r };
 			})();
 
+			await page.close();
+		}
+
+		/* F20 — modified dot (v0.1.94, moved 2026-08-30): the dot subject row
+		   "Show message timestamps" moved from General to Appearance, so the
+		   probe follows it there. Pristine sibling: "Tool calls" (seed keeps
+		   it at its default). */
+		{
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "appearance"), "appearance");
+			probes.F20 = await page.evaluate(() => {
+				const item = [...document.querySelectorAll(".setting-item")];
+				const byName = (t) => item.find((el) => (el.querySelector(".setting-item-name")?.textContent ?? "").includes(t));
+				const dot = byName("Show message timestamps")?.querySelector(".oa-mod-dot");
+				const siblingDot = byName("Tool calls")?.querySelector(".oa-mod-dot");
+				return {
+					fixed: !!dot && dot.getAttribute("aria-label") === "Changed from default" && !siblingDot && document.querySelectorAll(".oa-mod-dot").length === 1,
+					dotA11y: dot?.getAttribute("aria-label") ?? null,
+					dotsOnPane: document.querySelectorAll(".oa-mod-dot").length,
+				};
+			});
 			await page.close();
 		}
 
@@ -2605,6 +2634,83 @@ async function main() {
 				capabilities,
 				cron,
 			};
+		}
+
+		/* F50 — v0.1.157 (owner directive 2026-08-31): MCP server card text
+		   fields stack full-width below their labels. Command/Arguments
+		   (stdio card) and URL (http card) used to be narrow right-aligned
+		   control-column inputs that truncated long values; they now share
+		   the oa-has-stacked treatment of Environment/Headers — input is a
+		   direct child of the setting-item, sits below the info block, and
+		   spans the card's content width. */
+		{
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "capabilities"), "capabilities");
+			probes.F50mcpStackedFields = await page.evaluate(() => {
+				const cards = [...document.querySelectorAll(".oa-mcp-server")];
+				const row = (card, name) => {
+					const el = [...card.querySelectorAll(".setting-item")].find(
+						(s) => s.querySelector(".setting-item-name")?.textContent?.trim() === name
+					);
+					if (!el) return null;
+					const input = el.querySelector(":scope > input[type=\"text\"]");
+					const info = el.querySelector(".setting-item-info");
+					if (!input || !info) return { stacked: el.classList.contains("oa-has-stacked"), hasInput: !!input, belowInfo: false, flush: false };
+					const r = input.getBoundingClientRect();
+					const i = info.getBoundingClientRect();
+					const se = el.getBoundingClientRect();
+					return {
+						stacked: el.classList.contains("oa-has-stacked"),
+						hasInput: true,
+						belowInfo: r.top >= i.bottom - 2,
+						flush: Math.abs(r.left - se.left - 16) <= 4 && Math.abs(se.right - 16 - r.right) <= 4 && r.width >= se.width - 44,
+					};
+				};
+				const stdio = cards.find((c) => [...c.querySelectorAll(".setting-item-name")].some((n) => n.textContent?.trim() === "Command"));
+				const http = cards.find((c) => [...c.querySelectorAll(".setting-item-name")].some((n) => n.textContent?.trim() === "URL"));
+				const cmd = stdio ? row(stdio, "Command") : null;
+				const args = stdio ? row(stdio, "Arguments") : null;
+				const url = http ? row(http, "URL") : null;
+				const ok = (p) => !!p && p.stacked && p.hasInput && p.belowInfo && p.flush;
+				return { cmd, args, url, fixed: ok(cmd) && ok(args) && ok(url) };
+			});
+			await page.close();
+		}
+
+		/* F51 — v0.1.158 (owner directive 2026-08-31): vault-folder paths stack
+		   full-width below their labels and are not truncated. Memory folder
+		   and Skills folder were the last two control-column inputs that
+		   clipped long values at the standard pane width (measured
+		   scrollWidth > clientWidth: 34px and 11px). */
+		{
+			const rowProbe = (name) => {
+				const el = [...document.querySelectorAll(".setting-item")].find(
+					(s) => s.querySelector(".setting-item-name")?.textContent?.trim() === name
+				);
+				if (!el) return { present: false };
+				const input = el.querySelector(":scope > input[type=\"text\"]");
+				const info = el.querySelector(".setting-item-info");
+				if (!input || !info) return { present: true, stacked: el.classList.contains("oa-has-stacked"), hasInput: !!input, belowInfo: false, flush: false, notTruncated: false };
+				const r = input.getBoundingClientRect();
+				const i = info.getBoundingClientRect();
+				const se = el.getBoundingClientRect();
+				return {
+					present: true,
+					stacked: el.classList.contains("oa-has-stacked"),
+					hasInput: true,
+					belowInfo: r.top >= i.bottom - 2,
+					flush: Math.abs(r.left - se.left - 16) <= 4 && Math.abs(se.right - 16 - r.right) <= 4 && r.width >= se.width - 44,
+					valueShown: input.value,
+					notTruncated: input.scrollWidth <= input.clientWidth + 1,
+				};
+			};
+			const { page: memPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory");
+			const memoryFolder = await memPage.evaluate(rowProbe, "Memory folder");
+			await memPage.close();
+			const { page: skPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "capabilities"), "capabilities");
+			const skillsFolder = await skPage.evaluate(rowProbe, "Skills folder");
+			await skPage.close();
+			const ok = (p) => p.present && p.stacked && p.hasInput && p.belowInfo && p.flush && p.notTruncated;
+			probes.F51folderStacked = { memoryFolder, skillsFolder, fixed: ok(memoryFolder) && ok(skillsFolder) };
 		}
 
 		/* F42 — v0.1.159 TokenTag: the statusbar token pill renders its
