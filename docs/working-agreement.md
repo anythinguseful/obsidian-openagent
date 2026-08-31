@@ -118,6 +118,8 @@ isi ke sini).
 |---|---|
 | UI / visual / CSS / copy plugin apa pun | `agents/skills/internal/openagent-ui/SKILL.md` (KONTRAK — menang atas saran skill lain) |
 | Arah estetika (tipografi, layout, anti-"AI slop") | `agents/skills/vendor/anthropics/frontend-design/SKILL.md` |
+| Landing/portfolio (bukan chrome plugin) | `agents/skills/vendor/leonxlnx/taste-skill/SKILL.md` + adapter Arena; `openagent-ui` tetap menang di plugin |
+| Ideasi terbuka / `/adhd` | `agents/skills/vendor/uditakhourii/adhd/SKILL.md` + `agents/arena/workflows/adhd.md` |
 | Susunan permukaan fungsional (chat, settings, dashboard) | `agents/skills/internal/functional-ui/SKILL.md` |
 | Audit a11y/UX (fokus, form, animasi, tipografi) | `agents/skills/vendor/vercel/web-design-guidelines/SKILL.md` |
 | Parity dengan upstream (prompt-kit, Hermes, Copilot, lobe-ui, shadcn) | `docs/reference/reference-sources.md` — **verify raw dulu** |
