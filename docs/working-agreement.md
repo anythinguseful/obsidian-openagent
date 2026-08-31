@@ -1600,7 +1600,7 @@ isi ke sini).
 - Satu shell = hapus cabang `Platform?.isMobile` + class `.is-mobile` seluruhnya. Backdrop `align-items:flex-end; padding:10px; background:rgba(0,0,0,.35)` + panel `width:100%; max-width:560px; height:auto; max-height:min(70vh,520px); radius-l; border penuh; animasi oa-panel-up` jadi gaya DASAR `.oa-panel`. Drawer lama (`width:min(290px,88%); height:100%; oa-slide-in`) dihapus.
 - `min-height:0` pindah ke `.oa-panel-list` dasar supaya list scroll di dalam sheet yang di-cap.
 - Amandemen pin serentak (pola Lesson 121): guard v0.1.168, pin import v0.1.21 (Platform keluar lagi), skenario harness `panel-mobile` → `panel` (probe geometri tunggal `__oaPanelCheck`), ALL_SCENARIOS, type decl.
-- Pelajaran (penguatan 121c): kalau owner kasih SOLUSI lalu tanya "kenapa tidak disamakan", jangan baca sebagai "keep scoped" — baca sebagai "terapkan SOLUSI itu SERAGAM". Jangan re-scope keputusan UI atas inisiatif sendiri.
+- Pelajaran (penguatan 121c): untuk **panel sesi itu**, jangan pecah jadi dua produk (HP sheet vs desktop drawer) atas inisiatif sendiri. **Superseded-in-part Lesson 222:** "sama di mobile dan desktop" milik owner = bahasa visual + komponen yang sama, **adaptif** terhadap lebar — bukan larangan media query / layout yang menyusut.
 
 ### 151. (2026-08-20) oa-panel di HP: slide-over penuh "sangat mengganggu" → mobile = floating bottom sheet (lebar composer, max-height 70vh, scroll dalam), desktop slide-over DIKUNCI
 - Owner: "masalahnya sangat mengganggu ketika dijalankan di hp; solusinya dibuat oa-overlay aja?" Jawaban: YA, overlay — TAPI scoped mobile. Desktop slide-over mapan + punya lane harness (`panel`) → jangan diubah. Mobile: backdrop `align-items:flex-end` + `is-mobile` di aside → `width:100%; max-width:560px; height:auto; max-height:min(70vh,520px); radius-l; border penuh; animasi translateY`. Gate via `Platform?.isMobile === true` (ChatApp kini import Platform).
@@ -2280,3 +2280,26 @@ Aturan:
 
 Guard: teks constraint 5 menyebut "cancelled change is not a category
 ban" dan "Settings **may** be reskinned".
+
+## Lesson 222 — (2026-08-31) "Sama mobile dan desktop" = UI adaptif, bukan satu geometri kaku
+
+Ringkasan agen sempat menulis: "satu kulit di semua platform; jangan pecah
+mobile/desktop; kalau owner tanya kenapa tidak disamakan, terapkan merata."
+Owner: itu **bukan** niatnya. Yang diminta kemarin: tampilan HP dan desktop
+**sama dalam arti adaptif** — satu bahasa UI, satu set kontrol, layout
+mengikuti lebar (pane sempit / layar sentuh), bukan dua aplikasi terpisah
+dan bukan screenshot desktop yang dipaksa ke HP.
+
+Lesson 152 tetap benar untuk insiden panel sesi: agen sempat mengunci
+desktop=drawer dan mobile=sheet tanpa diminta. Yang salah adalah
+mengangkat itu jadi undang-undang "dilarang beda layout antar lebar."
+
+Aturan:
+
+1. Satu **identitas**: token Obsidian, komponen, copy, ikon — HP tidak
+   boleh jadi skin lain.
+2. Layout **boleh** (harus) adaptif: flex wrap, `min-width:0`,
+   `@media` / `@container`, target sentuh lebih besar di coarse pointer.
+   `Platform.isMobile` sah bila itu cara host membedakan input, bukan
+   alasan membuat drawer vs sheet sebagai dua produk.
+3. Jangan baca "samakan" sebagai "pixel-identical di 390px dan 1280px."
