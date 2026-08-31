@@ -8,6 +8,14 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.157 — MCP server fields stack full-width
+
+**Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.
+
+- **MCP server forms are readable again.** Command, Arguments, and URL on each server card (MCP servers section) now render as full-width fields below their labels — the same stacked treatment as Environment and Headers — instead of narrow right-aligned inputs that truncated long values like `npx -y @modelcontextprotocol/server-filesystem …`.
+
+---
+
 # Open Agent v0.1.156 — Settings placement tidy-up
 
 **Release archive:** prepared locally; publication requires the separate explicit GitHub Release confirmation flow.

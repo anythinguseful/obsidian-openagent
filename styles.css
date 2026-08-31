@@ -3818,6 +3818,36 @@
 	outline: none;
 	border-color: var(--interactive-accent);
 }
+/* v0.1.157: single-line stacked inputs (MCP server cards: Command /
+   Arguments / URL). Same stacked geometry as the textareas above, but no
+   markdown-editor font-size coupling beyond the shared family and no
+   resize handle — an <input> has none anyway. */
+.oa-settings .setting-item.oa-has-stacked input[type="text"],
+.oa-confirm-modal .setting-item.oa-has-stacked input[type="text"] {
+	flex: 1 1 100%;
+	box-sizing: border-box;
+	min-width: 0;
+	margin-top: 8px;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	padding: 6px 10px;
+	border-radius: var(--radius-m, 8px);
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: none;
+}
+/* v0.1.140 contract extended to the single-line stacked inputs: Settings
+   fields stay visually quiet; modals keep their pre-existing behavior. */
+.oa-settings .setting-item.oa-has-stacked input[type="text"]:hover,
+.oa-settings .setting-item.oa-has-stacked input[type="text"]:active,
+.oa-settings .setting-item.oa-has-stacked input[type="text"]:focus,
+.oa-settings .setting-item.oa-has-stacked input[type="text"]:focus-visible {
+	outline: none;
+	border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+	box-shadow: none;
+}
 
 /* compound stacked controls (Model tab: dropdown + input stacked full-width) */
 .oa-settings .setting-item.oa-has-stacked .oa-stacked-control,

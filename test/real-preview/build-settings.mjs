@@ -841,7 +841,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.156") &&
+					blob.includes("Open Agent v0.1.157") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
@@ -2634,6 +2634,46 @@ async function main() {
 				capabilities,
 				cron,
 			};
+		}
+
+		/* F50 — v0.1.157 (owner directive 2026-08-31): MCP server card text
+		   fields stack full-width below their labels. Command/Arguments
+		   (stdio card) and URL (http card) used to be narrow right-aligned
+		   control-column inputs that truncated long values; they now share
+		   the oa-has-stacked treatment of Environment/Headers — input is a
+		   direct child of the setting-item, sits below the info block, and
+		   spans the card's content width. */
+		{
+			const { page } = await openPage(browser, shell(bundleText, refCss, pluginCss, "capabilities"), "capabilities");
+			probes.F50mcpStackedFields = await page.evaluate(() => {
+				const cards = [...document.querySelectorAll(".oa-mcp-server")];
+				const row = (card, name) => {
+					const el = [...card.querySelectorAll(".setting-item")].find(
+						(s) => s.querySelector(".setting-item-name")?.textContent?.trim() === name
+					);
+					if (!el) return null;
+					const input = el.querySelector(":scope > input[type=\"text\"]");
+					const info = el.querySelector(".setting-item-info");
+					if (!input || !info) return { stacked: el.classList.contains("oa-has-stacked"), hasInput: !!input, belowInfo: false, flush: false };
+					const r = input.getBoundingClientRect();
+					const i = info.getBoundingClientRect();
+					const se = el.getBoundingClientRect();
+					return {
+						stacked: el.classList.contains("oa-has-stacked"),
+						hasInput: true,
+						belowInfo: r.top >= i.bottom - 2,
+						flush: Math.abs(r.left - se.left - 16) <= 4 && Math.abs(se.right - 16 - r.right) <= 4 && r.width >= se.width - 44,
+					};
+				};
+				const stdio = cards.find((c) => [...c.querySelectorAll(".setting-item-name")].some((n) => n.textContent?.trim() === "Command"));
+				const http = cards.find((c) => [...c.querySelectorAll(".setting-item-name")].some((n) => n.textContent?.trim() === "URL"));
+				const cmd = stdio ? row(stdio, "Command") : null;
+				const args = stdio ? row(stdio, "Arguments") : null;
+				const url = http ? row(http, "URL") : null;
+				const ok = (p) => !!p && p.stacked && p.hasInput && p.belowInfo && p.flush;
+				return { cmd, args, url, fixed: ok(cmd) && ok(args) && ok(url) };
+			});
+			await page.close();
 		}
 
 		/* F42 — v0.1.159 TokenTag: the statusbar token pill renders its

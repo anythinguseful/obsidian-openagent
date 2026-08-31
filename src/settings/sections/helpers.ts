@@ -63,3 +63,30 @@ export function stackedTextArea(
 	});
 	return ta;
 }
+
+/**
+ * Single-line sibling of `stackedTextArea` (v0.1.157, owner directive
+ * 2026-08-31): the input stacks INSIDE its setting-item — info above, a
+ * full-width text input below. Introduced for the MCP server cards, where
+ * narrow right-aligned control-column inputs truncated long values
+ * (Command/Arguments/URL); those rows now share the Environment/Headers
+ * stacked treatment. Uses the `change` event (commit on blur/Enter), like
+ * `stackedTextArea` — not per-keystroke `addText` onChange.
+ */
+export function stackedText(
+	setting: Setting,
+	opts: { value: string; placeholder?: string; ariaLabel: string },
+	onChange: (v: string) => void | Promise<void>
+): HTMLInputElement {
+	setting.settingEl.addClass("oa-has-stacked");
+	const input = setting.settingEl.createEl("input", {
+		attr: {
+			type: "text",
+			"aria-label": opts.ariaLabel,
+			...(opts.placeholder ? { placeholder: opts.placeholder } : {}),
+		},
+	});
+	input.value = opts.value;
+	input.addEventListener("change", () => void onChange(input.value));
+	return input;
+}

@@ -465,22 +465,22 @@
 						</div>
 					</div>
 
-					<div class="oa-subsection"><h3 class="oa-subsection-title">MCP servers</h3><div class="oa-subsection-desc">External tool servers over the Model Context Protocol. Config only for now — the runtime client arrives in a later update.</div></div>
-					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Enable MCP</div><div class="setting-item-description">Master switch for MCP integrations. Stored now; nothing connects until the runtime client ships.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
+					<div class="oa-subsection"><h3 class="oa-subsection-title">MCP servers</h3><div class="oa-subsection-desc">External tool servers over the Model Context Protocol — stdio (a command) or HTTP (a URL).</div></div>
+					<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Enable MCP</div><div class="setting-item-description">Runs configured MCP servers on this device — first-use consent explains the risk. stdio is desktop-only; HTTP connects over a URL.</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div></div></div>
 					<div class="oa-mcp-list">
 						<div class="oa-mcp-server">
 							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">filesystem</div><div class="setting-item-description">stdio · npx -y @modelcontextprotocol/server-filesystem /path/to/dir</div></div><div class="setting-item-control"><div class="checkbox-container is-enabled"><input type="checkbox" checked></div><button class="clickable-icon" aria-label="Remove server"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></div>
-							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Command</div><div class="setting-item-description">Executable spawned over stdio, e.g. npx</div></div><div class="setting-item-control"><input type="text" value="npx"></div></div>
-							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Arguments</div><div class="setting-item-description">Space-separated arguments passed to the command.</div></div><div class="setting-item-control"><input type="text" value="-y @modelcontextprotocol/server-filesystem /path/to/dir"></div></div>
-							<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Environment</div><div class="setting-item-description">KEY=VALUE pairs, one per line.</div></div><div class="setting-item-control"><textarea rows="2"></textarea></div></div>
+						<div class="setting-item oa-has-stacked"><div class="setting-item-info"><div class="setting-item-name">Command</div><div class="setting-item-description">Executable spawned over stdio, e.g. npx</div></div><div class="setting-item-control"></div><input type="text" value="npx" aria-label="Command"></div>
+						<div class="setting-item oa-has-stacked"><div class="setting-item-info"><div class="setting-item-name">Arguments</div><div class="setting-item-description">Space-separated arguments passed to the command.</div></div><div class="setting-item-control"></div><input type="text" value="-y @modelcontextprotocol/server-filesystem /path/to/dir" aria-label="Arguments"></div>
+						<div class="setting-item oa-has-stacked"><div class="setting-item-info"><div class="setting-item-name">Environment</div><div class="setting-item-description">KEY=VALUE pairs, one per line.</div></div><div class="setting-item-control"></div><textarea rows="2" aria-label="Environment variables"></textarea></div>
 						</div>
 					</div>
 					<div class="setting-item"><div class="setting-item-info"></div><div class="setting-item-control"><button>Add MCP server</button></div></div>
 					<div class="oa-mcp-import">
+						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Import mcp.json</div><div class="setting-item-description">Paste a standard mcp.json document below. Servers are merged by name.</div></div><div class="setting-item-control"><button>Import</button></div></div>
 						<textarea class="oa-mcp-import-text" rows="5" placeholder='{"mcpServers": {"filesystem": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]}}}'></textarea>
-						<div class="setting-item"><div class="setting-item-info"><div class="setting-item-name">Import mcp.json</div><div class="setting-item-description">Paste a standard mcp.json document above. Servers are merged by name.</div></div><div class="setting-item-control"><button>Import</button></div></div>
 					</div>
-					<div class="oa-mcp-note">Runtime client coming soon — configured servers are saved but not connected yet.</div>
+					<div class="oa-mcp-note">Servers connect lazily on the next chat run. The catalog offers curated, pinned servers — git-installed ones clone and run third-party code on this device without a sandbox.</div>
 
 					<div class="oa-subsection"><h3 class="oa-subsection-title">Browse Hub</h3><div class="oa-subsection-desc">Hermes-style skills hub — search trusted GitHub taps progressively, preview + security-scan, one-click install into the active profile.</div></div>
 					<div class="oa-hub">
