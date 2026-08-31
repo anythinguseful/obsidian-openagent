@@ -2871,6 +2871,24 @@ nudgeCounterRef.current = 0;
 
 					if (abort.signal.aborted) throw new Error("Run interrupted.");
 					finalizeReasoning(aid);
+				/* If tokens never reached onToken (array-shaped content, some
+				   gateways, buffered fallback that skipped callbacks), the
+				   bubble would stay empty even though the wire has a reply. */
+				{
+					const shown = turnsRef.current
+						.find((t) => t.id === aid)
+						?.parts.filter((p) => p.kind === "text")
+						.map((p) => (p.kind === "text" ? p.text : ""))
+						.join("") ?? "";
+					if (!shown.trim()) {
+						const fromWire = result.messages
+							.filter((m) => m.role === "assistant")
+							.map((m) => textFromMessageContent(m.content))
+							.filter((t) => t.trim().length > 0)
+							.join("\n\n");
+						if (fromWire.trim()) appendText(aid, fromWire);
+					}
+				}
 				/* One canonical Mermaid representation feeds both the durable
 				   transcript and every later UI/editor sink. Do this only after the
 				   attempt commits so a partial stream is never made canonical/persisted. */

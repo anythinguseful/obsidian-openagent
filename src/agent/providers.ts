@@ -248,6 +248,24 @@ function buildBody(
 	return JSON.stringify(body);
 }
 
+/** OpenAI-compat content may be a string OR an array of parts
+ *  (`[{type:"text", text:"…"}]`). Treating only strings as tokens leaves
+ *  Gemini/Claude-via-gateway replies invisible in the chat. */
+export function textFromMessageContent(content: unknown): string {
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
+	let out = "";
+	for (const part of content) {
+		if (typeof part === "string") out += part;
+		else if (part && typeof part === "object") {
+			const rec = part as Record<string, unknown>;
+			if (typeof rec.text === "string") out += rec.text;
+			else if (rec.type === "text" && typeof rec.content === "string") out += rec.content;
+		}
+	}
+	return out;
+}
+
 function normalizeUsage(u: any): TokenUsage | null {
 	if (!u) return null;
 	return {
@@ -704,12 +722,14 @@ async function streamingCompletion(
 				sawFinishReason = true;
 			}
 			const delta = choice.delta ?? {};
-			if (typeof delta.content === "string" && delta.content.length > 0) {
-				content += delta.content;
-				cb.onToken?.(delta.content);
+			const token = textFromMessageContent(delta.content);
+			if (token.length > 0) {
+				content += token;
+				cb.onToken?.(token);
 			}
-			const rc = delta.reasoning_content ?? delta.reasoning;
-			if (typeof rc === "string" && rc.length > 0) {
+			const rcRaw = delta.reasoning_content ?? delta.reasoning;
+			const rc = typeof rcRaw === "string" ? rcRaw : textFromMessageContent(rcRaw);
+			if (rc.length > 0) {
 				reasoning += rc;
 				cb.onReasoning?.(rc);
 			}
