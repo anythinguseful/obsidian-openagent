@@ -841,7 +841,7 @@ async function main() {
 					about.headerDesc === "A self-improving AI agent for your vault." &&
 					!about.headerDesc.includes("modeled after") &&
 					about.hasCopyBtn === true &&
-					blob.includes("Open Agent v0.1.157") &&
+					blob.includes("Open Agent v0.1.158") &&
 					blob.includes("Toolsets enabled") &&
 					!blob.includes("sk-") &&
 					!blob.includes("apiKey"),
@@ -2674,6 +2674,43 @@ async function main() {
 				return { cmd, args, url, fixed: ok(cmd) && ok(args) && ok(url) };
 			});
 			await page.close();
+		}
+
+		/* F51 — v0.1.158 (owner directive 2026-08-31): vault-folder paths stack
+		   full-width below their labels and are not truncated. Memory folder
+		   and Skills folder were the last two control-column inputs that
+		   clipped long values at the standard pane width (measured
+		   scrollWidth > clientWidth: 34px and 11px). */
+		{
+			const rowProbe = (name) => {
+				const el = [...document.querySelectorAll(".setting-item")].find(
+					(s) => s.querySelector(".setting-item-name")?.textContent?.trim() === name
+				);
+				if (!el) return { present: false };
+				const input = el.querySelector(":scope > input[type=\"text\"]");
+				const info = el.querySelector(".setting-item-info");
+				if (!input || !info) return { present: true, stacked: el.classList.contains("oa-has-stacked"), hasInput: !!input, belowInfo: false, flush: false, notTruncated: false };
+				const r = input.getBoundingClientRect();
+				const i = info.getBoundingClientRect();
+				const se = el.getBoundingClientRect();
+				return {
+					present: true,
+					stacked: el.classList.contains("oa-has-stacked"),
+					hasInput: true,
+					belowInfo: r.top >= i.bottom - 2,
+					flush: Math.abs(r.left - se.left - 16) <= 4 && Math.abs(se.right - 16 - r.right) <= 4 && r.width >= se.width - 44,
+					valueShown: input.value,
+					notTruncated: input.scrollWidth <= input.clientWidth + 1,
+				};
+			};
+			const { page: memPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "memory"), "memory");
+			const memoryFolder = await memPage.evaluate(rowProbe, "Memory folder");
+			await memPage.close();
+			const { page: skPage } = await openPage(browser, shell(bundleText, refCss, pluginCss, "capabilities"), "capabilities");
+			const skillsFolder = await skPage.evaluate(rowProbe, "Skills folder");
+			await skPage.close();
+			const ok = (p) => p.present && p.stacked && p.hasInput && p.belowInfo && p.flush && p.notTruncated;
+			probes.F51folderStacked = { memoryFolder, skillsFolder, fixed: ok(memoryFolder) && ok(skillsFolder) };
 		}
 
 		/* F42 — v0.1.159 TokenTag: the statusbar token pill renders its

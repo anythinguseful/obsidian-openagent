@@ -86,7 +86,7 @@ export class McpClient {
 		await this.request("initialize", {
 			protocolVersion: "2024-11-05",
 			capabilities: {},
-			clientInfo: { name: "openagent", version: "0.1.157" },
+			clientInfo: { name: "openagent", version: "0.1.158" },
 		});
 		this.notify("notifications/initialized", {});
 	}

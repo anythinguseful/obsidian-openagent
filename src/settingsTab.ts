@@ -31,7 +31,7 @@ import { GuardFindingsModal } from "./settings/modals/guard-findings";
 import { ExportFileSuggestModal, JsonImportModal, SkillSuggestModal } from "./settings/modals/json-import";
 import { createSliderInput } from "./ui/settings-controls";
 import type { SectionContext } from "./settings/sections/context";
-import { stackedTextArea } from "./settings/sections/helpers";
+import { stackedText, stackedTextArea } from "./settings/sections/helpers";
 import { general as generalSection } from "./settings/sections/general";
 import { memory as memorySection } from "./settings/sections/memory";
 import { mcp as mcpSection } from "./settings/sections/mcp";
@@ -2610,18 +2610,24 @@ export class OpenAgentSettingTab extends PluginSettingTab {
 
 		const stSkillsFolder = new Setting(containerEl)
 			.setName("Skills folder")
-			.setDesc("Vault folder holding skill folders (each with a SKILL.md).")
-			.addText((t) =>
-				t.setValue(s.skillsFolder).onChange(async (v) => {
-					try {
-						s.skillsFolder = canonicalVaultPath(v.trim() || "openagent/openagent-skills", { label: "Skills folder" });
-						await this.plugin.saveSettings();
-					} catch (e) {
-						t.setValue(s.skillsFolder);
-						new Notice(`Open Agent: ${e instanceof Error ? e.message : String(e)}`);
-					}
-				})
-			);
+			.setDesc("Vault folder holding skill folders (each with a SKILL.md).");
+		/* v0.1.158 (owner directive 2026-08-31): stacked full-width — the
+		   control-column input truncated "openagent/openagent-skills" by
+		   11px at the standard pane width (measured); same defect class as
+		   the MCP server cards. */
+		const skillsFolderInput = stackedText(
+			stSkillsFolder,
+			{ value: s.skillsFolder, ariaLabel: "Skills folder" },
+			async (v) => {
+				try {
+					s.skillsFolder = canonicalVaultPath(v.trim() || "openagent/openagent-skills", { label: "Skills folder" });
+					await this.plugin.saveSettings();
+				} catch (e) {
+					skillsFolderInput.value = s.skillsFolder;
+					new Notice(`Open Agent: ${e instanceof Error ? e.message : String(e)}`);
+				}
+			}
+		);
 		markModified(stSkillsFolder, this.plugin.settings, "skillsFolder");
 
 		const stAutoCreateSkills = new Setting(containerEl)

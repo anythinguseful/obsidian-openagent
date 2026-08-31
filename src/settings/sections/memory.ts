@@ -14,6 +14,7 @@ import { Notice, Setting } from "obsidian";
 import { canonicalVaultPath } from "../../agent/workspacePolicy";
 import { markModified } from "../../settingsModified";
 import { createSliderInput } from "../../ui/settings-controls";
+import { stackedText } from "./helpers";
 import type { SectionContext } from "./context";
 
 export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
@@ -27,18 +28,25 @@ export function memory(ctx: SectionContext, containerEl: HTMLElement): void {
 	);
 	markModified(stMemoryEnabled, ctx.plugin.settings, "memoryEnabled");
 
-	const stMemoryFolder = new Setting(containerEl).setName("Memory folder").setDesc("Vault folder for MEMORY.md and USER.md.").addText((t) =>
-		t.setValue(s.memoryFolder).onChange(async (v) => {
-			try {
-				s.memoryFolder = canonicalVaultPath(v.trim() || "openagent/openagent-memory", { label: "Memory folder" });
-				await ctx.plugin.saveSettings();
-			} catch (e) {
-				t.setValue(s.memoryFolder);
-				new Notice(`Open Agent: ${e instanceof Error ? e.message : String(e)}`);
+		/* v0.1.158 (owner directive 2026-08-31): the folder path stacks
+		   full-width below its label — the control-column input truncated
+		   "openagent/openagent-memory" by 34px at the standard pane width
+		   (measured), the same defect class fixed on the MCP server cards. */
+		const stMemoryFolder = new Setting(containerEl).setName("Memory folder").setDesc("Vault folder for MEMORY.md and USER.md.");
+		const memoryFolderInput = stackedText(
+			stMemoryFolder,
+			{ value: s.memoryFolder, ariaLabel: "Memory folder" },
+			async (v) => {
+				try {
+					s.memoryFolder = canonicalVaultPath(v.trim() || "openagent/openagent-memory", { label: "Memory folder" });
+					await ctx.plugin.saveSettings();
+				} catch (e) {
+					memoryFolderInput.value = s.memoryFolder;
+					new Notice(`Open Agent: ${e instanceof Error ? e.message : String(e)}`);
+				}
 			}
-		})
-	);
-	markModified(stMemoryFolder, ctx.plugin.settings, "memoryFolder");
+		);
+		markModified(stMemoryFolder, ctx.plugin.settings, "memoryFolder");
 
 	const stUserProfileEnabled = new Setting(containerEl)
 		.setName("User profile")

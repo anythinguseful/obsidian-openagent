@@ -1041,7 +1041,7 @@ module.exports = function settingsGuards() {
 			mem126.includes("0 disables") &&
 			bs126.includes("approvalMovedToSafety") &&
 			bs126.includes("workspaceMovedOut") &&
-			read("manifest.json").includes('"version": "0.1.157"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ Notifications IA: native/sound tab is in tabs/search; Appearance present after Chat; About last tab with renderer; Workspace/Safety and audited sliders remain");
 		} else {
@@ -2250,7 +2250,7 @@ module.exports = function settingsGuards() {
 			st2.includes("clarify: true,") && st2.includes("todo: true,") &&
 			tb.includes('key: "todo"') &&
 			tp.includes("todo dedupe: last occurrence wins") &&
-			read("manifest.json").includes('"version": "0.1.157"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.133: todo tool (port Hermes 1:1) — ride session file · injeksi lintas kompresi hanya item aktif · ephemeral di headless/quick-ask · 18 cek unit hijau");
 		} else {
@@ -2282,7 +2282,7 @@ module.exports = function settingsGuards() {
 			cm.includes('"webExtract" | "vision"') &&
 			tp.includes("vision source: vault path") &&
 			al.includes("vision: provider request carries pixels inside the tool message") &&
-			read("manifest.json").includes('"version": "0.1.157"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.134: vision_analyze — native pixels ride tool result (bypass 20k clipper) · legacy aux+template mereka · magic-byte detect · witness wire-level hijau");
 		} else {
@@ -2318,7 +2318,7 @@ module.exports = function settingsGuards() {
 			tp.includes("runPooled(3, workers)") &&
 			al.includes("delegation: consolidated batch result lands on the wire") &&
 			plan.includes("DELEGATE_BLOCKED_TOOLS") &&
-			read("manifest.json").includes('"version": "0.1.157"');
+			read("manifest.json").includes('"version": "0.1.158"');
 		if (ok) {
 			console.log("✓ v0.1.135+: delegate_task — child/headless fail-closed allowlists · pool 3 · consolidated index-sorted · orchestrator/output_schema ditolak jujur · gap 🟡 TUNTAS SEMUA");
 		} else {
@@ -2452,7 +2452,7 @@ module.exports = function settingsGuards() {
 		const tab = read("src/settingsTab.ts");
 		const css = read("styles.css");
 		const ok =
-			read("manifest.json").includes('"version": "0.1.157"') &&
+			read("manifest.json").includes('"version": "0.1.158"') &&
 			!tab.includes("groupSubsections") &&
 			!tab.includes("oa-settings-group") &&
 			!/\n\.oa-settings \.oa-settings-group\s*\{/.test(css) &&
@@ -2487,6 +2487,25 @@ module.exports = function settingsGuards() {
 			console.log("✓ v0.1.157: MCP server card fields stack full-width below their labels");
 		} else {
 			console.error("✗ v0.1.157 MCP stacked field contract drifted");
+			failed++;
+		}
+	}
+	/* v0.1.158 (owner directive 2026-08-31): the two vault-folder path fields
+	   (Memory folder, Skills folder) stack full-width via stackedText — they
+	   were the last control-column inputs truncating long values. Their
+	   canonicalVaultPath revert-on-error contract must survive the move. */
+	{
+		const memory = read("src/settings/sections/memory.ts");
+		const tab = read("src/settingsTab.ts");
+		const ok =
+			memory.includes("memoryFolderInput = stackedText(") &&
+			memory.includes('canonicalVaultPath(v.trim() || "openagent/openagent-memory", { label: "Memory folder" })') &&
+			tab.includes("skillsFolderInput = stackedText(") &&
+			tab.includes('canonicalVaultPath(v.trim() || "openagent/openagent-skills", { label: "Skills folder" })');
+		if (ok) {
+			console.log("✓ v0.1.158: vault-folder fields stack full-width, canonicalization intact");
+		} else {
+			console.error("✗ v0.1.158 vault-folder stacked field contract drifted");
 			failed++;
 		}
 	}
