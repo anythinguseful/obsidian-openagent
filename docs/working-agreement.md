@@ -89,6 +89,29 @@ apa pun — audit dulu, implementasi belakangan:
 7. **Jangan pernah commit/push ke `main`.** Kerja di branch sesi
    (`arena/<id>`), push hanya ke branch itu; pull request dari sana.
 
+## Vendor / development skill intake (owner 2026-08-31)
+
+Binding. Berlaku untuk permintaan owner **dan** inisiatif agen.
+
+Owner memberi izin penuh menambah development skill vendor serta riset
+dalam terkait proyek. Izin itu **bukan** izin melewati gerbang kecocokan.
+
+Sebelum `git add` skill apa pun ke `agents/skills/vendor/`:
+
+1. Baca `SKILL.md` (atau README upstream) cukup untuk tahu pemicu, stack,
+   dan tool host yang diasumsikan.
+2. Uji kecocokan untuk **plugin Obsidian dikerjakan di Arena**:
+   - Apakah skill itu untuk chrome plugin / vault, atau untuk landing
+     Next/Tailwind / portfolio?
+   - Apakah metode utamanya bisa dijalankan di Arena (bukan fan-out
+     Agent/Task Claude Code, bukan CLI yang tidak kita pin)?
+   - Apakah ia bertarung dengan `openagent-ui` (palet, font, ikon, reskin
+     Settings)?
+3. Tidak cocok → beri tahu owner, **jangan vendor**. Keputusan "batalkan"
+   dicatat (kelas Lesson 119 / 220), bukan dipasang dulu lalu dicabut.
+4. Cocok → snapshot ter-pin + `UPSTREAM.md` + baris `manifest.yaml` +
+   adapter Arena bila host berbeda. `openagent-ui` tetap menang.
+
 ## Aturan dokumentasi (kapan update docs)
 
 Diadopsi 2026-08-18 dari `designdocs/agents/DOCS_GUIDE.md` repo obsidian-copilot
@@ -2209,3 +2232,29 @@ Rule: an owner decision that overrides a recorded one gets its Lesson
 in the same change as the move. This note was written a day late, after
 two more releases had shipped — that gap is exactly what the rule
 closes.
+
+## Lesson 220 — (2026-08-31) Install skill = uji kecocokan dulu; Arena + plugin Obsidian adalah filter, bukan afterthought
+
+Owner minta pasang dua skill publik (ADHD tree-of-thought, taste-skill
+anti-slop landing). Agen mem-vendor keduanya ke `agents/skills/vendor/`
+lalu baru menjelaskan bahwa keduanya **tidak cocok**: taste menarget
+landing Next/Tailwind dan kalah dari `openagent-ui` di chrome plugin;
+ADHD menuntut cabang Agent paralel yang Arena tidak punya. Owner:
+batalkan, seharusnya ditanya dulu.
+
+Aturan:
+
+1. Permintaan "install skill X" adalah permintaan **evaluasi**, baru
+   instalasi. Jawaban pertama = cocok atau tidak, dengan alasan konkret
+   (sasaran skill vs plugin Obsidian vs kemampuan Arena).
+2. Tidak cocok → jangan snapshot, jangan routing `AGENTS.md`, jangan
+   adapter. Cukup bilang tidak.
+3. Owner juga mengizinkan agen **sendiri** menambah skill vendor dan
+   riset dalam bila ada gap nyata — gerbang yang sama. Bukan lisensi
+   reskin atau skill yang tidak bisa dijalankan di host ini.
+4. Keputusan batal dicatat di Lessons (ini), bukan diulang sebagai
+   tawaran di sesi berikutnya.
+
+Guard: `scripts/check-skills.mjs` menolak folder vendor
+`uditakhourii` dan `leonxlnx` (pasangan yang sempat masuk lalu dicabut).
+Skill baru yang lolos gerbang tetap boleh ditambah lewat manifest.

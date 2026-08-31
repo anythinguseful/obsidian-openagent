@@ -39,6 +39,10 @@ including Arena Agent. Read it before inspecting or changing code.
 `openagent-ui` is the binding UI contract and wins if it conflicts with a
 more generic design skill.
 
+Do not vendor a new development skill until it fits this Obsidian plugin
+on Arena (see `docs/working-agreement.md` — Vendor skill intake + Lesson 220).
+Unfit skills are reported, not installed.
+
 ## Repository conventions
 
 - `docs/` holds curated project documentation; `evidence/` holds raw logs,

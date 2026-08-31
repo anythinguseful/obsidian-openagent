@@ -94,6 +94,16 @@ for (const entry of entries) {
 }
 
 check(!existsSync(abs("skills")), "root skills/ is gone — development skills live under agents/skills/", "root skills/ still exists; move it to agents/skills/");
+check(
+	!existsSync(abs("agents/skills/vendor/uditakhourii")),
+	"rejected ADHD vendor tree is absent",
+	"agents/skills/vendor/uditakhourii must stay uninstalled (Lesson 220)",
+);
+check(
+	!existsSync(abs("agents/skills/vendor/leonxlnx")),
+	"rejected taste vendor tree is absent",
+	"agents/skills/vendor/leonxlnx must stay uninstalled (Lesson 220)",
+);
 const actualSkills = collectSkillFiles(abs("agents/skills"));
 const missingManifest = actualSkills.filter((path) => !declaredPaths.has(path));
 const missingFiles = [...declaredPaths].filter((path) => !actualSkills.includes(path));
