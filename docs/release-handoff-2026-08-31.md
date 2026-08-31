@@ -44,6 +44,15 @@ sha256 + clean-source + manifest + final report — persis pola v0.1.151–155.
   Hapus draft itu (Releases → draft → Delete), perbaiki sebabnya, jalankan ulang
   workflow. Publisher menolak menimpa rilis yang sudah ada ("refusing to
   rewrite"), jadi draft basi memang harus dihapus dulu.
+- **Egress sandbox Arena bisa memblokir `uploads.github.com`** (terjadi
+  2026-08-31: TLS gagal HTTP 000, sementara `api.github.com` normal). Gejala:
+  `publish:release --publish` membuat draft lalu gagal upload (EOF, retry 4×)
+  dan **menghapus draft-nya sendiri** — tidak ada rilis parsial; aman di-retry
+  kapan pun. Bila uploads masih terblokir di percobaan berikutnya, jalurnya:
+  (a) retry dari sesi/sandbox baru (egress bisa berubah), (b) merge PR lalu
+  pakai workflow (upload berjalan dari runner GitHub, tak terpengaruh), atau
+  (c) upload manual: buat draft `v0.1.158` → target commit head PR, drag-drop
+  keenam file dari `release/` (sha256 tercantum di final report), publish.
 - **CI merah di PR**: jangan merge; lihat log check-nya. Semua gate lokal sudah
   hijau saat commit-commit ini dibuat (tsc, 1.900+ test, docs+skills, rilis
   lokal ZIP SYNCED), jadi merah biasanya berarti flake atau perbedaan lingkungan.
