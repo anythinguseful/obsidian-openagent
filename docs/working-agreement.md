@@ -2181,9 +2181,9 @@ shells anyway was a skill-contract miss, not a missing visual language.
 Fix (v0.1.154): remove `groupSubsections()` and the group-shell CSS. MCP
 server cards stay (they are managed objects). Guards invert: smoke pins
 absence of the wrapper class; F49 now requires zero group shells and
-direct-child subsections. The group-shell pass stays cancelled; Settings
-reskin as a category is not banned (Lesson 221). A new pass still needs
-a real screenshot / real-DOM harness, not a unify-the-system story alone.
+direct-child subsections. The *nested* group-shell pass stays cancelled. Settings may use one
+grouping/card layer when it clarifies related rows (Lesson 223). Reskin
+as a category is not banned (Lesson 221). Real-DOM harness still required.
 
 ## Lesson 218 — (2026-08-26) Development skills belong under agents/; vault skills do not move with them
 
@@ -2303,3 +2303,23 @@ Aturan:
    `Platform.isMobile` sah bila itu cara host membedakan input, bukan
    alasan membuat drawer vs sheet sebagai dua produk.
 3. Jangan baca "samakan" sebagai "pixel-identical di 390px dan 1280px."
+
+## Lesson 223 — (2026-08-31) Miss komunikasi: insiden ≠ undang-undang; kerjakan yang adaptif tanpa tanya
+
+Tiga koreksi owner beruntun (220–222) pola yang sama: agen mengangkat
+satu batal/satu kalimat jadi larangan kategori, lalu takut bergerak.
+
+Putusan 2026-08-31 (kartu tanya):
+
+1. Settings **boleh** dirapikan — kartu, grup, reskin — asal bukan
+   kartu di dalam kartu tanpa alasan. Tema/font/palet tetap milik
+   Obsidian (constraint 1 **tetap**).
+2. Kerja **adaptif / rapi** dikerjakan tanpa kartu izin. Tanya hanya
+   kalau ada **dua arah produk besar**. "Atas inisiatif sendiri" bukan
+   dosa; yang salah adalah dua produk (HP vs desktop) atau palet custom.
+3. Baca keputusan batal sebagai artefak itu saja (Lesson 221).
+
+Yang **tidak** saya ubah tanpa ditanya (masih bisa janggal nanti):
+Lesson 16 (setiap giliran wajib tool call), Lesson 88 (tahan docs
+user-facing), ritual `ask_user`→greenlight di mekanisme penegakan,
+anti-slop letter-spacing. Itu proses/agen, bukan UI yang baru dikoreksi.
