@@ -1,39 +1,38 @@
 ---
-title: "Open Agent — arsitektur"
+title: "Open Agent architecture"
 type: reference
 status: active
 date: 2026-09-11
 tags: [openagent, architecture, reference]
 ---
 
-# Open Agent — arsitektur
+# Open Agent architecture
 
-Satu peta sistem. Bukan clone Hermes Desktop, bukan Cordis/DeepSeek Harness.
-Host-nya **Obsidian**; agen berjalan **in-process** di plugin.
+One system map. Not a clone of Hermes Desktop, not Cordis / DeepSeek Harness.
+The host is **Obsidian**; the agent runs **in-process** in the plugin.
 
-Dokumen lanjutan **tidak** dipecah dulu menjadi banyak file kosong. Bagian di
-bawah + tautan ke audit/plan yang sudah ada. Pecah hanya jika satu bagian
-tumbuh sendiri (tools, session, security).
+Do **not** split this into empty sibling files yet. Split only when one topic
+grows on its own (tools, session, security).
 
-- Hub docs: [README](../README.md)
-- Paritas otoritas Hermes: [audit 2026-08-25](../audits/hermes-desktop-architecture-parity-2026-08-25.md)
-- Refresh Desktop: [audit 2026-09-11](../audits/hermes-desktop-refresh-2026-09-11.md)
-- Arah kernel: [hybrid DeepSeek + Hermes](../plans/deepseek-hermes-hybrid-harness-2026-09-06.md)
+- Docs hub: [README](../README.md)
+- Hermes authority parity: [audit 2026-08-25](../audits/hermes-desktop-architecture-parity-2026-08-25.md)
+- Desktop refresh: [audit 2026-09-11](../audits/hermes-desktop-refresh-2026-09-11.md)
+- Kernel direction: [hybrid DeepSeek + Hermes](../plans/deepseek-hermes-hybrid-harness-2026-09-06.md)
 - Workspace: [path security](workspace-security.md)
 
-Jangan buat `ARCHITECTURE.md` di root repo — sumber kebenaran arsitektur
-adalah file ini (`docs/reference/architecture.md`).
+Do not add `ARCHITECTURE.md` at the repo root — this file is the architecture
+source of truth (`docs/reference/architecture.md`).
 
 ---
 
-## 1. Tiga otoritas
+## 1. Three authorities
 
-Hermes Desktop: Electron / renderer / `hermes serve`.  
-Kita: **plugin lifecycle / UI / runner+loop** — satu proses Obsidian.
+Hermes Desktop: Electron / renderer / `hermes serve`.
+Here: **plugin lifecycle / UI / runner+loop** — one Obsidian process.
 
 ```mermaid
 flowchart TB
-  subgraph host [Host Obsidian]
+  subgraph host [Obsidian host]
     Main[src/main.ts]
     Vault[Vault adapter]
   end
@@ -58,24 +57,24 @@ flowchart TB
   Chat -->|persist turns| Stores
 ```
 
-| Otoritas | File | Boleh benar tentang |
+| Authority | File | Allowed to be right about |
 | --- | --- | --- |
-| Host | `src/main.ts` | Lifecycle plugin, view, cron tick, inject MCP/terminal, `data.json` |
-| Domain | `AgentRunner` + `AgentLoop` + `src/agent/*` | Prompt, tool, model HTTP, kebijakan workspace, child/headless |
-| UI | `ChatApp`, settings, Quick Ask | Composer, antrian, kartu tool, approval/clarify **callback** |
+| Host | `src/main.ts` | Plugin lifecycle, views, cron tick, MCP/terminal inject, `data.json` |
+| Domain | `AgentRunner` + `AgentLoop` + `src/agent/*` | Prompt, tools, model HTTP, workspace policy, child/headless |
+| UI | `ChatApp`, settings, Quick Ask | Composer, queue, tool cards, approval/clarify **callbacks** |
 
-UI **tidak** boleh `new AgentLoop` — hanya `InteractiveRunHandle` (`run` / `steer`).
+UI must **not** `new AgentLoop` — only `InteractiveRunHandle` (`run` / `steer`).
 
-Ini **bukan** “semua komponen plugin Cordis”. Saklar Settings = **feature flag**
-Hermes (toolset ON/OFF). Ganti implementasi loop tetap ubah kode, sampai seam
-DeepSeek (rencana, belum ship).
+Settings toggles are Hermes **feature flags** (toolset ON/OFF), not a Cordis
+plugin tree. Replacing the loop implementation still means changing code until
+DeepSeek seams ship (planned, not shipped).
 
 ---
 
-## 2. Satu giliran chat
+## 2. One chat turn
 
-Istilah UI: **iteration**. Istilah DeepSeek nanti: **step** = satu request
-model + tool-nya; **turn** = sampai model berhenti minta tool.
+UI term: **iteration**. Later DeepSeek terms: **step** = one model request plus
+its tools; **turn** = until the model stops requesting tools.
 
 ```mermaid
 flowchart TD
@@ -93,20 +92,20 @@ flowchart TD
   Cap -->|cap| Done
 ```
 
-Inti loop: `AgentLoop.run` di `src/agent/agentLoop.ts`.
+Loop core: `AgentLoop.run` in `src/agent/agentLoop.ts`.
 
-Sisipan:
+Inserts:
 
-- **Failover** — `resilience.ts`, sekali per run
-- **MoA** — `moaLoop.prepareIteration` sebelum request; aggregator yang acting
-- **Steer** — stash, nempel di tool result terakhir
-- **Kompresi** — ChatApp, bukan di dalam loop (kontrak v0.1.17)
+- **Failover** — `resilience.ts`, once per run
+- **MoA** — `moaLoop.prepareIteration` before the request; aggregator acts
+- **Steer** — stash, attached to the last tool result
+- **Compression** — ChatApp, not inside the loop (v0.1.17 contract)
 
 ---
 
-## 3. Mode eksekusi
+## 3. Execution modes
 
-Satu kelas loop; **set tool berbeda** (fail-closed).
+One loop class; **different tool sets** (fail-closed).
 
 ```mermaid
 flowchart LR
@@ -120,22 +119,22 @@ flowchart LR
   QA -->|no terminal| Loop
 ```
 
-| Mode | Pintu | MCP | Terminal | Todo |
+| Mode | Entry | MCP | Terminal | Todo |
 | --- | --- | --- | --- | --- |
-| Interactive | `createInteractiveRun` | ya, jika consent | desktop + opt-in | session file |
-| Headless / cron | `runHeadless` | tidak | tidak | ephemeral |
-| Child | `delegate.ts` allowlist | tidak | tidak | ephemeral |
-| Quick Ask | overlay | tidak | tidak | — |
+| Interactive | `createInteractiveRun` | yes, if consent | desktop + opt-in | session file |
+| Headless / cron | `runHeadless` | no | no | ephemeral |
+| Child | `delegate.ts` allowlist | no | no | ephemeral |
+| Quick Ask | overlay | no | no | — |
 
-Capability baru default **mati** di child/headless sampai di-review.
+New capabilities default **off** on child/headless until reviewed.
 
 ---
 
-## 4. Data dan cakupan
+## 4. Data and scope
 
 ```mermaid
 flowchart TB
-  Settings[data.json keys global]
+  Settings[data.json global keys]
   Profile[ProfileStore partition]
   Policy[WorkspacePolicy snapshot per run]
   Settings --> Profile
@@ -146,59 +145,59 @@ flowchart TB
   Policy --> Mem
 ```
 
-- Kunci API: **global** plugin (pilihan produk).
-- Memory / skills / sessions: per **profile**; Strict mode menambah partisi folder.
-- Satu run memegang **snapshot** policy + session store — ganti profile di tengah
-  await tidak menulis ke partisi baru.
+- API keys: plugin-**global** (product choice).
+- Memory / skills / sessions: per **profile**; Strict mode also partitions by folder.
+- A run holds a **snapshot** of policy + session store — switching profile mid-await
+  must not write into the new partition.
 
-Layout vault: lihat [README](../../README.md) bagian Data layout.
+Vault layout: [README](../../README.md) Data layout.
 
 ---
 
-## 5. Peta modul `src/agent`
+## 5. `src/agent` module map
 
-| Modul | Peran |
+| Module | Role |
 | --- | --- |
-| `runner.ts` | Komposisi: tools, ctx, prompt, interactive/headless |
+| `runner.ts` | Composition: tools, ctx, prompt, interactive/headless |
 | `agentLoop.ts` | Driver: request → tools → repeat |
-| `providers.ts` | HTTP OpenAI-compatible + SSE |
-| `tools.ts` | Registry Hermes toolsets |
-| `systemPrompt.ts` | Susun system prompt |
-| `sessions.ts` | JSON session + search |
-| `memory.ts` / `memoryEngine.ts` | MEMORY.md + engine fakta |
+| `providers.ts` | OpenAI-compatible HTTP + SSE |
+| `tools.ts` | Hermes toolset registry |
+| `systemPrompt.ts` | System prompt assembly |
+| `sessions.ts` | JSON sessions + search |
+| `memory.ts` / `memoryEngine.ts` | MEMORY.md + fact engine |
 | `skills.ts` / `hub.ts` | SKILL.md + Browse Hub |
-| `moa.ts` / `moaLoop.ts` | Config + facade penasihat |
-| `webSearch.ts` / `webExtract.ts` | Search backend vs fetch URL |
+| `moa.ts` / `moaLoop.ts` | Config + advisor facade |
+| `webSearch.ts` / `webExtract.ts` | Search backend vs URL fetch |
 | `workspacePolicy.ts` | Whole / Preferred / Strict |
 | `cron.ts` | Automations |
-| `mcp/` `terminal/` | Hanya jalur interactive |
+| `mcp/` `terminal/` | Interactive path only |
 
 UI: `src/ui/`. Settings: `src/settings.ts` + `settingsTab.ts` + `settings/sections/`.
 
 ---
 
-## 6. Yang sengaja bukan arsitektur kita
+## 6. Intentionally not our architecture
 
-| Bukan | Mengapa |
+| Not this | Why |
 | --- | --- |
-| `ARCHITECTURE.md` di root | Duplikat; hub = `docs/` |
-| Cordis / spawn `dsh` | Host salah; Cherry pun hanya child-process |
-| `hermes serve` + gateway | Obsidian sudah host |
-| Voice / Cloud Desktop | Produk Electron, bukan vault |
-| Saklar = ganti implementasi | Itu flag; seam pengganti masih rencana |
+| Root `ARCHITECTURE.md` | Duplicate; hub is `docs/` |
+| Cordis / spawn `dsh` | Wrong host; even Cherry only child-processes it |
+| `hermes serve` + gateway | Obsidian is already the host |
+| Desktop Voice / Cloud | Electron product, not a vault plugin |
+| Toggle = swap implementation | That is a flag; replacement seams are still a plan |
 
 ---
 
-## 7. Dokumen lanjutan — kapan pecah
+## 7. When to split this file
 
-Cukup file ini sampai ada kebutuhan nyata:
+This file is enough until a topic actually grows:
 
-| Kalau topik ini menggemuk | Baru pecah ke |
+| If this topic gets fat | Split into |
 | --- | --- |
-| Event log session / turn vs step | `docs/reference/session-log.md` setelah Phase 1 hybrid |
-| Pipeline tool + approval | tautkan `tools.ts` + safety di working-agreement |
-| MCP/terminal boundaries | tetap [SECURITY.md](../../SECURITY.md) + workspace-security |
+| Session event log / turn vs step | `docs/reference/session-log.md` after hybrid Phase 1 |
+| Tool pipeline + approval | keep `tools.ts` + Safety in the working agreement |
+| MCP/terminal boundaries | [SECURITY.md](../../SECURITY.md) + workspace-security |
 
-Jangan membuat ensiklopedia spekulatif. Plan hybrid tetap di
+No speculative encyclopedia. The hybrid plan stays in
 [plans/deepseek-hermes-hybrid-harness-2026-09-06.md](../plans/deepseek-hermes-hybrid-harness-2026-09-06.md)
-sampai kodenya ship.
+until the code ships.

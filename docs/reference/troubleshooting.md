@@ -8,50 +8,50 @@ tags: [openagent, troubleshooting, user]
 
 # Troubleshooting
 
-Gejala yang sering muncul. Tanpa wajib membuka source.
+Symptoms that actually show up. You do not need to open the source.
 
-## Chat tidak membalas / bubble kosong
+## Chat does not reply / empty bubble
 
-1. Reload plugin setelah update (`main.js` baru).
-2. Settings → Open Agent → **Debug mode**: lihat konsol Obsidian.
-3. Model lokal (LM Studio / Ollama): naikkan context window di server
-   (contoh LM Studio `n_ctx`). Error “prompt too long” / 400 artinya
-   permintaan lebih besar dari jendela model — bukan bug chat kosong saja.
-4. Beberapa model menaruh jawaban di *reasoning* bukan di teks biasa; plugin
-   seharusnya tetap menampilkan isi. Jika masih kosong setelah reload,
-   coba model instruct non-reasoning.
+1. Reload the plugin after an update (`main.js` replaced).
+2. Settings → Open Agent → **Debug mode**: check the Obsidian console.
+3. Local models (LM Studio / Ollama): raise the server context window
+   (for example LM Studio `n_ctx`). “Prompt too long” / HTTP 400 means the
+   request is larger than the model window — not only an empty bubble.
+4. Some models put the answer in *reasoning* instead of ordinary text; the
+   plugin should still show that content. If the bubble is still empty after
+   a reload, try a non-reasoning instruct model.
 
-## Web search tidak jalan / “model tidak bisa internet”
+## Web search does not run / “the model has no internet”
 
-Pencarian **bukan** fitur provider chat. Settings → **Capabilities → Web search**.
+Search is **not** a chat-provider feature. Settings → **Capabilities → Web search**.
 
-- Default **DuckDuckGo** — tanpa API key.
-- Brave / Tavily butuh key; SearXNG butuh URL. Key kosong → jatuh ke DuckDuckGo.
-- **Web extract** = buka satu URL yang sudah ada, bukan kotak search.
-- Matikan toolset Web di Capabilities → agen tidak search.
+- Default **DuckDuckGo** — no API key.
+- Brave / Tavily need a key; SearXNG needs a URL. Empty key → fall back to DuckDuckGo.
+- **Web extract** opens one URL you already have; it is not the search box.
+- Turn the Web toolset off in Capabilities → the agent will not search.
 
-## Lambat di model lokal
+## Local model feels slow
 
-Prompt plugin berisi system + daftar tool + riwayat, jauh lebih besar dari
-chat polos. Kurangi toolset yang aktif, matikan title generation jika tidak
-perlu, pin tugas kecil (judul/kompresi) ke model cepat.
+The plugin prompt includes system text + tool list + history, much larger than
+plain chat. Disable unused toolsets, turn off title generation if you do not
+need it, and pin small jobs (titles / compression) to a fast model.
 
-## Terminal tidak muncul
+## Terminal never appears
 
-Hanya **desktop**, default off, butuh consent pertama. Tidak ada di mobile,
-Quick Ask, cron, atau subagen.
+Desktop only, default off, first-use consent required. Not available on mobile,
+Quick Ask, cron, or subagents.
 
-## Setelah update plugin, MCP / skrip cron hilang
+## After a plugin update, MCP installs / cron scripts vanished
 
-Folder di dalam direktori plugin ikut terhapus saat update. Pasang ulang
-server katalog / taruh lagi skrip. Lihat README bagian Data layout.
+Folders inside the plugin directory are wiped on update. Re-run catalog install
+or put the scripts back. See README → Data layout.
 
-## Mermaid rusak di note vault
+## Mermaid broken in a vault note
 
-Chat sudah disanitasi; note yang sudah tertulis tidak diubah diam-diam.
-Perbaiki fence di note: kutip label yang berisi tanda kurung.
+Chat is sanitized; notes already on disk are not rewritten silently.
+Fix the fence in the note: quote labels that contain parentheses.
 
-## Masih macet
+## Still stuck
 
-Settings → Community plugins: cek **versi** Open Agent. Laporan bug: template
-GitHub (plugin lain dimatikan, log, screenshot).
+Settings → Community plugins: check the Open Agent **version**. File a GitHub
+issue with the bug template (other plugins disabled, log, screenshot).

@@ -1,65 +1,69 @@
 ---
-title: "Cara dokumentasi Open Agent"
+title: "How Open Agent documentation works"
 type: reference
 status: active
 date: 2026-09-11
 tags: [openagent, documentation, process]
 ---
 
-# Cara dokumentasi Open Agent
+# How Open Agent documentation works
 
-Standar **cara** menulis, bukan ensiklopedia fitur.
+This is the **method**, not a feature encyclopedia.
 
-Putusan yang sudah binding (jangan dibalik): satu vault `docs/` (Lesson 118),
-bukan `docs/` vs `designdocs/`; bukan `ARCHITECTURE.md` di root; bukan manual
-raksasa yang membusuk (Lesson 88 / 224).
+Binding decisions (do not reverse): one `docs/` vault (Lesson 118); no
+`docs/` vs `designdocs/` split; no root `ARCHITECTURE.md`; no giant manuals
+that rot (Lessons 88 / 224).
 
-## Audiens — dipisah di hub, bukan di folder
+**Language (Lesson 118):** hub pages, frontmatter, and **new** notes are
+**English**. Chat with the owner may be Indonesian. Older notes (especially
+the working agreement) stay as written.
 
-| Siapa | Baca dulu | Jangan |
+## Audiences — split in the hub, not in extra folders
+
+| Who | Read first | Skip |
 | --- | --- | --- |
-| Pengguna vault | [README](../../README.md) install + first run; [troubleshooting](troubleshooting.md); [architecture](architecture.md) tanpa wajib buka source | `working-agreement`, Lessons, smoke tests |
-| Maintainer / coding agent | [docs/README.md](../README.md); [working-agreement](../working-agreement.md); [architecture](architecture.md) | Menyalin path `src/` ke halaman pengguna |
-| Kontributor PR | [CONTRIBUTING.md](../../CONTRIBUTING.md); [SECURITY.md](../../SECURITY.md) | Menganggap `RELEASES.md` sebagai bukti ZIP |
+| Vault user | [README](../../README.md) install + first run; [troubleshooting](troubleshooting.md) | Working agreement, Lessons, smoke tests |
+| Maintainer / coding agent | [docs/README.md](../README.md); [working-agreement](../working-agreement.md); [architecture](architecture.md) | Putting `src/` paths on user pages |
+| PR contributor | [CONTRIBUTING.md](../../CONTRIBUTING.md); [SECURITY.md](../../SECURITY.md) | Treating `RELEASES.md` as ZIP proof |
 
-## Pemetaan Diátaxis (cukup, tidak lengkap-semua)
+Architecture is a **maintainer** map (Hermes puts it in developer-guide). Users
+may open it; the hub lists it under Changing the plugin.
 
-Praktik umum: tutorial · how-to · reference · explanation. Kita **sengaja
-tipis** di tutorial/how-to.
+## Diátaxis — thin on purpose
 
-| Jenis | Di mana | Status |
+| Kind | Where | Status |
 | --- | --- | --- |
-| Tutorial | README First run | Ada; jangan digandakan jadi Getting Started 20 halaman |
-| How-to / FAQ | [troubleshooting.md](troubleshooting.md) | Hidup; hanya gejala yang benar-benar terjadi |
-| Reference (kontrak hidup) | `docs/reference/*` — architecture, workspace, cron, sumber upstream | Ada |
-| Explanation / keputusan | `plans/` `studies/` `audits/` | Ada |
-| Proses agen | working-agreement + `AGENTS.md` | Ada; **bukan** user guide |
-| Changelog pengguna | [RELEASES.md](../../RELEASES.md) | Ada |
-| Bukti rilis | GitHub Release assets | Ada |
+| Tutorial | README First run | Exists; do not duplicate as a 20-page Getting Started |
+| How-to / FAQ | [troubleshooting.md](troubleshooting.md) | Living; only symptoms that actually happened |
+| Reference | `docs/reference/*` | Exists |
+| Explanation / decisions | `plans/` `studies/` `audits/` | Exists |
+| Agent process | working-agreement + `AGENTS.md` | Exists; **not** a user guide |
+| User changelog | [RELEASES.md](../../RELEASES.md) | Exists |
+| Release proof | GitHub Release assets | Exists |
 
-Yang **tidak** kita kejar (standar korporat yang akan membusuk): USER_GUIDE
-penuh, API docs HTTP, ADR folder terpisah (plan = ADR), wiki.
+We **do not** chase: a full USER_GUIDE, HTTP API docs, a separate ADR tree
+(plans are ADRs), a wiki.
 
-## Aturan isi
+## Content rules
 
-1. Perilaku yang terlihat pengguna berubah → update catatan **user-facing**
-   di commit yang sama (working-agreement § Aturan dokumentasi).
-2. Halaman pengguna: perilaku dan konsep. **Tanpa** path `src/…` kecuali README
-   peta kontributor (bagian Feature map) yang memang untuk developer.
-3. Halaman arsitektur boleh menyebut path — itu reference maintainer.
-4. Plan baru = `_TEMPLATE.md`. Status jujur.
-5. Note baru yang material → baris di `docs/README.md`.
-6. `npm run check:docs` sebelum klaim docs selesai.
+1. User-visible behavior changed → update the matching **user-facing** note in
+   the same commit (working-agreement § documentation rules).
+2. User pages: behavior and concepts. **No** `src/…` paths except the README
+   Feature map (contributor table).
+3. Architecture may name paths — it is maintainer reference.
+4. New plans start from `_TEMPLATE.md`. Frontmatter status stays honest.
+5. Material new notes get a row in `docs/README.md`.
+6. `npm run check:docs` before claiming docs are done.
 
-## Apa yang kurang vs “standar aplikasi” — dan keputusan
+## Gaps vs “standard app docs” — decisions
 
-| Celah umum | Keputusan kita |
+| Common gap | Our decision |
 | --- | --- |
-| User guide terpisah | Tidak. README + troubleshooting + Settings in-app |
-| FAQ | Ya, satu file troubleshooting, tumbuh dari laporan nyata |
-| Architecture | Ya, `reference/architecture.md` — bukan root ARCHITECTURE.md |
-| Pemisahan docs/designdocs | Tidak (Lesson 120) |
-| Issue templates | Sudah `.github/ISSUE_TEMPLATE/` |
-| DOCS_GUIDE | Sudah di working-agreement, diringkas di sini |
+| Separate user guide | No. README + troubleshooting + in-app Settings |
+| FAQ | Yes, one troubleshooting file, grown from real reports |
+| Architecture | Yes, `reference/architecture.md` — not root `ARCHITECTURE.md` |
+| `docs/` vs `designdocs/` | No (Lesson 120) |
+| Issue templates | Already `.github/ISSUE_TEMPLATE/` |
+| DOCS_GUIDE | Already in the working agreement; this file is the short map |
 
-Kalau ragu file mana: hub [docs/README.md](../README.md), dua tabel “start”.
+If unsure which file: [docs/README.md](../README.md), two “start” tables.

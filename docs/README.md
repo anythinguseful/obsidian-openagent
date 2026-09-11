@@ -21,16 +21,15 @@ resolve in both).
 
 ## Where to start
 
-Cara kita menulis docs: [Documentation approach](reference/docs-approach.md).
-Satu folder `docs/` untuk semua audiens; yang dipisah adalah **tabel di bawah**,
-bukan `designdocs/`.
+How we write docs: [Documentation approach](reference/docs-approach.md).
+One `docs/` folder for every audience; the **tables below** are the split,
+not a `designdocs/` tree. New notes and this hub are English (Lesson 118).
 
 ### Using the plugin
 
 | Document | What it is |
 | --- | --- |
 | [Root README](../README.md) | Install, first run, feature map, security notes. |
-| [Architecture](reference/architecture.md) | System map (authorities, one chat turn, execution modes) with mermaid. Not a root `ARCHITECTURE.md`. |
 | [Troubleshooting](reference/troubleshooting.md) | Empty replies, web search, local-model slowness, terminal, updates. |
 | [Workspace path security](reference/workspace-security.md) | Whole / Preferred / Strict. |
 | [Cron expressions](reference/cron-expressions.md) | Automation schedules. |
@@ -40,7 +39,8 @@ bukan `designdocs/`.
 
 | Document | What it is |
 | --- | --- |
-| [Working Agreement](working-agreement.md) | Binding process: owner rules, when to update docs, routing table, Lessons log. Coding agents read this first. |
+| [Working Agreement](working-agreement.md) | Binding process: owner rules, when to update docs, routing table, Lessons log. Coding agents read this first. (Indonesian body is historical.) |
+| [Architecture](reference/architecture.md) | System map (authorities, one chat turn, execution modes) with mermaid. Not a root `ARCHITECTURE.md`. |
 | [AGENTS.md](../AGENTS.md) | Agent bootstrap + skill routing. |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | `npm run verify`, PRs, release staging. |
 | [Backlog](backlog.md) | Deferred ideas, unlock conditions. |
