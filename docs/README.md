@@ -21,12 +21,31 @@ resolve in both).
 
 ## Where to start
 
+Cara kita menulis docs: [Documentation approach](reference/docs-approach.md).
+Satu folder `docs/` untuk semua audiens; yang dipisah adalah **tabel di bawah**,
+bukan `designdocs/`.
+
+### Using the plugin
+
 | Document | What it is |
 | --- | --- |
-| [Working Agreement](working-agreement.md) | Binding process memory: owner's standing instructions, enforcement mechanisms, documentation rules, GitHub handoff bootstrap, and the Lessons log (1–179). **Read this first in any new session.** |
-| [Backlog](backlog.md) | Deferred ideas with explicit reasons, unlock conditions, and cheap alternatives. |
-| [Hermes tools gap](studies/hermes-tools-gap-2026-08-09.md) | Live map of Hermes Agent tools vs Open Agent, with the recommended roadmap. |
-| [Reference sources](reference/reference-sources.md) | One-stop registry of verified official upstream sources allowed for parity work. |
+| [Root README](../README.md) | Install, first run, feature map, security notes. |
+| [Architecture](reference/architecture.md) | System map (authorities, one chat turn, execution modes) with mermaid. Not a root `ARCHITECTURE.md`. |
+| [Troubleshooting](reference/troubleshooting.md) | Empty replies, web search, local-model slowness, terminal, updates. |
+| [Workspace path security](reference/workspace-security.md) | Whole / Preferred / Strict. |
+| [Cron expressions](reference/cron-expressions.md) | Automation schedules. |
+| [RELEASES.md](../RELEASES.md) | User-facing changelog. |
+
+### Changing the plugin
+
+| Document | What it is |
+| --- | --- |
+| [Working Agreement](working-agreement.md) | Binding process: owner rules, when to update docs, routing table, Lessons log. Coding agents read this first. |
+| [AGENTS.md](../AGENTS.md) | Agent bootstrap + skill routing. |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | `npm run verify`, PRs, release staging. |
+| [Backlog](backlog.md) | Deferred ideas, unlock conditions. |
+| [Hermes tools gap](studies/hermes-tools-gap-2026-08-09.md) | Historical tool inventory vs Hermes Agent. |
+| [Reference sources](reference/reference-sources.md) | Official upstream registry for parity work. |
 
 ---
 
@@ -65,6 +84,7 @@ Feature plans and port designs, with their implementation status.
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
 | [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
 | [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
+| [Hybrid harness — DeepSeek seams + Hermes capabilities](plans/deepseek-hermes-hybrid-harness-2026-09-06.md) | draft | In-process kernel (event log, tool waterfall, inject) without Cordis; Hermes toolsets stay the capabilities. |
 | [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 and both scoped Stage 6 targets are complete; no future architecture target is selected. |
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |
@@ -84,6 +104,7 @@ Upstream research and parity notes — always verified against raw sources.
 
 | Document | Status | Summary |
 | --- | --- | --- |
+| [DeepSeek Harness vs Hermes](studies/deepseek-harness-architecture-2026-09-06.md) | done | Cordis plugin tree, turn/step, event log; Cherry only spawns `dsh`; Open Agent keeps Hermes capabilities. |
 | [Browse Hub study](studies/browse-hub.md) | done | Hermes Desktop Browse Hub: connected hubs, chips, status. |
 | [Copilot study notes](studies/copilot-study-notes.md) | done | Obsidian Copilot → Open Agent port notes. |
 | [Copilot docs organization](studies/copilot-docs-organization-2026-08-18.md) | done | How obsidian-copilot organizes docs (user vs agent, DOCS_GUIDE, routing, plans, changelog). |
@@ -105,6 +126,7 @@ Audits of the plugin itself (our own surface, not upstream).
 
 | Document | Status | Summary |
 | --- | --- | --- |
+| [Hermes Desktop refresh 2026-09-11](audits/hermes-desktop-refresh-2026-09-11.md) | done | Re-read of Desktop-adopted ports vs live `apps/desktop` (2026-09-11): keep CLI harness; do not chase voice/cloud/assistant-ui; DeepSeek seams still valid. |
 | [Repo condition audit 2026-08-30](audits/repo-condition-audit-2026-08-30.md) | done | Read-only post-v0.1.155 condition audit: version chain, release proof, hygiene, and Lessons log verify clean; three non-code findings (unshipped branch commit, tagless v0.1.154, stale RELEASES.md lines). |
 | [Plugin audit 2026-08-09](audits/audit-2026-08-09.md) | done | Full plugin audit after v0.1.127. |
 | [Error & bug sweep 2026-08-24](audits/error-bug-sweep-2026-08-24.md) | done | Repo-wide sweep closed after all documented dimensions were verified and its recorded findings received regression guards. |
@@ -128,6 +150,9 @@ Audits of the plugin itself (our own surface, not upstream).
 
 | Document | Status | Summary |
 | --- | --- | --- |
+| [Architecture](reference/architecture.md) | active | Open Agent system map: authorities, turn loop, execution modes, module index. |
+| [Documentation approach](reference/docs-approach.md) | active | Audiences, Diátaxis mapping, what we refuse (no root ARCHITECTURE.md, no giant user manual). |
+| [Troubleshooting](reference/troubleshooting.md) | active | User FAQ: empty chat, web search, local latency, terminal, updates. |
 | [Reference sources](reference/reference-sources.md) | active | Verified official upstream registry (prompt-kit, lobe-ui, shadcn, Hermes, Obsidian app.css, lucide). |
 | [Workspace path security](reference/workspace-security.md) | active | Whole/Preferred/Strict semantics, migration, read ceiling, covered surfaces, and the logical-vs-physical containment boundary. |
 | [Cron expressions](reference/cron-expressions.md) | active | How the 5-field automation schedule works: fields, operators, copy-paste examples, and where the UI hides it behind human choices. |

@@ -24,7 +24,8 @@ including Arena Agent. Read it before inspecting or changing code.
 | Visual direction, typography, or layout | `agents/skills/vendor/anthropics/frontend-design/SKILL.md` |
 | Chat, Settings, dashboard, or other functional surface | `agents/skills/internal/functional-ui/SKILL.md` |
 | UI accessibility or UX review | `agents/skills/vendor/vercel/web-design-guidelines/SKILL.md` |
-| User-facing behavior or documentation | `agents/skills/internal/openagent-docs/SKILL.md`; `docs/working-agreement.md`; `docs/README.md` |
+| User-facing behavior or documentation | `agents/skills/internal/openagent-docs/SKILL.md`; `docs/reference/docs-approach.md`; `docs/README.md`; `docs/working-agreement.md` |
+| System architecture (loop, execution modes) | `docs/reference/architecture.md` |
 | Create/evaluate a skill or agent workflow | `agents/skills/vendor/anthropics/skill-creator/SKILL.md`; `agents/skills/manifest.yaml` |
 | Write a substantial plan, spec, or decision document | `agents/skills/vendor/anthropics/doc-coauthoring/SKILL.md`; `docs/plans/_TEMPLATE.md` |
 | Security, Workspace policy, Terminal, MCP, or network boundaries | `docs/working-agreement.md`; relevant note under `docs/audits/` or `docs/reference/` |

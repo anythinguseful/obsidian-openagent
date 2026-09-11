@@ -148,6 +148,9 @@ isi ke sini).
 | Proses, prinsip owner, Lessons log, bootstrap GitHub | `docs/working-agreement.md` |
 | Ide yang sengaja ditunda + alasan + unlock | `docs/backlog.md` |
 | Peta seluruh docs | `docs/README.md` (hub) |
+| Cara menulis docs (audiens, apa yang ditolak) | `docs/reference/docs-approach.md` |
+| Peta sistem (loop, mode, otoritas) | `docs/reference/architecture.md` |
+| Gejala pengguna (chat kosong, web search, lokal) | `docs/reference/troubleshooting.md` |
 | Merilis (pipeline, zip, checksum) | `scripts/release.mjs` + `CONTRIBUTING.md` |
 | Gate sebelum selesai | `npm run verify` · `npm run check:docs` · `npm run check:skills` |
 
