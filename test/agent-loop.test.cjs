@@ -189,15 +189,24 @@ const check = (ok, label) => {
 		]);
 		const loop = new AgentLoop(makeSettings(), [echoTool], {});
 		const events = [];
+		const live = [];
 		const result = await loop.run(history, {
 			onToolStart: (id, name) => events.push(`start:${name}`),
 			onToolResult: (id, name, status) => events.push(`result:${name}:${status}`),
+			onSessionEvent: (e) => live.push(e.type),
 		});
 		const roles = result.messages.map((m) => m.role).join(",");
 		check(roles === "assistant,tool,assistant", `wire shape after tool round-trip (${roles})`);
 		check(result.messages[1].content === "echo:hello", "tool result fed back to model");
 		check(result.messages[2].content === "Done: the echo says hi", "final assistant text accumulated from SSE");
 		check(events.join("|") === "start:echo_tool|result:echo_tool:done", "tool lifecycle events emitted");
+		const types = (result.events ?? []).map((e) => e.type).join(",");
+		check(
+			types === "turn/start,step/start,assistant/message,tool/call,tool/result,step/end,step/start,assistant/message,step/end,turn/end",
+			`session event trajectory (${types})`
+		);
+		check(result.events.some((e) => e.type === "tool/call" && e.name === "echo_tool"), "tool/call names the tool");
+		check(live.join(",") === types, "onSessionEvent matches the run log in order");
 	}
 
 	/* Test 2: approval denial in manual mode */
@@ -878,6 +887,12 @@ const check = (ok, label) => {
 		check(applied.length === 1 && applied[0].id === "call_1", "onSteerApplied fired once, with the tool call id");
 		check(result.pendingSteer === null, "stash empty after the drain");
 		check(result.messages.filter((m) => m.role === "tool").length === 1, "no tool message invented — only content modified");
+		const injectEv = (result.events ?? []).find((e) => e.type === "inject");
+		check(
+			!!injectEv && injectEv.text === applied[0].marker && toolMsg.content.includes(injectEv.text),
+			"inject is on the log and on the wire, same bytes"
+		);
+		check(loop.inject("via inject api") === true && loop.steer("also steer") === true, "steer is an inject consumer");
 	}
 
 	/* Test 7b: leftover — no tool message ANYWHERE means the marker has
@@ -1035,6 +1050,23 @@ const check = (ok, label) => {
 		const toolMsg = result.messages[1];
 		const consolidated = JSON.parse(String(toolMsg.content));
 		check(consolidated.results.length === 2 && consolidated.summary.failed === 1, "delegation: consolidated batch result lands on the wire as the tool result");
+	}
+
+	/* Phase 4: request-prep plugin is not a second execute path */
+	{
+		mockFetchSequence([sse([textChunk("ok"), finishChunk("stop")])]);
+		let preps = 0;
+		const settings = makeSettings();
+		const prep = {
+			prepareIteration: async (wire) => {
+				preps++;
+				return { wire, provider: settings.providers[0], model: settings.model };
+			},
+		};
+		const loop = new AgentLoop(settings, [], {}, prep);
+		const result = await loop.run(history, {});
+		check(preps === 1 && result.messages[0]?.content === "ok", "HarnessRequestPrep runs inside AgentLoop; no second execute path");
+		check(typeof loop.inject === "function" && typeof loop.steer === "function", "driver exposes inject and steer");
 	}
 
 	if (failed > 0) {

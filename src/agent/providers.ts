@@ -244,8 +244,47 @@ function buildBody(
 			body.reasoning_effort = effort;
 		}
 	}
-	if (stream) body.stream_options = { include_usage: true };
+	// OpenAI-only; llama.cpp / LM Studio / Ollama reject or mishandle it.
+	if (stream && (provider.id === "openai" || provider.id === "openrouter" || provider.id === "nous-portal")) {
+		body.stream_options = { include_usage: true };
+	}
 	return JSON.stringify(body);
+}
+
+/** OpenAI-compat content may be a string OR an array of parts
+ *  (`[{type:"text", text:"…"}]`). Treating only strings as tokens leaves
+ *  Gemini/Claude-via-gateway replies invisible in the chat. */
+export function textFromMessageContent(content: unknown): string {
+	if (typeof content === "string") return content;
+	if (!Array.isArray(content)) return "";
+	let out = "";
+	for (const part of content) {
+		if (typeof part === "string") out += part;
+		else if (part && typeof part === "object") {
+			const rec = part as Record<string, unknown>;
+			if (typeof rec.text === "string") out += rec.text;
+			else if (rec.type === "text" && typeof rec.content === "string") out += rec.content;
+		}
+	}
+	return out;
+}
+
+function describeHttpError(status: number, body: string): string {
+	const slice = body.slice(0, 400);
+	try {
+		const parsed = JSON.parse(body) as { error?: { message?: string; type?: string; n_prompt_tokens?: number; n_ctx?: number } };
+		const e = parsed?.error;
+		if (e && (e.type === "exceed_context_size_error" || /exceeds the available context/i.test(e.message ?? ""))) {
+			const used = e.n_prompt_tokens;
+			const ctx = e.n_ctx;
+			const span = used && ctx ? ` (${used} tokens into a ${ctx}-token window)` : "";
+			return `Prompt is larger than the model's context window${span}. Shorten the system prompt / tools, raise LM Studio context length, or turn on context compression.`;
+		}
+		if (typeof e?.message === "string" && e.message.trim()) return `HTTP ${status}: ${e.message}`;
+	} catch {
+		/* raw body */
+	}
+	return `HTTP ${status}: ${slice}`;
 }
 
 function normalizeUsage(u: any): TokenUsage | null {
@@ -519,7 +558,18 @@ export async function chatCompletion(
 	};
 	if (settings.streaming) {
 		try {
-			return await streamingCompletion(provider, settings, messages, tools, tracked);
+			const streamed = await streamingCompletion(provider, settings, messages, tools, tracked);
+			const empty =
+				!streamed.content.trim() &&
+				!streamed.reasoning.trim() &&
+				streamed.toolCalls.length === 0;
+			if (empty) {
+				throw new ProviderStreamTransportError(
+					new Error("stream completed with no content"),
+					streamed.diagnostics
+				);
+			}
+			return streamed;
 		} catch (err) {
 			if (cb.signal?.aborted) throw err;
 			// An HTTP status travels with the error — a buffered retry would hit
@@ -572,13 +622,18 @@ async function bufferedCompletion(
 		provider
 	);
 	if (resp.status >= 400) {
-		throw new ProviderHttpError(resp.status, `HTTP ${resp.status}: ${(resp.text ?? "").slice(0, 300)}`);
+		throw new ProviderHttpError(resp.status, describeHttpError(resp.status, resp.text ?? ""));
 	}
 	const data = resp.json;
 	const choice = data?.choices?.[0];
 	const msg = choice?.message ?? {};
-	const reasoning = msg.reasoning_content ?? msg.reasoning ?? "";
-	const content = msg.content ?? "";
+	const reasoning =
+		(typeof msg.reasoning_content === "string" ? msg.reasoning_content : "") ||
+		(typeof msg.reasoning === "string" ? msg.reasoning : "") ||
+		textFromMessageContent(msg.reasoning_content ?? msg.reasoning);
+	let content = textFromMessageContent(msg.content);
+	// Gemma 4 / llama.cpp: all tokens in reasoning_content, content empty.
+	if (!content.trim() && reasoning.trim()) content = reasoning;
 	// Single-shot emission so event-driven UIs (chat) show the full reply
 	// even when streaming was off or the stream failed before any token.
 	if (cb && reasoning) cb.onReasoning?.(reasoning);
@@ -658,9 +713,12 @@ async function streamingCompletion(
 			body: buildBody(provider, settings, messages, tools, true),
 			signal: ctl.signal,
 		});
-		if (!resp.ok || !resp.body) {
+		if (!resp.ok) {
 			const errText = await resp.text().catch(() => "");
-			throw new ProviderHttpError(resp.status, `HTTP ${resp.status}: ${errText.slice(0, 300)}`);
+			throw new ProviderHttpError(resp.status, describeHttpError(resp.status, errText));
+		}
+		if (!resp.body) {
+			throw new ProviderStreamTransportError(new Error("streaming response had no body"), attemptDiagnostics());
 		}
 
 		const reader = resp.body.getReader();
@@ -703,13 +761,31 @@ async function streamingCompletion(
 				finishReason = choice.finish_reason;
 				sawFinishReason = true;
 			}
-			const delta = choice.delta ?? {};
-			if (typeof delta.content === "string" && delta.content.length > 0) {
-				content += delta.content;
-				cb.onToken?.(delta.content);
+			if (json.error) {
+				const errObj = json.error;
+				const errMsg =
+					typeof errObj === "string"
+						? errObj
+						: typeof errObj?.message === "string"
+							? errObj.message
+							: JSON.stringify(errObj).slice(0, 300);
+				throw new ProviderHttpError(
+					typeof errObj?.code === "number" ? errObj.code : 400,
+					errMsg
+				);
 			}
-			const rc = delta.reasoning_content ?? delta.reasoning;
-			if (typeof rc === "string" && rc.length > 0) {
+			const delta = choice.delta ?? choice.message ?? {};
+			const token =
+				textFromMessageContent(delta.content) ||
+				(typeof delta.text === "string" ? delta.text : "") ||
+				(typeof choice.text === "string" ? choice.text : "");
+			if (token.length > 0) {
+				content += token;
+				cb.onToken?.(token);
+			}
+			const rcRaw = delta.reasoning_content ?? delta.reasoning;
+			const rc = typeof rcRaw === "string" ? rcRaw : textFromMessageContent(rcRaw);
+			if (rc.length > 0) {
 				reasoning += rc;
 				cb.onReasoning?.(rc);
 			}
@@ -751,8 +827,18 @@ async function streamingCompletion(
 				}
 			}
 		}
-		if (!done && buffer.length > 0) handleLine(buffer);
+		if (!done && buffer.length > 0) {
+			for (const line of buffer.split("\n")) {
+				if (handleLine(line)) break;
+			}
+		}
 		if (malformedEvents > 0) throw new ProviderStreamProtocolError(malformedEvents, attemptDiagnostics());
+		/* Gemma 4 on LM Studio/llama.cpp often streams only reasoning_content
+		   (content stays ""). Promote it so the chat bubble is not blank. */
+		if (!content.trim() && reasoning.trim()) {
+			content = reasoning;
+			cb.onToken?.(reasoning);
+		}
 		const eofWithoutCompletion = !sawDone && !sawFinishReason;
 		if (settings.debugMode && (!sawDone || eofWithoutCompletion)) {
 			/* Metadata only: never log token/content payloads. EOF without an

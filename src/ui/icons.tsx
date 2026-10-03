@@ -37,6 +37,7 @@ export const RefreshIcon = make("refresh-cw");
    history → rotate-ccw-clock (history is the deprecated alias), so the old
    name is the one Obsidian's setIcon actually resolves. */
 export const RotateCcwIcon = make("history");
+export const ListTreeIcon = make("list-tree");
 export const ChevronUpIcon = make("chevron-up");
 export const LayersIcon = make("layers");
 export const PinIcon = make("pin");

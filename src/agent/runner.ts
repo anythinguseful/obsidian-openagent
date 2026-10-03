@@ -14,7 +14,8 @@ import { Skill, SkillsStore } from "./skills";
 import { buildSystemPrompt } from "./systemPrompt";
 import { AgentLoop, AgentLoopEvents, AgentRunResult } from "./agentLoop";
 import { TodoApi, ephemeralTodoApi } from "./todo";
-import type { MoaTurnEngine } from "./moaLoop";
+import { MoaTurnEngine } from "./moaLoop";
+import { normalizeMoaConfig } from "./moa";
 import {
 	capSummary,
 	childSystemPrompt,
@@ -36,6 +37,18 @@ export interface InteractiveRunHandle {
 	tools: AgentTool[];
 	run(messages: ChatMessage[], events: AgentLoopEvents): Promise<AgentRunResult>;
 	steer(text: string): boolean;
+	inject(text: string): boolean;
+}
+
+function moaEngineFromSettings(settings: OpenAgentSettings, signal?: AbortSignal): MoaTurnEngine | null {
+	const cfg = settings.moa ? normalizeMoaConfig(settings.moa) : null;
+	if (!cfg?.active_preset || !cfg.presets[cfg.active_preset]) return null;
+	return new MoaTurnEngine({
+		presetName: cfg.active_preset,
+		preset: cfg.presets[cfg.active_preset],
+		settings,
+		signal,
+	});
 }
 
 export interface CreateInteractiveRunOptions {
@@ -386,6 +399,7 @@ export class AgentRunner {
 			tools,
 			run: (messages, events) => loop.run(messages, events),
 			steer: (text) => loop.steer(text),
+			inject: (text) => loop.inject(text),
 		};
 	}
 
@@ -394,7 +408,7 @@ export class AgentRunner {
 		const policy = this.snapshotWorkspacePolicy(settings);
 		const ctx = this.makeContext(policy, settings);
 		ctx.todo = ephemeralTodoApi(); // v0.1.133: fresh per loop (Hermes: one store per agent instance)
-		const loop = new AgentLoop(settings, this.getTools(settings), ctx);
+		const loop = new AgentLoop(settings, this.getTools(settings), ctx, moaEngineFromSettings(settings));
 		return loop;
 	}
 
@@ -416,7 +430,7 @@ export class AgentRunner {
 		];
 		const ctx = this.makeContext(workspacePolicy, settings);
 		ctx.todo = ephemeralTodoApi(); // v0.1.133: scratch plan per cron run — never crosses runs
-		const loop = new AgentLoop(settings, tools, ctx);
+		const loop = new AgentLoop(settings, tools, ctx, moaEngineFromSettings(settings, opts?.signal));
 		let finalText = "";
 		const result = await loop.run(history, {
 			signal: opts?.signal,

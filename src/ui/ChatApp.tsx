@@ -17,6 +17,7 @@ import {
 	fetchAdvertisedContextLength,
 	listModels,
 	modelSupportsVision,
+	textFromMessageContent,
 } from "../agent/providers";
 import { getActiveProfile, resolveConnection, resolveOverlayKey } from "../agent/profiles";
 import { exactMoaPresetName, moaUsage, normalizeMoaConfig, setActiveMoaPreset } from "../agent/moa";
@@ -60,6 +61,7 @@ import {
 	updateEntry,
 } from "../agent/promptQueue";
 import { Session, SessionMeta, SessionStore, newSessionId } from "../agent/sessions";
+import { resumeMessages, sessionEvent, trajectoryRows, truncateSessionEvents, type SessionEvent } from "../agent/sessionEvents";
 import { ChatMessage, ConversationTurn, TokenUsage, TurnPart } from "../types";
 import { OpenAgentSettings, PERSONALITY_OVERLAYS, getActiveProvider, isOverlayKey } from "../settings";
 import type { OpenAgentNotificationEvent } from "../notifications";
@@ -73,6 +75,7 @@ import { Intro } from "./components/intro";
 import { ProfilePicker } from "./components/profile-picker";
 import { SearchField } from "./components/search-field";
 import { SessionPanel } from "./components/session-panel";
+import { TrajectoryPanel } from "./components/trajectory-panel";
 import { markdownTextareaKeydown } from "./markdown-keys";
 import { canonicalizeAssistantOutput } from "../markdown/canonical-output";
 import {
@@ -122,6 +125,7 @@ import {
 	LayersIcon,
 	SettingsIcon,
 	RotateCcwIcon,
+	ListTreeIcon,
 	StopIcon,
 	TrashIcon,
 	XIcon,
@@ -163,6 +167,7 @@ type SessionPersistSnapshot = {
 	parent: string | null;
 	goal: SessionGoal | null;
 	todos: TodoItem[] | null;
+	events: SessionEvent[];
 };
 
 type GoalContinuationContext = {
@@ -556,6 +561,7 @@ export function ChatApp(props: ChatAppProps) {
 	}, [sessionId]);
 	const [sessionList, setSessionList] = useState<SessionMeta[]>([]);
 	const [panelOpen, setPanelOpen] = useState(false);
+	const [trajectoryOpen, setTrajectoryOpen] = useState(false);
 	const [editingTurnId, setEditingTurnId] = useState<string | null>(null);
 	const [editDraft, setEditDraft] = useState("");
 	const [panelFilter, setPanelFilter] = useState("");
@@ -642,6 +648,8 @@ export function ChatApp(props: ChatAppProps) {
 	   [+] attach menu below). */
 	const panelRef = useRef<HTMLElement>(null);
 	const panelToggleRef = useRef<HTMLButtonElement>(null);
+	const trajectoryRef = useRef<HTMLElement>(null);
+	const trajectoryToggleRef = useRef<HTMLButtonElement>(null);
 	/* context compression (v0.1.17): rolling wire summary — NEVER written into
 	   the canonical history; cached in the session file, wire-rendering only */
 	const compressionRef = useRef<CompressionCache | null>(null);
@@ -650,6 +658,12 @@ export function ChatApp(props: ChatAppProps) {
 	   runAgent generation shares one list; persisted into the session file by
 	   persistSession (goal/compression precedent) */
 	const todoRef = useRef<TodoItem[] | null>(null);
+	const eventsRef = useRef<SessionEvent[]>([]);
+	const [sessionEvents, setSessionEvents] = useState<SessionEvent[]>([]);
+	const setEventsSynced = useCallback((next: SessionEvent[]) => {
+		eventsRef.current = next;
+		setSessionEvents(next);
+	}, []);
 	const todoApiRef = useRef<TodoApi>({
 		read: () => (todoRef.current ?? []).map((t) => ({ ...t })),
 		write: (items) => {
@@ -735,12 +749,34 @@ export function ChatApp(props: ChatAppProps) {
 		};
 	}, [panelOpen]);
 
+	useEffect(() => {
+		if (!trajectoryOpen) return;
+		const onDown = (e: PointerEvent) => {
+			const t = e.target;
+			if (!(t instanceof Node)) return;
+			if (trajectoryRef.current?.contains(t) || trajectoryToggleRef.current?.contains(t)) return;
+			setTrajectoryOpen(false);
+		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key !== "Escape") return;
+			const t = e.target;
+			if (t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+			setTrajectoryOpen(false);
+		};
+		document.addEventListener("pointerdown", onDown, true);
+		document.addEventListener("keydown", onKey, true);
+		return () => {
+			document.removeEventListener("pointerdown", onDown, true);
+			document.removeEventListener("keydown", onKey, true);
+		};
+	}, [trajectoryOpen]);
+
 		const messagesRef = useRef<ChatMessage[]>([]);
 		const abortRef = useRef<AbortController | null>(null);
 		const headlessCommandAbortRef = useRef<AbortController | null>(null);
 		/* the live AgentLoop — /steer reaches its thread-safe stash through this
 		   while a run is in flight (run_agent.py busy-path parity) */
-		const loopRef = useRef<Pick<InteractiveRunHandle, "steer"> | null>(null);
+		const loopRef = useRef<Pick<InteractiveRunHandle, "steer" | "inject"> | null>(null);
 		/* Closing the view must release provider/tool work and interactive
 		   promises without scheduling React state from an unmount cleanup. */
 		useEffect(() => () => {
@@ -1277,6 +1313,7 @@ export function ChatApp(props: ChatAppProps) {
 				parent: sessionParentRef.current,
 				goal: goalRef.current,
 				todos: todoRef.current,
+				events: eventsRef.current,
 			};
 			if (!state.enabled) return;
 			const firstUser = allTurns.find((t) => t.role === "user");
@@ -1303,6 +1340,7 @@ export function ChatApp(props: ChatAppProps) {
 				...(state.parent ? { parent: state.parent } : {}),
 				...(state.goal && state.goal.status !== "cleared" ? { goal: state.goal } : {}),
 				...(state.todos?.length ? { todos: state.todos } : {}),
+				...(state.events?.length ? { events: state.events } : {}),
 			};
 			await sessionStore.save(session);
 			void refreshSessions();
@@ -2032,6 +2070,7 @@ export function ChatApp(props: ChatAppProps) {
 		setSessionOverlay(resolveOverlayKey(settings, null));
 		compressionRef.current = null;
 		todoRef.current = null; // v0.1.133: fresh chat, fresh plan
+		setEventsSynced([]);
 		skillContextRef.current = null; // never carry project-partitioned instructions across chats/scopes
 		retainCounterRef.current = 0; // v0.1.176: structured-memory cadence restarts per chat
 		setRecalledCount(0);
@@ -2110,12 +2149,13 @@ nudgeCounterRef.current = 0;
 			setSessionId(s.id); // outgoing draft saved by the sessionId effect cleanup
 			setInput(composerDrafts.get(s.id) ?? "");
 			setTurnsSynced(s.turns);
-			messagesRef.current = s.messages ?? [];
+			messagesRef.current = resumeMessages(s);
 			compressionRef.current = s.compression ?? null;
 			sessionTitleRef.current = s.title || null; // loaded titles persist verbatim on save
 			sessionParentRef.current = s.parent ?? null;
 			setGoalSynced(s.goal ?? null);
 			todoRef.current = s.todos ? s.todos.map((t) => ({ ...t })) : null; // v0.1.133
+			setEventsSynced(s.events ? s.events.map((e) => ({ ...e })) : []);
 			historyBrowseRef.current.reset(); // v0.1.180: loaded chat, fresh browse cursor
 			composerRef.current?.resetUndo();
 			overlayExplicitRef.current = !!s.personality;
@@ -2193,6 +2233,7 @@ nudgeCounterRef.current = 0;
 			compression: compressionRef.current ?? undefined,
 			parent: parentId,
 			...(todoRef.current?.length ? { todos: todoRef.current.map((t) => ({ ...t })) } : {}), // v0.1.133
+			...(eventsRef.current.length ? { events: eventsRef.current.map((e) => ({ ...e })) } : {}),
 		};
 		await scopedSessions.save(session);
 		if (
@@ -2208,9 +2249,10 @@ nudgeCounterRef.current = 0;
 		setSessionId(branchId); // outgoing draft saved by the sessionId effect cleanup
 		setInput(composerDrafts.get(branchId) ?? "");
 		setTurnsSynced(copyTurns);
-		messagesRef.current = session.messages ?? [];
+		messagesRef.current = resumeMessages(session);
 		compressionRef.current = session.compression ?? null;
 		todoRef.current = session.todos ?? null; // v0.1.133: the child inherits the plan
+		setEventsSynced(session.events ? session.events.map((e) => ({ ...e })) : []);
 		sessionTitleRef.current = branchTitle;
 		sessionParentRef.current = parentId;
 		overlayExplicitRef.current = !!session.personality;
@@ -2565,6 +2607,16 @@ nudgeCounterRef.current = 0;
 				let runCompression = compressionRef.current;
 				const runGoal = goalRef.current;
 				let runTodos = todoRef.current?.map((item) => ({ ...item })) ?? null;
+			let runEvents: SessionEvent[] = [
+				...eventsRef.current.map((e) => ({ ...e })),
+				sessionEvent({
+				type: "user/message",
+				source: "user",
+				text: displayText ?? promptText,
+				images: visionOk ? imageFiles.length : undefined,
+			}),
+			];
+			setEventsSynced(runEvents);
 			const runTodoApi: TodoApi = {
 				read: () => (runTodos ?? []).map((item) => ({ ...item })),
 				write: (items) => {
@@ -2583,6 +2635,7 @@ nudgeCounterRef.current = 0;
 					parent: sessionParentRef.current,
 					goal: runGoal,
 				todos: runTodos,
+				events: runEvents,
 			};
 			const currentSessionState = (): SessionPersistSnapshot => ({
 				...initialSessionState,
@@ -2591,6 +2644,7 @@ nudgeCounterRef.current = 0;
 						compression: runCompression,
 					goal: runGoal,
 				todos: runTodos,
+				events: runEvents,
 			});
 
 			try {
@@ -2701,6 +2755,11 @@ nudgeCounterRef.current = 0;
 				const cloneParts = (parts: TurnPart[]): TurnPart[] => parts.map((part) => ({ ...part }));
 				const events: AgentLoopEvents = {
 					signal: abort.signal,
+					onSessionEvent: (ev) => {
+						if (abort.signal.aborted) return;
+						runEvents = [...runEvents, ev];
+						setEventsSynced(runEvents);
+					},
 					onAttemptStart: () => {
 						if (abort.signal.aborted) return;
 						const turn = turnsRef.current.find((item) => item.id === aid);
@@ -2871,6 +2930,24 @@ nudgeCounterRef.current = 0;
 
 					if (abort.signal.aborted) throw new Error("Run interrupted.");
 					finalizeReasoning(aid);
+				/* If tokens never reached onToken (array-shaped content, some
+				   gateways, buffered fallback that skipped callbacks), the
+				   bubble would stay empty even though the wire has a reply. */
+				{
+					const shown = turnsRef.current
+						.find((t) => t.id === aid)
+						?.parts.filter((p) => p.kind === "text")
+						.map((p) => (p.kind === "text" ? p.text : ""))
+						.join("") ?? "";
+					if (!shown.trim()) {
+						const fromWire = result.messages
+							.filter((m) => m.role === "assistant")
+							.map((m) => textFromMessageContent(m.content))
+							.filter((t) => t.trim().length > 0)
+							.join("\n\n");
+						if (fromWire.trim()) appendText(aid, fromWire);
+					}
+				}
 				/* One canonical Mermaid representation feeds both the durable
 				   transcript and every later UI/editor sink. Do this only after the
 				   attempt commits so a partial stream is never made canonical/persisted. */
@@ -2883,6 +2960,7 @@ nudgeCounterRef.current = 0;
 						: message
 				);
 				messagesRef.current.push(...canonicalMessages.filter((m) => m.role !== "system"));
+				if (!abort.signal.aborted) setEventsSynced(runEvents);
 
 				if (result.iterations >= runSettings.maxIterations && result.messages.some((m) => m.tool_calls)) {
 					appendText(aid, `\n\n_(Stopped: reached the ${runSettings.maxIterations}-iteration cap.)_`);
@@ -3599,6 +3677,12 @@ nudgeCounterRef.current = 0;
 						}
 					}
 					messagesRef.current = messagesRef.current.slice(0, cut);
+					setEventsSynced(
+						truncateSessionEvents(
+							eventsRef.current,
+							messagesRef.current.filter((m) => m.role !== "system").length
+						)
+					);
 						window.setTimeout(() => {
 							if (
 								mountedRef.current &&
@@ -3622,6 +3706,12 @@ nudgeCounterRef.current = 0;
 						}
 					}
 					messagesRef.current = messagesRef.current.slice(0, cut);
+					setEventsSynced(
+						truncateSessionEvents(
+							eventsRef.current,
+							messagesRef.current.filter((m) => m.role !== "system").length
+						)
+					);
 					pushLocalNoticeTurn("Last exchange removed.");
 					return true;
 				}
@@ -3682,11 +3772,12 @@ nudgeCounterRef.current = 0;
 									props.sessions.partitionKey() !== scopedSessions.partitionKey() ||
 									sessionIdRef.current !== sourceSessionId
 								) return true;
-							messagesRef.current = [
-							{ role: "user", content: `[Context brief from earlier conversation]\n${brief}` },
-							{ role: "assistant", content: "Understood — I have the context brief. Continuing." },
-						];
-						compressionRef.current = null; // hard reset replaces the wire — any rolling cache is stale
+					messagesRef.current = [
+						{ role: "user", content: `[Context brief from earlier conversation]\n${brief}` },
+						{ role: "assistant", content: "Understood — I have the context brief. Continuing." },
+					];
+					setEventsSynced([]);
+					compressionRef.current = null; // hard reset replaces the wire — any rolling cache is stale
 						pushLocalNoticeTurn(`Context compressed to a brief (${brief.length} chars).`);
 							} catch (e) {
 								if (
@@ -4123,6 +4214,12 @@ nudgeCounterRef.current = 0;
 			const editSessionId = sessionIdRef.current;
 			setTurnsSynced(turns.slice(0, turnIdx));
 			messagesRef.current = messagesRef.current.slice(0, cut);
+			setEventsSynced(
+				truncateSessionEvents(
+					eventsRef.current,
+					messagesRef.current.filter((m) => m.role !== "system").length
+				)
+			);
 				window.setTimeout(() => {
 					if (
 						mountedRef.current &&
@@ -4132,7 +4229,7 @@ nudgeCounterRef.current = 0;
 				) void runAgent(newText);
 			}, 30);
 		},
-		[running, turns, setTurnsSynced, runAgent, snapshotPickerPolicy, pickerPolicyIsCurrent, props.sessions]
+		[running, turns, setTurnsSynced, setEventsSynced, runAgent, snapshotPickerPolicy, pickerPolicyIsCurrent, props.sessions]
 	);
 
 	/* v0.1.165: each slash row carries a visual kind so the popover mirrors
@@ -4524,12 +4621,24 @@ nudgeCounterRef.current = 0;
 					className={`oa-icon-btn${panelOpen ? " is-on" : ""}`}
 					aria-label="Conversations"
 					onClick={() => {
+						setTrajectoryOpen(false);
 						setPanelOpen(!panelOpen);
 						setPanelFilter("");
 						void refreshSessions();
 					}}
 				>
 					<RotateCcwIcon size={15} />
+				</button>
+				<button
+					ref={trajectoryToggleRef}
+					className={`oa-icon-btn${trajectoryOpen ? " is-on" : ""}`}
+					aria-label="Trajectory"
+					onClick={() => {
+						setPanelOpen(false);
+						setTrajectoryOpen((open) => !open);
+					}}
+				>
+					<ListTreeIcon size={15} />
 				</button>
 				<button className="oa-icon-btn" aria-label="Settings" onClick={() => props.openSettings()}>
 					<SettingsIcon size={15} />
@@ -5085,6 +5194,21 @@ nudgeCounterRef.current = 0;
 						</div>
 					) : null}
 
+					{trajectoryOpen ? (
+						<TrajectoryPanel
+							panelRef={trajectoryRef}
+							rows={trajectoryRows(sessionEvents)}
+							onClose={() => setTrajectoryOpen(false)}
+							injectEnabled={running}
+							onInject={(text) => {
+								const live = loopRef.current;
+								if (!running || !live) return false;
+								if (!live.inject(text)) return false;
+								pushLocalNoticeTurn(`**Steer queued** — arrives after the next tool call: “${steerPreview(text, 80)}”`);
+								return true;
+							}}
+						/>
+					) : null}
 					{/* ---------- sessions panel (slash-menu-style popover) ---------- */}
 					{panelOpen ? (
 						<SessionPanel

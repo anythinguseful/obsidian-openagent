@@ -16,7 +16,7 @@ artifact belongs and what project contracts it must satisfy.
 | Feature/refactor plan | `docs/plans/` | Start from `_TEMPLATE.md`; status is honest. |
 | Upstream/source research | `docs/studies/` | Record primary source, scope, conclusion, and date. |
 | Audit of Open Agent itself | `docs/audits/` | State baseline, evidence, findings, limits, and outcome. |
-| Living user/security contract | `docs/reference/` | Update when behavior changes; avoid implementation history. |
+| Living user/security contract | `docs/reference/` | Architecture, docs-approach, troubleshooting, workspace, cron; update when behavior changes; avoid implementation history. |
 | Superseded diagnosis/plan | `docs/arsip/` | Mark `archived`; link to the replacement. |
 | Raw logs, matrices, checksums, screenshots | `evidence/` | Keep proof separate from readable narrative. |
 | User release summary | `RELEASES.md` | Concise behavior-oriented changelog. |

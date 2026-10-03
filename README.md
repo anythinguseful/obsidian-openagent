@@ -23,6 +23,7 @@ vault: **plans** (feature designs), **studies** (upstream parity research),
 the **working agreement** (process memory & Lessons log). Every note carries
 frontmatter metadata and relative links that resolve both on GitHub and
 inside Obsidian. Start at [**docs/README.md**](docs/README.md) — the hub.
+System map: [architecture](docs/reference/architecture.md). How we document: [docs approach](docs/reference/docs-approach.md). Common problems: [troubleshooting](docs/reference/troubleshooting.md).
 
 ---
 

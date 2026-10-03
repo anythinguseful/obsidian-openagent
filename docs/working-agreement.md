@@ -51,7 +51,7 @@ Penjelasan untuk owner harus langsung dipahami:
 | Perfectionist · teliti | Pipeline penuh (`npm run release`) setelah **setiap** perubahan kode; laporan "selesai" hanya jika typecheck ✓ + 10 suite ✓ + ZIP SYNCED ✓. Tidak ada "harusnya aman". |
 | Konsisten | Kontrak gaya SKILL.md (class `oa-`, variabel CSS Obsidian, blok CSS baru di akhir file dsb.); API komponen mengikuti source official, bukan improvisasi. |
 | Periksa docs/source resmi | **Aturan tool.tsx**: klaim tentang library/framework hanya setelah menarik **source mentah resmi** (jsDelivr/raw CDN/repo), bukan sekadar halaman docs. Temuan diarsipkan di ringkasan sesi. |
-| Menaati prosedur | Workflow: study → keputusan binding via `ask_user` → plan → greenlight → implement → pipeline → commit per logical change → present. Ritual release sebelum present. |
+| Menaati prosedur | Kerja adaptif/rapi: study → implement → pipeline → commit. `ask_user` / greenlight **hanya** jika dua arah produk besar bersaing (Lesson 223). Ritual release sebelum klaim rilis, bukan sebelum setiap kalimat. |
 | Tanpa halusinasi | Setiap klaim teknis diverifikasi (grep / test / screenshot pixel). Pisahkan eksplisit **fakta vs hipotesis** (contoh: insiden LM Studio 180-token tetap 3 hipotesis sampai user konfirmasi). |
 | Logis | Premis dinyatakan, kesimpulan diturunkan; premis goyang → berhenti, verifikasi dulu, baru lanjut. |
 | Tak mengulang kesalahan | Setiap bug/kegagalan mendapat **regression guard** di smoke test + dicatat di Lessons log di bawah. Bug tanpa guard = utang. |
@@ -89,6 +89,29 @@ apa pun — audit dulu, implementasi belakangan:
 7. **Jangan pernah commit/push ke `main`.** Kerja di branch sesi
    (`arena/<id>`), push hanya ke branch itu; pull request dari sana.
 
+## Vendor / development skill intake (owner 2026-08-31)
+
+Binding. Berlaku untuk permintaan owner **dan** inisiatif agen.
+
+Owner memberi izin penuh menambah development skill vendor serta riset
+dalam terkait proyek. Izin itu **bukan** izin melewati gerbang kecocokan.
+
+Sebelum `git add` skill apa pun ke `agents/skills/vendor/`:
+
+1. Baca `SKILL.md` (atau README upstream) cukup untuk tahu pemicu, stack,
+   dan tool host yang diasumsikan.
+2. Uji kecocokan untuk **plugin Obsidian dikerjakan di Arena**:
+   - Apakah skill itu untuk chrome plugin / vault, atau untuk landing
+     Next/Tailwind / portfolio?
+   - Apakah metode utamanya bisa dijalankan di Arena (bukan fan-out
+     Agent/Task Claude Code, bukan CLI yang tidak kita pin)?
+   - Apakah ia bertarung dengan `openagent-ui` (palet hardcode, font
+     custom, emoji-as-icon)? Settings **boleh** di-reskin (Lesson 221).
+3. Tidak cocok → beri tahu owner, **jangan vendor**. Keputusan "batalkan"
+   dicatat (kelas Lesson 119 / 220), bukan dipasang dulu lalu dicabut.
+4. Cocok → snapshot ter-pin + `UPSTREAM.md` + baris `manifest.yaml` +
+   adapter Arena bila host berbeda. `openagent-ui` tetap menang.
+
 ## Aturan dokumentasi (kapan update docs)
 
 Diadopsi 2026-08-18 dari `designdocs/agents/DOCS_GUIDE.md` repo obsidian-copilot
@@ -125,6 +148,9 @@ isi ke sini).
 | Proses, prinsip owner, Lessons log, bootstrap GitHub | `docs/working-agreement.md` |
 | Ide yang sengaja ditunda + alasan + unlock | `docs/backlog.md` |
 | Peta seluruh docs | `docs/README.md` (hub) |
+| Cara menulis docs (audiens, apa yang ditolak) | `docs/reference/docs-approach.md` |
+| Peta sistem (loop, mode, otoritas) | `docs/reference/architecture.md` |
+| Gejala pengguna (chat kosong, web search, lokal) | `docs/reference/troubleshooting.md` |
 | Merilis (pipeline, zip, checksum) | `scripts/release.mjs` + `CONTRIBUTING.md` |
 | Gate sebelum selesai | `npm run verify` · `npm run check:docs` · `npm run check:skills` |
 
@@ -237,9 +263,10 @@ isi ke sini).
 16. **Giliran teks-saja bisa tak ter-render untuk owner** (2026-07-21) — dua
     kali berturut balasan berisi hanya teks tidak sampai ("chat hilang"),
     sedangkan balasan dengan tool call (ask_user / present_file) selalu
-    tampil. → Tutup setiap giliran dengan tool call bermakna (pertanyaan,
-    presentasi hasil, atau aksi), bukan paragraf telanjang — dan sampaikan
-    keputusan penting di label/opsi ask_user, bukan hanya di narasi.
+    tampil. Itu bug **host Arena lama**, bukan aturan percakapan.
+    **Superseded 2026-08-31 (Lesson 224):** jangan paksa setiap balasan
+    ditutup tool. Teks biasa sah. Pakai ask_user / present_file hanya
+    kalau memang ada pertanyaan atau file yang harus dilihat.
 
 17. **Build tak teridentifikasi = diagnosis buta** (2026-07-22) — owner dua
     kali melaporkan "masih tidak bisa upload" padahal fix sudah di-zip: ia
@@ -1156,20 +1183,14 @@ isi ke sini).
     tempat membendungnya, dengan saksi lane pada sumber yang TIBA.
 
 88. "Apakah perlu proper docs?" — ukur AUDIENS dulu, rot dulu, baru
-    pekerjakan: untuk repo personal yang tidak dipublish, dokumen besar
-    USER-GUIDE/DEVELOPER adalah hutang bukan aset — pembacanya tidak ada,
-    dan dokumen tanpa pembaca membusuk (kita baru saja menghapus checklist
-    yang basi karena alasan identik). Bukti hidup satu pintu: README kita
-    sendiri sudah melenceng dari realitas (slash list 11 dari 24; web tool
-    salah nama; quick-ask tak tercatat) — jika SATU dokumen saja bisa
-    basi, sepuluh dokumen akan basi sepuluh kali. Aturan kerjanya:
-    (1) pemakaian pribadi → manual hidup di DALAM produk (/help, settings
-    yang bisa dicari, deskripsi tool) + working-agreement sebagai memori
-    proses; (2) yang layak dikerjakan hanya sinkronisasi README yang
-    TERVERIFIKASI ke registry nyata — grep daftar nama dari kode, jangan
-    tulis dari ingatan; (3) dokumen proper untuk audiens luar ditulis
-    TEPAT SAAT audiensnya ada (trigger: publish/zip dibagikan), tidak
-    lebih awal.
+    pekerjakan: dokumen besar USER-GUIDE/DEVELOPER tanpa pembaca adalah
+    hutang (checklist basi sudah pernah dihapus). README yang salah
+    angka tool adalah bukti drift. **Fleksibel 2026-08-31 (Lesson 224):**
+    (1) perilaku user-facing tetap update `docs/` di commit yang sama
+    (aturan dokumentasi di atas) — jangan ditahan sampai "publish";
+    (2) README harus verifikasi ke source, bukan ingatan;
+    (3) manual raksasa tetap tidak wajib; tulis yang dipakai, skip yang
+    akan membusuk.
 
 89. Port komponen dari library React ke DOM vanila = petakan KONTRAK
     behavior, bukan salin JSX — dan inventarisasi pohon dulu saat
@@ -1577,7 +1598,7 @@ isi ke sini).
 - Satu shell = hapus cabang `Platform?.isMobile` + class `.is-mobile` seluruhnya. Backdrop `align-items:flex-end; padding:10px; background:rgba(0,0,0,.35)` + panel `width:100%; max-width:560px; height:auto; max-height:min(70vh,520px); radius-l; border penuh; animasi oa-panel-up` jadi gaya DASAR `.oa-panel`. Drawer lama (`width:min(290px,88%); height:100%; oa-slide-in`) dihapus.
 - `min-height:0` pindah ke `.oa-panel-list` dasar supaya list scroll di dalam sheet yang di-cap.
 - Amandemen pin serentak (pola Lesson 121): guard v0.1.168, pin import v0.1.21 (Platform keluar lagi), skenario harness `panel-mobile` → `panel` (probe geometri tunggal `__oaPanelCheck`), ALL_SCENARIOS, type decl.
-- Pelajaran (penguatan 121c): kalau owner kasih SOLUSI lalu tanya "kenapa tidak disamakan", jangan baca sebagai "keep scoped" — baca sebagai "terapkan SOLUSI itu SERAGAM". Jangan re-scope keputusan UI atas inisiatif sendiri.
+- Pelajaran (penguatan 121c): untuk **panel sesi itu**, jangan pecah jadi dua produk (HP sheet vs desktop drawer) atas inisiatif sendiri. **Superseded-in-part Lesson 222:** "sama di mobile dan desktop" milik owner = bahasa visual + komponen yang sama, **adaptif** terhadap lebar — bukan larangan media query / layout yang menyusut.
 
 ### 151. (2026-08-20) oa-panel di HP: slide-over penuh "sangat mengganggu" → mobile = floating bottom sheet (lebar composer, max-height 70vh, scroll dalam), desktop slide-over DIKUNCI
 - Owner: "masalahnya sangat mengganggu ketika dijalankan di hp; solusinya dibuat oa-overlay aja?" Jawaban: YA, overlay — TAPI scoped mobile. Desktop slide-over mapan + punya lane harness (`panel`) → jangan diubah. Mobile: backdrop `align-items:flex-end` + `is-mobile` di aside → `width:100%; max-width:560px; height:auto; max-height:min(70vh,520px); radius-l; border penuh; animasi translateY`. Gate via `Platform?.isMobile === true` (ChatApp kini import Platform).
@@ -1629,7 +1650,7 @@ isi ke sini).
 
 ### 142. (2026-08-20) Bug-bounty audit kontrak UI: 14 aturan terverifikasi HIJAU, 3 WARN rendah, dan satu "kontrak over-promise" milik saya sendiri dikoreksi — fallback var() harus di-scope, bukan "absolute"
 - Owner minta audit + "bug bounty". Hasil (bukti grep + DOM): tanpa emoji (0), tanpa transition:all (0), tanpa gradien berat (2 = shimmer resmi + mask), tanpa font/palette hardcode, tombol semantik + aria, fokus-visible 29, radius ber-fallback 98, reduced-motion ada, wiring settings 14/14, ellipsis `…` konsisten. Jadi kontrak TERIMPLEMENTASI.
-- 3 WARN rendah: (a) 9 label small-caps `uppercase+letter-spacing` (subsection/panel-group/steer/wordmark) — sidik anti-slop, tapi konsisten+deliberate; mengubahnya = reskin (dilarang constraint 5) → biarkan, dicatat; (b) aria-live cuma 2 permukaan (Notice = milik Obsidian); (c) 32 `--color-*` tanpa fallback — core-defined, bukan bug (swatch yang rusak itu bug SPESIFISITAS, sudah diperbaiki v0.1.153).
+- 3 WARN rendah: (a) 9 label small-caps `uppercase+letter-spacing` (subsection/panel-group/steer/wordmark) — sidik anti-slop, tapi konsisten+deliberate; mengubahnya = reskin visual; boleh, tapi bukan bagian audit itu → biarkan, dicatat; (b) aria-live cuma 2 permukaan (Notice = milik Obsidian); (c) 32 `--color-*` tanpa fallback — core-defined, bukan bug (swatch yang rusak itu bug SPESIFISITAS, sudah diperbaiki v0.1.153).
 - Temuan jujur: aturan yang SAYA tulis 2026-08-20 "Every var() carries a fallback — absolute" = over-promise. Codebase ~1.200 var() tanpa fallback (`--text-*`, `--font-*`, `--background-*`, `--interactive-accent`) dan itu BENAR (core Obsidian, hardcode malah melanggar). Yang berisiko (`-rgb` + `--radius-*` + var buatan) SUDAH ber-fallback semua. SKILL.md diamend jadi scope jujur: REQUIRED (-rgb/radius/self-owned), RECOMMENDED (`--color-*`), NOT REQUIRED (core). Prinsip: audit harus menemukan kesalahan aturan juga, bukan cuma kesalahan kode.
 
 ### 141. (2026-08-20) A7 Skeleton: "Loading…" teks diganti baris shimmer; dan jebakan probe — CSS ter-scope `.oa-settings` berarti inject DI LUAR scope = tinggi 0, "element not visible"
@@ -2158,8 +2179,9 @@ shells anyway was a skill-contract miss, not a missing visual language.
 Fix (v0.1.154): remove `groupSubsections()` and the group-shell CSS. MCP
 server cards stay (they are managed objects). Guards invert: smoke pins
 absence of the wrapper class; F49 now requires zero group shells and
-direct-child subsections. Do not re-skin Settings behind a "unify the system"
-story without owner greenlight on a real screenshot.
+direct-child subsections. The *nested* group-shell pass stays cancelled. Settings may use one
+grouping/card layer when it clarifies related rows (Lesson 223). Reskin
+as a category is not banned (Lesson 221). Real-DOM harness still required.
 
 ## Lesson 218 — (2026-08-26) Development skills belong under agents/; vault skills do not move with them
 
@@ -2207,3 +2229,109 @@ Rule: an owner decision that overrides a recorded one gets its Lesson
 in the same change as the move. This note was written a day late, after
 two more releases had shipped — that gap is exactly what the rule
 closes.
+
+## Lesson 220 — (2026-08-31) Install skill = uji kecocokan dulu; Arena + plugin Obsidian adalah filter, bukan afterthought
+
+Owner minta pasang dua skill publik (ADHD tree-of-thought, taste-skill
+anti-slop landing). Agen mem-vendor keduanya ke `agents/skills/vendor/`
+lalu baru menjelaskan bahwa keduanya **tidak cocok**: taste menarget
+landing Next/Tailwind dan kalah dari `openagent-ui` di chrome plugin;
+ADHD menuntut cabang Agent paralel yang Arena tidak punya. Owner:
+batalkan, seharusnya ditanya dulu.
+
+Aturan:
+
+1. Permintaan "install skill X" adalah permintaan **evaluasi**, baru
+   instalasi. Jawaban pertama = cocok atau tidak, dengan alasan konkret
+   (sasaran skill vs plugin Obsidian vs kemampuan Arena).
+2. Tidak cocok → jangan snapshot, jangan routing `AGENTS.md`, jangan
+   adapter. Cukup bilang tidak.
+3. Owner juga mengizinkan agen **sendiri** menambah skill vendor dan
+   riset dalam bila ada gap nyata — gerbang yang sama. Bukan lisensi
+   skill yang tidak bisa dijalankan di host ini. Reskin Settings
+   **boleh** (Lesson 221); yang dilarang adalah memasang skill yang
+   kalah uji kecocokan.
+4. Keputusan batal dicatat di Lessons (ini), bukan diulang sebagai
+   tawaran di sesi berikutnya.
+
+Guard: `scripts/check-skills.mjs` menolak folder vendor
+`uditakhourii` dan `leonxlnx` (pasangan yang sempat masuk lalu dicabut).
+Skill baru yang lolos gerbang tetap boleh ditambah lewat manifest.
+
+## Lesson 221 — (2026-08-31) Membatalkan satu reskin ≠ melarang reskin
+
+Owner: "Settings tidak di-reskin" yang sempat tertulis di kontrak UI
+**bukan** larangan. Membatalkan atau me-revert satu pass (polish/flat,
+kartu B+, group shells) berarti pass itu salah atau belum siap — bukan
+bahwa kategori Settings chrome dibekukan.
+
+Aturan:
+
+1. Baca keputusan batal sebagai *keputusan tentang artefak itu*, bukan
+   sebagai undang-undang untuk semua pekerjaan sejenis berikutnya.
+2. Settings **boleh** di-reskin. Ajukan pass baru dengan harness
+   real-DOM; jangan menghidupkan patch yang sudah di-revert seolah masih
+   disetujui.
+3. Constraint 5 di `openagent-ui` diamend ke aturan ini. Audit 2026-08-20
+   yang mem-pin "additions only" adalah foto tanggal itu, bukan hukum
+   sekarang.
+
+Guard: teks constraint 5 menyebut "cancelled change is not a category
+ban" dan "Settings **may** be reskinned".
+
+## Lesson 222 — (2026-08-31) "Sama mobile dan desktop" = UI adaptif, bukan satu geometri kaku
+
+Ringkasan agen sempat menulis: "satu kulit di semua platform; jangan pecah
+mobile/desktop; kalau owner tanya kenapa tidak disamakan, terapkan merata."
+Owner: itu **bukan** niatnya. Yang diminta kemarin: tampilan HP dan desktop
+**sama dalam arti adaptif** — satu bahasa UI, satu set kontrol, layout
+mengikuti lebar (pane sempit / layar sentuh), bukan dua aplikasi terpisah
+dan bukan screenshot desktop yang dipaksa ke HP.
+
+Lesson 152 tetap benar untuk insiden panel sesi: agen sempat mengunci
+desktop=drawer dan mobile=sheet tanpa diminta. Yang salah adalah
+mengangkat itu jadi undang-undang "dilarang beda layout antar lebar."
+
+Aturan:
+
+1. Satu **identitas**: token Obsidian, komponen, copy, ikon — HP tidak
+   boleh jadi skin lain.
+2. Layout **boleh** (harus) adaptif: flex wrap, `min-width:0`,
+   `@media` / `@container`, target sentuh lebih besar di coarse pointer.
+   `Platform.isMobile` sah bila itu cara host membedakan input, bukan
+   alasan membuat drawer vs sheet sebagai dua produk.
+3. Jangan baca "samakan" sebagai "pixel-identical di 390px dan 1280px."
+
+## Lesson 223 — (2026-08-31) Miss komunikasi: insiden ≠ undang-undang; kerjakan yang adaptif tanpa tanya
+
+Tiga koreksi owner beruntun (220–222) pola yang sama: agen mengangkat
+satu batal/satu kalimat jadi larangan kategori, lalu takut bergerak.
+
+Putusan 2026-08-31 (kartu tanya):
+
+1. Settings **boleh** dirapikan — kartu, grup, reskin — asal bukan
+   kartu di dalam kartu tanpa alasan. Tema/font/palet tetap milik
+   Obsidian (constraint 1 **tetap**).
+2. Kerja **adaptif / rapi** dikerjakan tanpa kartu izin. Tanya hanya
+   kalau ada **dua arah produk besar**. "Atas inisiatif sendiri" bukan
+   dosa; yang salah adalah dua produk (HP vs desktop) atau palet custom.
+3. Baca keputusan batal sebagai artefak itu saja (Lesson 221).
+
+Yang **tidak** saya ubah tanpa ditanya (masih bisa janggal nanti):
+Lesson 16 (setiap giliran wajib tool call), Lesson 88 (tahan docs
+user-facing), ritual `ask_user`→greenlight di mekanisme penegakan,
+anti-slop letter-spacing. Itu proses/agen, bukan UI yang baru dikoreksi.
+
+## Lesson 224 — (2026-08-31) Lesson 16 bukan hukum chat; docs tidak ditahan; greenlight bukan gerbang setiap edit
+
+Owner: "wajib akhiri balasan dengan tool" tidak relevan; docs jangan
+kaku; alur tanya→greenlight→kode bertabrakan dengan "langsung kerjakan
+yang adaptif."
+
+1. Lesson 16 = workaround host yang sempat menelan teks polos. Arena
+   sekarang menampilkan teks. Balasan tanpa tool **sah**.
+2. Lesson 88 tidak menahan docs sampai rilis publik. Aturan dokumentasi
+   (update `docs/` saat perilaku user-facing berubah) yang menang.
+   Yang ditahan hanya ensiklopedia yang tidak ada pembacanya.
+3. Tabel "Menaati prosedur" diamend: adaptif/rapi tanpa kartu; tanya
+   hanya dua arah produk besar.

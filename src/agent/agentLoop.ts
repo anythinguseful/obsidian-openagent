@@ -25,11 +25,14 @@ import {
 	ProviderStreamProtocolError,
 	ProviderTimeoutError,
 } from "./providers";
-import type { MoaTurnEngine } from "./moaLoop";
+import type { HarnessRequestPrep } from "./harness";
 import { getActiveProvider, ProviderConfig } from "../settings";
 import { backoffMs, FallbackTarget, maxAttempts, resolveFallbacks, sleep } from "./resilience";
 import { escapeUntrustedSteerMarkers, formatSteerMarker } from "./steer";
+import { InjectInbox } from "./injectInbox";
 import { redactSecretsInText } from "./redact";
+import { countContentImages, messageContentPreview, sessionEvent, type SessionEvent } from "./sessionEvents";
+import { runPostExecute, runPreExecute, toolErrorMessage } from "./toolWaterfall";
 
 export type ApprovalDecision = "allow-once" | "allow-always" | "deny";
 
@@ -98,6 +101,8 @@ export interface AgentLoopEvents {
 	    mirrors the marker into the matching transcript card + saved wire so
 	    the UI never disagrees with what the model saw. */
 	onSteerApplied?: (toolCallId: string | undefined, marker: string) => void;
+	/** Live session log (same objects as AgentRunResult.events). */
+	onSessionEvent?: (event: SessionEvent) => void;
 	/** Resolve with the user's decision. Must always resolve. */
 	requestApproval?: (req: ApprovalRequest) => Promise<ApprovalDecision>;
 	/** Hermes clarify-tool callback (v0.1.80): interactive contexts supply
@@ -121,51 +126,37 @@ export interface AgentRunResult {
 	    (the model settled first) comes back here for next-turn delivery.
 	    A hard interrupt supersedes it — then this is null. */
 	pendingSteer: string | null;
+	/** Append-only log for this run (turn/step/tool). Chat concatenates onto the session. */
+	events: SessionEvent[];
 }
 
 export class AgentLoop {
 	private allowlist = new Set<string>();
-	/* /steer stash (run_agent.py _pending_steer). No lock needed — JS is
-	   single-threaded and the UI thread both stashes and drains. */
-	private pendingSteer: string | null = null;
+	/* Inject inbox (Phase 3). /steer is one consumer. JS is single-threaded;
+	   the UI thread both stashes and drains. */
+	private inbox = new InjectInbox();
 
 	constructor(
 		private settings: OpenAgentSettings,
 		private tools: AgentTool[],
 		private ctx: ToolContext,
-		/** MoA facade (Hermes moa_loop MoAClient parity, v0.1.30): non-null
-		    when a Mixture-of-Agents preset is active — every iteration's
-		    outgoing wire passes through prepareIteration (advisor fan-out
-		    per cadence + guidance attach), and the acting connection is the
-		    preset's aggregator slot instead of the main model. */
-		private moa: MoaTurnEngine | null = null
+		/** Request-prep plugin (MoA implements HarnessRequestPrep). Null = bare loop. */
+		private moa: HarnessRequestPrep | null = null
 	) {}
 
 	resetAllowlist() {
 		this.allowlist.clear();
 	}
 
+	/** DeepSeek inject: admit text onto the next step. */
+	inject(text: string): boolean {
+		return this.inbox.push(text);
+	}
+
 	/** run_agent.py steer(): inject a user message into the next tool result
-	    WITHOUT interrupting. Rejects empty text; multiple steers before the
-	    drain concatenate with "\n". Returns true when accepted. */
+	    WITHOUT interrupting. One InjectInbox consumer. */
 	steer(text: string): boolean {
-		if (!text || !text.trim()) return false;
-		const cleaned = text.trim();
-		this.pendingSteer = this.pendingSteer ? `${this.pendingSteer}\n${cleaned}` : cleaned;
-		return true;
-	}
-
-	/** _drain_pending_steer: take the stash (or null) and clear the slot. */
-	private drainSteer(): string | null {
-		const text = this.pendingSteer;
-		this.pendingSteer = null;
-		return text;
-	}
-
-	/** Put-back with the official concat — used when no tool message exists
-	    to piggyback on yet (first iteration, no tools this run). */
-	private restoreSteer(text: string): void {
-		this.pendingSteer = this.pendingSteer ? `${this.pendingSteer}\n${text}` : text;
+		return this.inject(text);
 	}
 
 	private approvalKey(toolName: string, kind: ToolApprovalKind): string {
@@ -195,7 +186,7 @@ export class AgentLoop {
 
 		if (!tool) {
 			events.onToolResult?.(callId, name, "error", `Unknown tool: ${name}`);
-			return { role: "tool", tool_call_id: callId, name, content: `Error: unknown tool "${name}".` };
+			return toolErrorMessage(callId, name, `Error: unknown tool "${name}".`);
 		}
 
 		const interactive = {
@@ -209,31 +200,40 @@ export class AgentLoop {
 		} catch (err) {
 			const msg = escapeUntrustedSteerMarkers(err instanceof Error ? err.message : String(err));
 			events.onToolResult?.(callId, name, "error", msg);
-			return { role: "tool", tool_call_id: callId, name, content: `Error: ${msg}` };
+			return toolErrorMessage(callId, name, `Error: ${msg}`);
 		}
 
 		const kind = prepared?.approvalKind ?? resolveToolApprovalKind(tool, args);
 		const allowAlways = prepared?.allowAlways ?? tool.allowAlways ?? true;
-		if (this.needsApproval(tool, kind, prepared?.forceApproval === true)) {
-			const decision = (await events.requestApproval?.({
-				toolName: name,
-				args,
-				kind,
-				dangerous: !!tool.dangerous || kind === "destructive",
-				allowAlways,
-				details: prepared?.approvalDetails,
-			})) ?? "deny";
-			if (decision === "deny" || (decision === "allow-always" && !allowAlways)) {
-				events.onToolResult?.(callId, name, "denied", "Denied by user.");
-				return { role: "tool", tool_call_id: callId, name, content: "The user denied this action. Do not retry it; ask how to proceed." };
-			}
-			if (decision === "allow-always") this.allowlist.add(this.approvalKey(name, kind));
-		}
 
-		if (events.signal?.aborted) {
-			events.onToolResult?.(callId, name, "denied", "Aborted.");
-			return { role: "tool", tool_call_id: callId, name, content: "Aborted by user." };
-		}
+		const halted = await runPreExecute([
+			async () => {
+				if (!this.needsApproval(tool, kind, prepared?.forceApproval === true)) return { halt: false };
+				const decision = (await events.requestApproval?.({
+					toolName: name,
+					args,
+					kind,
+					dangerous: !!tool.dangerous || kind === "destructive",
+					allowAlways,
+					details: prepared?.approvalDetails,
+				})) ?? "deny";
+				if (decision === "deny" || (decision === "allow-always" && !allowAlways)) {
+					events.onToolResult?.(callId, name, "denied", "Denied by user.");
+					return {
+						halt: true,
+						message: toolErrorMessage(callId, name, "The user denied this action. Do not retry it; ask how to proceed."),
+					};
+				}
+				if (decision === "allow-always") this.allowlist.add(this.approvalKey(name, kind));
+				return { halt: false };
+			},
+			async () => {
+				if (!events.signal?.aborted) return { halt: false };
+				events.onToolResult?.(callId, name, "denied", "Aborted.");
+				return { halt: true, message: toolErrorMessage(callId, name, "Aborted by user.") };
+			},
+		]);
+		if (halted) return halted;
 
 		try {
 			if (prepared?.revalidate) {
@@ -255,24 +255,21 @@ export class AgentLoop {
 				events.onToolResult?.(callId, name, "done", safeText);
 				return { role: "tool", tool_call_id: callId, name, content: safeParts };
 			}
-			/* Tool/web/file output is untrusted data. Strip the exact reserved
-			   /steer boundary before both transcript and wire; a genuine steer
-			   is appended later by the loop itself, after this boundary. */
-			let safeResult = escapeUntrustedSteerMarkers(result);
-			/* v0.1.147 security.redact_secrets: mask detected secrets in
-			   model-visible tool output (web pages, file reads, …). Applied
-			   after steer-marker stripping; never blocks the result. */
-			if (this.settings.redactSecrets) {
-				const redacted = redactSecretsInText(safeResult);
-				if (redacted.redactions > 0) safeResult = redacted.text;
-			}
-			const clipped = safeResult.length > 20000 ? safeResult.slice(0, 20000) + "\n…(truncated)" : safeResult;
+			const clipped = await runPostExecute(result, [
+				(text) => escapeUntrustedSteerMarkers(text),
+				(text) => {
+					if (!this.settings.redactSecrets) return text;
+					const redacted = redactSecretsInText(text);
+					return redacted.redactions > 0 ? redacted.text : text;
+				},
+				(text) => (text.length > 20000 ? text.slice(0, 20000) + "\n…(truncated)" : text),
+			]);
 			events.onToolResult?.(callId, name, "done", clipped);
 			return { role: "tool", tool_call_id: callId, name, content: clipped };
 		} catch (err) {
 			const msg = escapeUntrustedSteerMarkers(err instanceof Error ? err.message : String(err));
 			events.onToolResult?.(callId, name, "error", msg);
-			return { role: "tool", tool_call_id: callId, name, content: `Error: ${msg}` };
+			return toolErrorMessage(callId, name, `Error: ${msg}`);
 		}
 	}
 
@@ -378,6 +375,13 @@ export class AgentLoop {
 		}
 
 		const produced: ChatMessage[] = [];
+		const sessionLog: SessionEvent[] = [];
+		const log = (partial: Omit<SessionEvent, "at"> & { at?: number }) => {
+			const ev = sessionEvent(partial);
+			sessionLog.push(ev);
+			events.onSessionEvent?.(ev);
+		};
+		log({ type: "turn/start", source: "system" });
 		const schemas = toolSchemas(this.tools);
 		/* v0.1.147 diagnostic (debugMode only): the exact per-request wire size,
 		   so "prompt processing is slow on LM Studio" is measurable instead of
@@ -409,6 +413,7 @@ export class AgentLoop {
 			}
 			iterations++;
 			events.onIterationStart?.(iterations);
+			log({ type: "step/start", step: iterations, source: "assistant" });
 
 			/* /steer drain (run_agent.py, both official points collapse into
 			   this one: our loop owns the iteration boundary, so "end of tool
@@ -417,7 +422,7 @@ export class AgentLoop {
 			   the LAST tool-role message of the whole wire, byte-marker intact,
 			   role alternation untouched. No tool message anywhere → put it
 			   back; post-run the leftover becomes the next user turn. */
-			const steerText = this.drainSteer();
+			const steerText = this.inbox.drain();
 			if (steerText) {
 				const wire = [...history, ...produced];
 				let injected = false;
@@ -427,11 +432,18 @@ export class AgentLoop {
 						const marker = formatSteerMarker(steerText);
 						sm.content += marker;
 						events.onSteerApplied?.(sm.tool_call_id, marker);
+						log({
+							type: "inject",
+							step: iterations,
+							source: "user",
+							callId: sm.tool_call_id,
+							text: marker,
+						});
 						injected = true;
 						break;
 					}
 				}
-				if (!injected) this.restoreSteer(steerText);
+				if (!injected) this.inbox.restore(steerText);
 			}
 
 			/* MoA facade (one prepareIteration per API call, official create()):
@@ -470,20 +482,60 @@ export class AgentLoop {
 				tool_calls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
 			};
 			produced.push(assistantMsg);
+			log({
+				type: "assistant/message",
+				step: iterations,
+				source: "assistant",
+				text: messageContentPreview(result.content),
+				images: countContentImages(result.content),
+			});
 
-			if (result.toolCalls.length === 0) break; // model is done
+			if (result.toolCalls.length === 0) {
+				log({ type: "step/end", step: iterations, source: "assistant", status: "done" });
+				break; // model is done
+			}
 
 			for (const call of result.toolCalls) {
 				events.onToolStart?.(call.id, call.function.name, call.function.arguments);
+				log({
+					type: "tool/call",
+					step: iterations,
+					source: "tool",
+					name: call.function.name,
+					callId: call.id,
+					text: call.function.arguments,
+				});
 				const toolMsg = await this.executeTool(call.id, call.function.name, call.function.arguments, events);
 				produced.push(toolMsg);
+				const status =
+					typeof toolMsg.content === "string" && toolMsg.content.startsWith("The user denied")
+						? "denied"
+						: typeof toolMsg.content === "string" && toolMsg.content.startsWith("Error:")
+							? "error"
+							: "done";
+				log({
+					type: "tool/result",
+					step: iterations,
+					source: "tool",
+					name: call.function.name,
+					callId: call.id,
+					status,
+					text: messageContentPreview(toolMsg.content),
+					images: countContentImages(toolMsg.content),
+				});
 				if (events.signal?.aborted) {
 					aborted = true;
 					break;
 				}
 			}
-			if (aborted) break;
+			if (aborted) {
+				log({ type: "step/end", step: iterations, source: "assistant", status: "aborted" });
+				break;
+			}
+			log({ type: "step/end", step: iterations, source: "assistant", status: "done" });
 		}
+
+		log({ type: "turn/end", source: "system", status: aborted ? "aborted" : "done" });
 
 		return {
 			messages: produced,
@@ -492,7 +544,8 @@ export class AgentLoop {
 			finishReason,
 			/* hard interrupt supersedes a pending steer (run_agent.py) — drop
 			   it; otherwise hand the leftover back for next-turn delivery */
-			pendingSteer: aborted ? (this.drainSteer(), null) : this.drainSteer(),
+			pendingSteer: aborted ? (this.inbox.clear(), null) : this.inbox.drain(),
+			events: sessionLog,
 		};
 	}
 }

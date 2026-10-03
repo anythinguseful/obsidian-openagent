@@ -11,6 +11,7 @@ import type { TodoItem } from "./todo";
 import { App } from "obsidian";
 import { ChatMessage, ConversationTurn } from "../types";
 import type { CompressionCache } from "./contextManager";
+import { sanitizeSessionEvents, type SessionEvent } from "./sessionEvents";
 import { canonicalVaultPath, pathContains } from "./workspacePolicy";
 
 const SESSION_ID_RE = /^[A-Za-z0-9_-]{1,200}$/;
@@ -49,6 +50,8 @@ export interface Session extends SessionMeta {
 	   pick it back up (Hermes keeps it in-memory per agent process + rebuilds
 	   via gateway replay; an Obsidian plugin restarts too often for that) */
 	todos?: TodoItem[];
+	/** Append-only DeepSeek-style log (Phase 1). Absent on pre-events files. */
+	events?: SessionEvent[];
 }
 
 /** A session file is disk data: a truncated write, a hand edit, or a file from
@@ -70,6 +73,7 @@ export function sanitizeSession(value: unknown): Session | null {
 			.filter((t): t is ConversationTurn => !!t && typeof t === "object")
 			.map((t) => ({ ...t, parts: Array.isArray(t.parts) ? t.parts : [] }))
 		: [];
+	const events = sanitizeSessionEvents(o.events);
 	return {
 		...(o as unknown as Session),
 		id: o.id,
@@ -79,6 +83,7 @@ export function sanitizeSession(value: unknown): Session | null {
 		model: typeof o.model === "string" ? o.model : "",
 		turnCount: typeof o.turnCount === "number" ? o.turnCount : turns.length,
 		turns,
+		...(events.length ? { events } : { events: undefined }),
 	};
 }
 

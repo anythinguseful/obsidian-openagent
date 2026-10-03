@@ -1579,7 +1579,8 @@ module.exports = function settingsGuards() {
 			setts.includes("approvalTimeoutSec: number;") &&
 			setts.includes("redactSecrets: boolean;") &&
 			setts.includes("checkpointsEnabled: boolean;") &&
-			loop.includes("redactSecretsInText(safeResult)") &&
+			loop.includes("redactSecretsInText(") &&
+			loop.includes("this.settings.redactSecrets") &&
 			tools.includes("checkpointBeforeWrite(ctx, path)") &&
 			chat.includes("approvalTimeoutSec") &&
 			chat.includes("timed out after") &&

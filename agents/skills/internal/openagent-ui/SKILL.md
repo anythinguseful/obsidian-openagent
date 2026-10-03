@@ -14,7 +14,7 @@ These are the owner's confirmed decisions. They **win over** any generic advice 
 2. **Geometry/flatness follows prompt-kit + Hermes Desktop** — small radii (4–8px), hairline borders (`--background-modifier-border`), quiet surfaces, no glassmorphism, no heavy shadows, no gradients.
 3. **No emoji in production UI** (Obsidian `setIcon()` with Lucide names only). Emoji are allowed ONLY in `preview/` frame tab icons and inside note *content* the agent writes (e.g. ✅/❌ run status in cron notes, which the user approved).
 4. **Plugin name "Open Agent"** (with a space) in every user-visible string; id stays `openagent`; vault folders `openagent/openagent-skills`, `openagent/openagent-memory`, `openagent/openagent-sessions`, run archives `openagent/cron/runs/`.
-5. **Never re-apply the reverted "polish/flat/fresh design" settings redesigns.** The user stopped that work and reverted it: keep the current section-rail settings layout; improve only by addition (new sections/rows), not reskinning. (2026-07-19 note: the same fate hit the B+ collapsible-cards settings redesign — approved, implemented, then fully reverted on the user's request because preview↔reality mismatches kept surfacing. Any settings-UI aspiration must go through a real-DOM harness first.)
+5. **A cancelled change is not a category ban.** Owner 2026-08-31: Settings **may** be reskinned, grouped, and given cards. Reverting a specific pass (polish/flat/fresh, B+ collapsible cards, group shells) means *that* pass is out — not that Settings chrome is frozen. Do not resurrect a reverted patch as if it were still approved. Nested cards-in-cards without an information reason is still slop; a single grouping shell around related rows is allowed. Adaptive / tidy UI work does **not** need a permission card — ask only when two large product directions compete. Every Settings-UI change still needs a real-DOM harness first.
 
 ## Anti-slop fingerprints (2026-08-06 calibration)
 
@@ -24,8 +24,11 @@ AI-generated *right now* — never emit them, whatever other skills suggest:
 
 - Purple-dominant palettes / purple gradients; gradients ON TEXT or as
   background blobs (constraint 2 bans heavy gradients — this names the tell).
-- "Panelitis": boxing content into nested rounded panels without an
-  information reason. Separate with spacing or a background shift first.
+- "Panelitis": **nested** rounded panels (a card already inside
+  `.setting-item`, then another box around the subsection) without an
+  information reason. Spacing or a background shift first is still the
+  default; one grouping shell is allowed when it clarifies related rows
+  (Lesson 223).
 - The three 2026 cluster looks are DEFAULTS, not choices: cream bg + serif
   display + terracotta accent; near-black + single acid/vermilion accent;
   broadsheet hairlines + zero radius. A brief asking for one wins — a free

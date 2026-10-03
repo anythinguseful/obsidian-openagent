@@ -94,6 +94,16 @@ for (const entry of entries) {
 }
 
 check(!existsSync(abs("skills")), "root skills/ is gone — development skills live under agents/skills/", "root skills/ still exists; move it to agents/skills/");
+check(
+	!existsSync(abs("agents/skills/vendor/uditakhourii")),
+	"rejected ADHD vendor tree is absent",
+	"agents/skills/vendor/uditakhourii must stay uninstalled (Lesson 220)",
+);
+check(
+	!existsSync(abs("agents/skills/vendor/leonxlnx")),
+	"rejected taste vendor tree is absent",
+	"agents/skills/vendor/leonxlnx must stay uninstalled (Lesson 220)",
+);
 const actualSkills = collectSkillFiles(abs("agents/skills"));
 const missingManifest = actualSkills.filter((path) => !declaredPaths.has(path));
 const missingFiles = [...declaredPaths].filter((path) => !actualSkills.includes(path));
@@ -115,6 +125,13 @@ const required = [
 	"diagnosing-bugs",
 ];
 check(required.every((name) => names.has(name)), "required internal and approved vendor skills are registered", `missing required skills: ${required.filter((name) => !names.has(name)).join(", ")}`);
+
+const uiSkill = isProjectFile("agents/skills/internal/openagent-ui/SKILL.md") ? read("agents/skills/internal/openagent-ui/SKILL.md") : "";
+check(
+	uiSkill.includes("cancelled change is not a category ban") && uiSkill.includes("Settings **may** be reskinned"),
+	"openagent-ui allows Settings reskin; cancel ≠ category ban",
+	"openagent-ui constraint 5 must record that Settings may be reskinned (Lesson 221)",
+);
 
 const agents = isProjectFile("AGENTS.md") ? read("AGENTS.md") : "";
 for (const needle of [

@@ -40,6 +40,7 @@ import type { ChatMessage } from "../types";
 import type { MoaPreset, MoaSlot } from "./moa";
 import { backoffMs, maxAttempts, sleep } from "./resilience";
 import { chatCompletion } from "./providers";
+import type { HarnessRequestPrep } from "./harness";
 
 /* ── constants (agent/moa_loop.py) ─────────────────────────────────────── */
 
@@ -332,7 +333,7 @@ export interface MoaPreparedIteration {
 	model: string;
 }
 
-export class MoaTurnEngine {
+export class MoaTurnEngine implements HarnessRequestPrep {
 	private cacheKey: string | null = null;
 	private cacheOutputs: ReferenceOutput[] | null = null;
 	private cadence = { turnSig: null as string | null, stateSig: null as string | null, iterationCount: 0 };

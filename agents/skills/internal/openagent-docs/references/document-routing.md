@@ -1,6 +1,6 @@
 # Document routing checklist
 
-- User-visible behavior changed: update the relevant docs note in the same work.
+- User-visible behavior changed: update the relevant docs note in the same work. User symptoms → `docs/reference/troubleshooting.md`. System map → `docs/reference/architecture.md`. How we write docs → `docs/reference/docs-approach.md`.
 - New audit: narrative in `docs/audits/`, raw proof in `evidence/`.
 - New plan: `docs/plans/`, frontmatter status starts `draft` or `active`.
 - Existing plan implemented: mark `done` only after the stated verification.
