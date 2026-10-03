@@ -30,7 +30,7 @@ const check = (ok, label) => {
 		},
 	});
 	check(await copyText("hello") && clipboard === "hello", "clipboard API path");
-	check(!(await copyText("")), "empty rejected");
+	check(await copyText("") && clipboard === "", "empty string still uses the Clipboard API");
 
 	Object.defineProperty(global, "navigator", { configurable: true, value: {} });
 	let copied = "";
