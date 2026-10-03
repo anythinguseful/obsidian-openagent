@@ -54,7 +54,7 @@ flowchart TB
   Runner --> Loop
   Loop --> Tools
   Tools --> Vault
-  Chat -->|persist turns| Stores
+  Chat -->|persist turns + events| Stores
 ```
 
 | Authority | File | Allowed to be right about |
@@ -164,6 +164,10 @@ Vault layout: [README](../../README.md) Data layout.
 | `tools.ts` | Hermes toolset registry |
 | `systemPrompt.ts` | System prompt assembly |
 | `sessions.ts` | JSON sessions + search |
+| `sessionEvents.ts` | Inspect/recovery log; `resumeMessages` prefers lossless `messages[]` |
+| `toolWaterfall.ts` | preExecute / postExecute listeners; `executeTool` is the driver |
+| `injectInbox.ts` | Next-step inject; `/steer` is one consumer |
+| `harness.ts` | `HarnessRequestPrep` — MoA rewrites the wire; tools still run in `AgentLoop` |
 | `memory.ts` / `memoryEngine.ts` | MEMORY.md + fact engine |
 | `skills.ts` / `hub.ts` | SKILL.md + Browse Hub |
 | `moa.ts` / `moaLoop.ts` | Config + advisor facade |

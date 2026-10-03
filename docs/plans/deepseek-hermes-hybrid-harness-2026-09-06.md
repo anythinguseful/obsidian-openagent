@@ -1,7 +1,7 @@
 ---
 title: "Hybrid harness — DeepSeek seams + Hermes capabilities"
 type: plan
-status: draft
+status: shipped
 date: 2026-09-06
 tags: [openagent, plan, deepseek, hermes, harness]
 ---
@@ -34,7 +34,7 @@ flowchart LR
 
 - User-visible chat, Settings, vault tools, approval, steer, MoA, cron, MCP **keep current behaviour**.
 - Internally: a **turn** may contain many **steps**; UI can keep saying “iteration”.
-- Anything the model saw can be reconstructed from the session log (DeepSeek rule). Existing `messages[]` becomes a *projection*, not a second source of truth.
+- Trajectory and recovery read `Session.events`. The lossless model wire stays `messages[]` (vision parts, unclipped tool payloads). Events are clipped/text-only — they must not replace a complete wire. `resumeMessages` uses the log only when messages are missing or shorter.
 - Hooks exist so a later driver (e.g. MoA-only loop) does not fork `executeTool`.
 - No Cordis dependency. No `dsh` child process.
 
@@ -72,11 +72,17 @@ Goal: documented map. Files: this plan + study note.
 
 Goal: append `events[]` beside existing `turns`/`messages`; project wire from events when present.
 
+Shipped (log only): `Session.events`, `sessionEvents.ts`, `AgentLoop` appends turn/step/message/tool events; ChatApp persist/load/branch. `eventsToWire` reconstructs conversation messages (no system prompt). Load/branch use `resumeMessages`: the lossless `messages[]` wire wins when it is at least as long as the event projection; events fill gaps (empty or shorter messages). Multimodal `content` parts always keep `messages[]`. Persist writes both, never projects messages from clipped events.
+
+Phase 1b (shipped): topbar Trajectory button opens a Conversations-style panel that projects `events[]`. Not a Chat|Trajectory tab. Live `onSessionEvent` updates the panel during a run. Source filter + inject field on the panel (`inject()` on the live handle; `/steer` still works).
+
 Verification: session sanitize + load/save tests still green; old files without `events` still load.
 
 ### Phase 2 — tool waterfall
 
 Goal: `preExecute` / `execute` / `postExecute` listeners used by approval, redact, steer — `AgentLoop.executeTool` becomes the default driver of that pipeline.
+
+Shipped: `toolWaterfall.ts`; approval + abort are preExecute; steer-escape / redact / clip are postExecute. Execute still only in `executeTool`. `/steer` inject stays Phase 3.
 
 Verification: existing tools tests + approval tests.
 
@@ -84,9 +90,13 @@ Verification: existing tools tests + approval tests.
 
 Goal: `inject()` lands on next admitted step (DeepSeek); `/steer` becomes one inject consumer.
 
+Shipped: `InjectInbox`; `AgentLoop.inject` / `steer` share it; drain at step start; `inject` session event matches the wire marker. Interrupt still clears leftover. `/steer` UI unchanged.
+
 ### Phase 4 — swappable driver
 
 Goal: `AgentLoop` and `MoaTurnEngine` share the kernel interface; no second execute path.
+
+Shipped: `HarnessRequestPrep` (`harness.ts`). `AgentLoop` is the only turn driver and the only `executeTool` path. `MoaTurnEngine` implements request prep (wire + aggregator slot), not a second loop. `InteractiveRunHandle.inject` matches the driver.
 
 ## GWT
 
@@ -107,9 +117,15 @@ Then inject is on the log and on the wire, same bytes
 ## Risks
 
 > [!risk]
-> Big-bang rewrite of AgentLoop — mitigasi: additive events, then move execute, never dual-write forever.
+> Big-bang rewrite of AgentLoop — mitigasi: additive events; `messages[]` stays the lossless wire.
 >
-> Cordis-shaped APIs leaking into UI — mitigasi: ChatApp still consumes turns; projection in SessionStore.
+> Cordis-shaped APIs leaking into UI — mitigasi: ChatApp still consumes turns; Trajectory projects `events[]`.
+
+## Remaining (out of scope)
+
+- Dual persist `messages[]` + `events[]` — keep both; do not project the wire from clipped events
+- System prompt and compression cache stay off the event log
+- Image bytes stay on `messages[]`; events store `images` count only
 
 ## Open Questions
 

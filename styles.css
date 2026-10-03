@@ -1442,6 +1442,116 @@
 	font-size: var(--font-ui-small);
 }
 
+.oa-app .oa-traj-row {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 2px;
+	padding: 6px 8px;
+	border-radius: var(--radius-s);
+}
+.oa-app .oa-traj-row.is-open {
+	background: var(--background-modifier-hover);
+}
+.oa-app .oa-traj-row-main {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 2px;
+	width: 100%;
+	border: none;
+	background: transparent;
+	text-align: left;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	padding: 0;
+}
+.oa-app .oa-traj-row-main:disabled {
+	cursor: default;
+}
+.oa-app .oa-traj-copy {
+	align-self: flex-start;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	cursor: pointer;
+	padding: 0;
+}
+.oa-app .oa-traj-copy.is-fail {
+	color: var(--text-error);
+}
+.oa-app .oa-traj-label {
+	font-size: var(--font-ui-small);
+	font-weight: 500;
+	color: var(--text-muted);
+}
+.oa-app .oa-traj-detail {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.oa-app .oa-traj-body {
+	margin: 0;
+	font-size: var(--font-ui-smaller);
+	font-family: var(--font-monospace);
+	color: var(--text-muted);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	max-height: 12rem;
+	overflow-y: auto;
+}
+.oa-app .oa-traj-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 0 8px 8px;
+}
+.oa-app .oa-traj-filter {
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	padding: 2px 8px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+.oa-app .oa-traj-filter.is-active {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+.oa-app .oa-traj-inject {
+	display: flex;
+	gap: 6px;
+	padding: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+.oa-app .oa-traj-inject-input {
+	flex: 1;
+	min-width: 0;
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	padding: 4px 8px;
+}
+.oa-app .oa-traj-inject-btn {
+	font-size: var(--font-ui-smaller);
+	padding: 4px 8px;
+}
+.oa-app .oa-traj-inject-note {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	align-self: center;
+}
+.oa-app .oa-traj-inject-note.is-fail {
+	color: var(--text-error);
+}
+
 .oa-app .oa-panel-group-label {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-faint);
