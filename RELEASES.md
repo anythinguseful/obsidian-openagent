@@ -8,6 +8,16 @@ catatan perubahan historisnya tetap dipertahankan di bawah.
 
 ---
 
+# Open Agent v0.1.159 — Live run trajectory and more reliable model responses
+
+**Release archive:** pending publication as GitHub Release `v0.1.159`.
+
+- **Follow a run as it happens.** The new Trajectory panel shows session events live, lets you filter by source, inspect and copy entries, and queue an instruction for the agent’s next step.
+- **More reliable model responses.** Streaming handles text-part and reasoning-only responses from compatible gateways, retries empty local-model streams through Obsidian’s buffered request path, and gives context-window overflow a clearer explanation.
+- **Older conversations remain intact.** Session events add inspect/recovery history without replacing the full model conversation, including multimodal content.
+
+---
+
 # Open Agent v0.1.158 — Vault-folder fields no longer truncate
 
 **Release archive:** published 2026-08-31 — full asset set on GitHub Releases (tag v0.1.158).
