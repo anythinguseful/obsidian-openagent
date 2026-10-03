@@ -2,7 +2,7 @@ const { execSync } = require("child_process");
 const path = require("path");
 
 const out = path.join(__dirname, "dist", "copyText.cjs");
-execSync(`npx esbuild src/ui/copyText.ts --bundle --platform=node --format=cjs --outfile=${out}`, {
+execSync(`npx esbuild src/ui/clipboard.ts --bundle --platform=node --format=cjs --outfile=${out}`, {
 	cwd: path.join(__dirname, ".."),
 	stdio: "inherit",
 });

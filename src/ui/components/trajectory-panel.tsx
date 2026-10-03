@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { copyText } from "../copyText";
+import { copyText } from "../clipboard";
 import { XIcon } from "../icons";
 import {
 	filterTrajectoryRows,

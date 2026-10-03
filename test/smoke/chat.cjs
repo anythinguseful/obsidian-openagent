@@ -270,7 +270,7 @@ module.exports = function chatGuards() {
 			chat.includes("runner.createInteractiveRun({") &&
 			chat.includes("const interactiveTools = interactiveRun.tools") &&
 			chat.includes("interactiveRun.run(runMessages(), events)") &&
-			chat.includes("useRef<Pick<InteractiveRunHandle, \"steer\"> | null>") &&
+			chat.includes("useRef<Pick<InteractiveRunHandle, \"steer\" | \"inject\"> | null>") &&
 			!chat.includes("new AgentLoop(") &&
 			!chat.includes("runner.makeContext(workspacePolicy, runSettings") &&
 			!chat.includes("runner.getToolsWithMcp(runSettings");
@@ -715,7 +715,7 @@ module.exports = function chatGuards() {
 			steer9.includes("splitSteerMarkers") &&
 			steer9.includes("STEER_CHANNEL_NOTE") &&
 			loop9.includes("steer(text: string): boolean") &&
-			loop9.includes("drainSteer") &&
+			loop9.includes("inbox.drain()") &&
 			loop9.includes("formatSteerMarker(steerText)") &&
 			loop9.includes("pendingSteer: aborted") &&
 			loop9.includes("onSteerApplied") &&
@@ -751,7 +751,7 @@ module.exports = function chatGuards() {
 			loop.includes("[skipped: interrupted by user]") &&
 			loop.includes("moaCadenceDecision") &&
 			loop.includes("attachMoaGuidance") &&
-			agent.includes("MoaTurnEngine") &&
+			agent.includes("this.moa") &&
 			agent.includes("prepareIteration(callWire)") &&
 			app13.includes("MoaTurnEngine") &&
 			app13.includes("moaEmit") &&
