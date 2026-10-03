@@ -84,7 +84,7 @@ Feature plans and port designs, with their implementation status.
 | [Appearance settings plan](plans/appearance-settings-plan.md) | done | Settings → Appearance: tool cards, reasoning, session density, intro, reactions (self-owned chat surface, Obsidian's theme untouched). |
 | [Session panel extraction](plans/session-panel-extraction-2026-08-23.md) | done | Conversations rendering and rename draft extracted while ChatApp retains persistence and agent lifecycle. |
 | [Settings tab modularization](plans/settings-tab-modularization-2026-08-23.md) | done | All Settings modal phases, including the security-sensitive MCP Catalog, are extracted and verified. |
-| [Hybrid harness — DeepSeek seams + Hermes capabilities](plans/deepseek-hermes-hybrid-harness-2026-09-06.md) | draft | In-process kernel (event log, tool waterfall, inject) without Cordis; Hermes toolsets stay the capabilities. |
+| [Hybrid harness — DeepSeek seams + Hermes capabilities](plans/deepseek-hermes-hybrid-harness-2026-09-06.md) | done | In-process kernel (event log, tool waterfall, inject) without Cordis; Hermes toolsets stay the capabilities. |
 | [Refactor roadmap after skills](plans/refactor-roadmap-after-skills-2026-08-23.md) | active | Stages 1–5 and both scoped Stage 6 targets are complete; no future architecture target is selected. |
 | [MCP catalog modal security refactor](plans/mcp-catalog-modal-security-plan-2026-08-23.md) | done | Password rendering, failure recovery, secret boundaries, and the extracted installer modal shipped in v0.1.151. |
 | [MCP credential storage decision](plans/mcp-credential-storage-decision-2026-08-23.md) | done | Option B private secret storage, migration, export stripping, reset, and runtime boundaries shipped in v0.1.151. |

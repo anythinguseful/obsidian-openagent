@@ -1,7 +1,7 @@
 ---
 title: "Hybrid harness — DeepSeek seams + Hermes capabilities"
 type: plan
-status: shipped
+status: done
 date: 2026-09-06
 tags: [openagent, plan, deepseek, hermes, harness]
 ---
