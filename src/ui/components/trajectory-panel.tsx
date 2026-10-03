@@ -109,13 +109,15 @@ export function TrajectoryPanel({ panelRef, rows, onClose, injectEnabled, onInje
 											className={`oa-traj-copy${copyNote?.key === row.key && !copyNote.ok ? " is-fail" : ""}`}
 											aria-live="polite"
 											onClick={() => {
-												void copyText(row.body ?? "").then((ok) => {
-													setCopyNote({ key: row.key, ok });
-													window.setTimeout(
-														() => setCopyNote((n) => (n?.key === row.key ? null : n)),
-														1200
-													);
-												});
+												copyText(row.body ?? "")
+													.then((ok) => {
+														setCopyNote({ key: row.key, ok });
+														window.setTimeout(
+															() => setCopyNote((n) => (n?.key === row.key ? null : n)),
+															1200
+														);
+													})
+													.catch(() => setCopyNote({ key: row.key, ok: false }));
 											}}
 										>
 											{copyNote?.key === row.key ? (copyNote.ok ? "Copied" : "Copy failed") : "Copy"}
