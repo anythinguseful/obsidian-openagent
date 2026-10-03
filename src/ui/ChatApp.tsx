@@ -17,6 +17,7 @@ import {
 	fetchAdvertisedContextLength,
 	listModels,
 	modelSupportsVision,
+	textFromMessageContent,
 } from "../agent/providers";
 import { getActiveProfile, resolveConnection, resolveOverlayKey } from "../agent/profiles";
 import { exactMoaPresetName, moaUsage, normalizeMoaConfig, setActiveMoaPreset } from "../agent/moa";
@@ -775,7 +776,7 @@ export function ChatApp(props: ChatAppProps) {
 		const headlessCommandAbortRef = useRef<AbortController | null>(null);
 		/* the live AgentLoop — /steer reaches its thread-safe stash through this
 		   while a run is in flight (run_agent.py busy-path parity) */
-		const loopRef = useRef<Pick<InteractiveRunHandle, "steer"> | null>(null);
+		const loopRef = useRef<Pick<InteractiveRunHandle, "steer" | "inject"> | null>(null);
 		/* Closing the view must release provider/tool work and interactive
 		   promises without scheduling React state from an unmount cleanup. */
 		useEffect(() => () => {
